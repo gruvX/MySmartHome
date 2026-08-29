@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MySmartHome — улучшенный Classic</title>
+<style>
+  :root{color-scheme:dark;font-family:system-ui,sans-serif;background:#0b0d0f;color:#f7f2e8}
+  body{margin:0;padding:24px;max-width:1440px;margin-inline:auto}
+  h1{margin:0 0 8px;font-size:clamp(28px,4vw,48px)}
+  p{color:#c9c4b8;margin:0 0 24px}
+  nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+  nav a{color:#f7f2e8;border:1px solid #303841;border-radius:999px;padding:10px 14px;text-decoration:none}
+  section{margin:28px 0}
+  h2{font-size:20px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:18px}
+  figure{margin:0;background:#15191d;border:1px solid #303841;border-radius:14px;overflow:hidden}
+  img{display:block;width:100%;height:auto}
+  figcaption{padding:12px 14px;color:#c9c4b8}
+</style>
+</head>
+<body>
+<h1>Улучшенный Classic</h1>
+<p>Финальный review-кандидат планшета и Mini App. Демо-данные, без команд реальному дому.</p>
+<nav><a href="#tablet">Планшет</a><a href="#energy">Энергия</a><a href="#miniapp">Mini App</a></nav>
+<section id="tablet"><h2>Планшет · 1024×768</h2><div class="grid">
+  <figure><img src="tablet_home_normal_1024.png" alt="Главная планшета, нормальное состояние"><figcaption>Центр · нормальное состояние</figcaption></figure>
+  <figure><img src="tablet_home_critical_1024.png" alt="Главная планшета, требуется внимание"><figcaption>Центр · требуется внимание</figcaption></figure>
+  <figure><img src="tablet_system_1024.png" alt="Экран системы"><figcaption>Система</figcaption></figure>
+</div></section>
+<section id="energy"><h2>Nord Pool · оси и состояния</h2><div class="grid">
+  <figure><img src="tablet_energy_populated_1024.png" alt="Заполненный график Nord Pool"><figcaption>48 часов · X время · Y EUR/кВт·ч</figcaption></figure>
+  <figure><img src="tablet_energy_empty_1024.png" alt="Нет данных Nord Pool"><figcaption>Честное пустое состояние</figcaption></figure>
+</div></section>
+<section id="miniapp"><h2>Mini App</h2><div class="grid">
+  <figure><img src="miniapp_home_390.png" alt="Mini App шириной 390 пикселей"><figcaption>390×844</figcaption></figure>
+  <figure><img src="miniapp_home_430.png" alt="Mini App шириной 430 пикселей"><figcaption>430×932</figcaption></figure>
+</div></section>
+</body>
+</html>

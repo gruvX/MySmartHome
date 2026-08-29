@@ -1,0 +1,77 @@
+{
+ "docHScroll": false,
+ "appHScroll": true,
+ "energyHScroll": false,
+ "homeHScroll": false,
+ "contentClipY": {
+  "scrollH": 740,
+  "clientH": 740,
+  "overflowsY": false
+ },
+ "agg": {
+  "kwh": 11.564000000000018,
+  "cost": 1.820867440000003,
+  "acceptedN": 4,
+  "totalMetered": 6,
+  "coverage": 67,
+  "quality": "частичное",
+  "dets": [
+   {
+    "name": "Гидрофор",
+    "status": "accepted",
+    "kwh": 0.4800000000000182,
+    "reason": null,
+    "stale": true
+   },
+   {
+    "name": "Бойлер ТЭН",
+    "status": "accepted",
+    "kwh": 10.605,
+    "reason": null,
+    "stale": false
+   },
+   {
+    "name": "EV зарядка",
+    "status": "excluded",
+    "kwh": null,
+    "reason": "аномалия данных (скачок счётчика)",
+    "stale": true
+   },
+   {
+    "name": "Полотенцесушитель",
+    "status": "excluded",
+    "kwh": null,
+    "reason": "показания заморожены",
+    "stale": true
+   },
+   {
+    "name": "Аквариум",
+    "status": "accepted",
+    "kwh": 0.46299999999999997,
+    "reason": null,
+    "stale": false
+   },
+   {
+    "name": "Рециркуляция ГВС",
+    "status": "accepted",
+    "kwh": 0.016,
+    "reason": null,
+    "stale": true
+   },
+   {
+    "name": "Подсветка кровати",
+    "status": "dead",
+    "kwh": null,
+    "reason": "не измеряется",
+    "stale": true
+   },
+   {
+    "name": "ТВ 75\" QLED",
+    "status": "dead",
+    "kwh": null,
+    "reason": "не измеряется",
+    "stale": true
+   }
+  ]
+ }
+}

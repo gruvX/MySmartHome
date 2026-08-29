@@ -1,0 +1,606 @@
+# Home Assistant — scripts.yaml этого дома, ОБЕЗЛИЧЕННАЯ копия.
+# Сцены, сирены, снятие и продление ручной выдержки тёплого пола, проверки EV.
+
+scene_away:
+  alias: 🚪 Ушёл из дома
+  icon: mdi:exit-run
+  sequence:
+  - action: light.turn_off
+    target:
+      entity_id:
+      - light.prikhozhaia_i_fanar_light
+      - light.prikhozhaia_i_fanar_light_2
+      - light.svet_pervyi_etazh_1_light
+      - light.svet_pervyi_etazh_1_light_2
+      - light.vtoroi_etazh_light
+      - light.dream_color_rgb
+      - light.dream_color_rgb_2
+      - light.veranda_light
+  - action: switch.turn_off
+    target:
+      entity_id:
+      - switch.kukhnia_poloski_switch_1
+      - switch.kukhnia_poloski_switch_2
+      - switch.svet_tv_zona_switch_1
+      - switch.svet_tv_zona_switch_2
+      - switch.smart_switch_2ch_switch_1
+      - switch.smart_switch_2ch_switch_2
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.security_armed
+  - action: notify.send_message
+    target:
+      entity_id: notify.telegram_owner
+    data:
+      message: '🚪 Режим «Ушёл»: свет выключен, охрана включена.'
+scene_cinema:
+  alias: 🎬 Кино
+  icon: mdi:movie-open
+  sequence:
+  - action: light.turn_off
+    target:
+      entity_id:
+      - light.prikhozhaia_i_fanar_light
+      - light.prikhozhaia_i_fanar_light_2
+      - light.svet_pervyi_etazh_1_light
+      - light.svet_pervyi_etazh_1_light_2
+      - light.vtoroi_etazh_light
+      - light.veranda_light
+  - action: switch.turn_off
+    target:
+      entity_id:
+      - switch.kukhnia_poloski_switch_1
+      - switch.kukhnia_poloski_switch_2
+      - switch.smart_switch_2ch_switch_1
+      - switch.smart_switch_2ch_switch_2
+  - action: switch.turn_on
+    target:
+      entity_id:
+      - switch.svet_tv_zona_switch_1
+      - switch.svet_tv_zona_switch_2
+  - action: notify.send_message
+    target:
+      entity_id: notify.telegram_owner
+    data:
+      message: '🎬 Режим «Кино»: приглушённый свет, подсветка ТВ-зоны.'
+scene_guests:
+  alias: 🎉 Гости
+  icon: mdi:party-popper
+  sequence:
+  - action: light.turn_on
+    target:
+      entity_id:
+      - light.prikhozhaia_i_fanar_light
+      - light.prikhozhaia_i_fanar_light_2
+      - light.svet_pervyi_etazh_1_light
+      - light.svet_pervyi_etazh_1_light_2
+      - light.vtoroi_etazh_light
+      - light.veranda_light
+  - action: notify.send_message
+    target:
+      entity_id: notify.telegram_owner
+    data:
+      message: '🎉 Режим «Гости»: основной свет включён.'
+rezhim_zhara_on:
+  alias: 🔥 Жара — выключить весь нагрев (кроме бойлера)
+  icon: mdi:weather-sunny-alert
+  sequence:
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.rezhim_zhara
+  - action: switch.turn_off
+    target:
+      entity_id: switch.kalarifer_socket_1
+  - action: climate.turn_off
+    target:
+      entity_id:
+      - climate.floor_heating
+      - climate.floor_heating_2
+  - action: notify.send_message
+    target:
+      entity_id: notify.telegram_owner
+    data:
+      message: >-
+        🔥 Режим «Жара» включён — полотенцесушитель и тёплые полы выключены,
+        нагрев по Nord Pool заморожен. Бойлер (ГВС) работает как обычно.
+rezhim_zhara_off:
+  alias: ❄️ Жара — выключить режим, вернуть нагрев
+  icon: mdi:weather-sunny-off
+  sequence:
+  - action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.rezhim_zhara
+  - action: climate.set_hvac_mode
+    target:
+      entity_id:
+      - climate.floor_heating
+      - climate.floor_heating_2
+    data:
+      hvac_mode: heat_cool
+  - action: climate.set_preset_mode
+    target:
+      entity_id:
+      - climate.floor_heating
+      - climate.floor_heating_2
+    data:
+      preset_mode: auto
+  - action: notify.send_message
+    target:
+      entity_id: notify.telegram_owner
+    data:
+      message: >-
+        ❄️ Режим «Жара» выключен — тёплые полы и полотенцесушитель снова
+        управляются по цене Nord Pool.
+tuya_grace_release:
+  alias: "\u23F1 Tuya grace: снять через 5 мин"
+  icon: mdi:timer-off-outline
+  description: 'Bounded release for input_boolean.tuya_reconnect_grace. Started
+    fire-and-forget by the /moisture_false_alarm Telegram button so that ONE press can
+    never disable leak protection (leak-v4 leak_check) indefinitely. mode: restart —
+    a second press restarts the 5-minute window instead of stacking.'
+  mode: restart
+  sequence:
+  - delay: 00:05:00
+  - action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.tuya_reconnect_grace
+  - action: notify.send_message
+    target:
+      entity_id: notify.telegram_owner
+    data:
+      message: "\u2705 Grace после «ложной тревоги» снят автоматически (5 мин). Защита
+        от протечки снова активна."
+alarm_smoke_siren:
+  alias: 🔥 Задымление — сирена (fire-and-forget)
+  icon: mdi:smoke-detector-alert
+  description: 'P0 containment. Started with script.turn_on from automation
+    1779200002001 so a Tuya `sign invalid` (ApiRequestException, NOT a
+    HomeAssistantError) raised by any siren entity can no longer abort the caller
+    and swallow the smoke alert. Same entities, same order of physical effect as
+    the inline steps it replaces. The caller verifies siren.alarm afterwards.'
+  mode: single
+  max_exceeded: silent
+  sequence:
+  - action: select.select_option
+    continue_on_error: true
+    target:
+      entity_id: select.alarm_volume
+    data:
+      option: high
+  - action: number.set_value
+    continue_on_error: true
+    target:
+      entity_id: number.alarm_time
+    data:
+      value: 300
+  - action: siren.turn_on
+    target:
+      entity_id: siren.alarm
+alarm_smoke_siren_off:
+  alias: 🔕 Задымление снято — выключить сирену
+  icon: mdi:volume-off
+  description: 'P0 containment for the smoke_off branch of automation
+    1779200002001. Started with script.turn_on so a failing siren.turn_off cannot
+    abort the caller and swallow the "задымление снято" notification.'
+  mode: single
+  max_exceeded: silent
+  sequence:
+  - action: siren.turn_off
+    target:
+      entity_id: siren.alarm
+alarm_security_siren:
+  alias: 🛡 Охрана — сирена (fire-and-forget)
+  icon: mdi:shield-alert
+  description: 'P0 containment. Started with script.turn_on from automation
+    1779200003001 so a Tuya `sign invalid` raised by any siren entity can no longer
+    abort the caller and swallow the intrusion alert. Same entities, same order of
+    physical effect. The caller verifies siren.alarm afterwards.'
+  mode: single
+  max_exceeded: silent
+  sequence:
+  - action: select.select_option
+    continue_on_error: true
+    target:
+      entity_id: select.alarm_volume
+    data:
+      option: high
+  - action: number.set_value
+    continue_on_error: true
+    target:
+      entity_id: number.alarm_time
+    data:
+      value: 120
+  - action: siren.turn_on
+    target:
+      entity_id: siren.alarm
+leak_shutoff_and_siren:
+  alias: 🚨 Утечка — гидрофор off, кран off, сирена
+  icon: mdi:water-alert
+  description: 'P0 containment. Started with script.turn_on from automation
+    1748000001001 (leak v4, default branch). Previously the hydrophore/valve/siren
+    calls were inline: a Tuya `sign invalid` on the FIRST call meant the valve was
+    never closed, the siren never sounded, the follow-up messages never arrived and
+    nothing told the owner the shutoff had failed. Same entities, same order of
+    physical effect. The caller reads back both the valve and the siren and reports
+    every failure. mode single + max_exceeded silent: a second leak sensor firing
+    while this runs is a no-op, which is the correct idempotent behaviour.'
+  mode: single
+  max_exceeded: silent
+  sequence:
+  - action: switch.turn_off
+    target:
+      entity_id: switch.zigbee_plug_2_socket_1
+  - action: switch.turn_off
+    target:
+      entity_id: switch.voda_kran_switch_1
+  - action: select.select_option
+    continue_on_error: true
+    target:
+      entity_id: select.alarm_volume
+    data:
+      option: high
+  - action: number.set_value
+    continue_on_error: true
+    target:
+      entity_id: number.alarm_time
+    data:
+      value: 120
+  - action: siren.turn_on
+    target:
+      entity_id: siren.alarm
+night_saver_restore_snapshot:
+  alias: 🌙 Ночная экономия — восстановить снимок
+  icon: mdi:restore
+  description: 'Started with script.turn_on from automation 1784000001002 (ветка
+    ВЫКЛ) так, что применение сессионной сцены scene.before_night_saver к
+    Tuya-розетке аквариума не может оборвать вызывающий скрипт: ApiRequestException
+    (`sign invalid`) — не HomeAssistantError, continue_on_error его не ловит.
+    Раньше такой сбой отменял восстановление полотенцесушителя и тёплых полов
+    по цене Nord Pool. Вызывающий скрипт проверяет наличие снимка до вызова и
+    сообщает владельцу, если снимок потерян.'
+  mode: single
+  max_exceeded: silent
+  sequence:
+  - action: scene.turn_on
+    target:
+      entity_id: scene.before_night_saver
+turbo_hot_water_start:
+  alias: 🔥 Турбо нагрев — включить (fire-and-forget)
+  icon: mdi:fire-alert
+  description: 'P0 containment. Запускается через script.turn_on из automation
+    1748000001002. Содержит РОВНО те шаги, которые раньше стояли там inline:
+    включить switch.smart_plug_2_socket_1 и поднять уставку ГВС котла до 65°C
+    (rest_command.turbo_boiler_cwu). Больше НИЧЕГО не трогает. Если Tuya отвечает
+    `sign invalid`, обрывается только этот скрипт — вызывающая автоматизация
+    доходит до `delay: 01:00:00` и гасит input_boolean.turbo_hot_water, поэтому
+    флаг больше не может зависнуть ON и заблокировать выключение бойлера по цене.'
+  mode: single
+  max_exceeded: silent
+  sequence:
+  - action: switch.turn_on
+    target:
+      entity_id: switch.smart_plug_2_socket_1
+  - delay: 00:00:03
+  - action: rest_command.turbo_boiler_cwu
+    data: {}
+turbo_hot_water_restore:
+  alias: 🔥 Турбо нагрев — вернуть уставку ГВС (fire-and-forget)
+  icon: mdi:restore
+  description: 'P0 containment. Запускается через script.turn_on из automation
+    1748000001003. Содержит РОВНО тот choose, что стоял там inline: если
+    электробойлер (ТЭН) работает — отключить нагрев ГВС котлом, иначе включить.
+    Больше НИЧЕГО не трогает. Таймаут ecoNET теперь обрывает только этот скрипт,
+    а не уведомление владельцу.'
+  mode: single
+  max_exceeded: silent
+  sequence:
+  - choose:
+    - conditions:
+      - condition: state
+        entity_id: switch.smart_plug_2_socket_1
+        state: 'on'
+      sequence:
+      - action: rest_command.disable_boiler_cwu
+        data: {}
+    default:
+    - action: rest_command.enable_boiler_cwu
+      data: {}
+ev_verify_start:
+  alias: 🚗 EV — проверка запуска (fire-and-forget)
+  icon: mdi:ev-station
+  description: 'P0 containment 2026-08-16. Проверка результата EV-команды вынесена из automation
+    1778700001005 (mode: queued). Раньше delay 10 s + wait_template 20 s держали очередь обработчика
+    ~30 s; Telegram аннулирует callback query примерно через 15 s, telegram_bot.answer_callback_query
+    падал и ОБРЫВАЛ весь обработчик — владелец не получал вообще никакого ответа на нажатие. Скрипт
+    запускается fire-and-forget (script.turn_on), его сбой не может оборвать вызывающую автоматизацию.
+    НИКАКИХ команд устройствам: только ожидание статуса и telegram_bot.send_message. Успех определяется
+    ТОЛЬКО по sensor.ev_charger_status: реле switch.ev_charger_switch на этой зарядке читается off
+    даже во время зарядки (подтверждено 2026-08-16 14:15: статус charger_charging, реле не менялось
+    с 09:43), поэтому судить по реле нельзя.'
+  mode: restart
+  max_exceeded: silent
+  sequence:
+  - action: script.turn_off
+    continue_on_error: true
+    target:
+      entity_id: script.ev_verify_stop
+  - alias: Ждём подтверждение зарядки по статусу (Tuya cloud, лаг до 5 мин)
+    wait_template: '{{ is_state(''sensor.ev_charger_status'', ''charger_charging'') }}'
+    timeout: 00:05:00
+    continue_on_timeout: true
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ is_state(''sensor.ev_charger_status'', ''charger_charging'') }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: '{{ ok_msg | default(''🚗⚡ EV: зарядка идёт.'') }}'
+    default:
+    - action: telegram_bot.send_message
+      data:
+        chat_id: 100000000
+        parse_mode: html
+        message: '{%- set s = states(''sensor.ev_charger_status'') -%}{%- set causes = {''charger_free'':
+          ''машина не подключена'', ''charger_insert'': ''машина подключена, но зарядка не началась'',
+          ''charger_pause'': ''зарядка на паузе'', ''charger_end'': ''зарядка уже завершена''} -%}{%-
+          set cause = causes.get(s, ''нет связи с зарядкой (Tuya)'' if s in [''unavailable'', ''unknown'',
+          ''none'', ''None'', '''', ''cloud_error''] else ''статус '' ~ (s | e)) -%}⚠️ EV: зарядка
+          не началась — {{ cause }}
+
+
+          Статус <code>sensor.ev_charger_status</code>: {{ s | e }} (ожидался <code>charger_charging</code>),
+          проверка 5 мин.'
+ev_verify_stop:
+  alias: 🚗 EV — проверка остановки (fire-and-forget)
+  icon: mdi:ev-station-off
+  description: 'P0 containment 2026-08-16. Проверка результата EV-команды вынесена из automation
+    1778700001005 (mode: queued). Раньше delay 10 s + wait_template 20 s держали очередь обработчика
+    ~30 s; Telegram аннулирует callback query примерно через 15 s, telegram_bot.answer_callback_query
+    падал и ОБРЫВАЛ весь обработчик — владелец не получал вообще никакого ответа на нажатие. Скрипт
+    запускается fire-and-forget (script.turn_on), его сбой не может оборвать вызывающую автоматизацию.
+    НИКАКИХ команд устройствам: только ожидание статуса и telegram_bot.send_message. Успех определяется
+    ТОЛЬКО по sensor.ev_charger_status: реле switch.ev_charger_switch на этой зарядке читается off
+    даже во время зарядки (подтверждено 2026-08-16 14:15: статус charger_charging, реле не менялось
+    с 09:43), поэтому судить по реле нельзя.'
+  mode: restart
+  max_exceeded: silent
+  sequence:
+  - action: script.turn_off
+    continue_on_error: true
+    target:
+      entity_id: script.ev_verify_start
+  - alias: Ждём, пока статус перестанет быть charger_charging
+    wait_template: '{{ not is_state(''sensor.ev_charger_status'', ''charger_charging'') }}'
+    timeout: 00:05:00
+    continue_on_timeout: true
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ not is_state(''sensor.ev_charger_status'', ''charger_charging'') }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: '{{ ok_msg | default(''⛔ EV: зарядка не идёт.'') }}'
+    default:
+    - action: telegram_bot.send_message
+      data:
+        chat_id: 100000000
+        parse_mode: html
+        message: '⚠️ EV: команда СТОП не подействовала — зарядка всё ещё идёт
+
+
+          Статус <code>sensor.ev_charger_status</code>: {{ states(''sensor.ev_charger_status'') |
+          e }} (ожидался любой, кроме <code>charger_charging</code>), проверка 5 мин.'
+leak_valve_verify:
+  alias: 🚰 Кран — подтвердить закрытие (fire-and-forget)
+  icon: mdi:valve-closed
+  description: 'P0 containment 2026-08-16. Read-back крана после кнопки /leak_confirm вынесен из
+    automation 1778700001005 (mode: queued): wait 20 s + delay 3 s держали очередь обработчика и
+    приводили к протуханию callback query Telegram, из-за чего обработчик обрывался и владелец не
+    получал ответа ни на одну кнопку. НИКАКИХ команд устройствам — только чтение состояния крана
+    и telegram_bot.send_message. Кран закрывается в самой автоматизации, до вызова этого скрипта.'
+  mode: restart
+  max_exceeded: silent
+  sequence:
+  - wait_template: '{{ is_state(''switch.voda_kran_switch_1'', ''off'') }}'
+    timeout: 00:00:20
+    continue_on_timeout: true
+  - delay: 00:00:03
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ is_state(''switch.voda_kran_switch_1'', ''off'') }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: 🚨 ✅ Кран закрыт, состояние ПОДТВЕРЖДЕНО по твоей команде. Гидрофор выключен. Сирена
+            (2 мин). Открой кран вручную после проверки.
+          inline_keyboard:
+          - - - 🔕 Выключить сирену
+              - /siren_off
+    default:
+    - action: telegram_bot.send_message
+      data:
+        chat_id: 100000000
+        parse_mode: html
+        message: '🚨 Команда закрытия отправлена, состояние крана НЕ ПОДТВЕРЖДЕНО (сейчас: {{ states(''switch.voda_kran_switch_1'')
+          | e }}). Проверьте физически!'
+        inline_keyboard:
+        - - - 🔕 Выключить сирену
+            - /siren_off
+house_change_digest:
+  alias: 📣 Изменения в доме — окно коалесценции и отправка
+  icon: mdi:message-badge-outline
+  description: 'Тело automation 1790300001003. Вынесено сюда 2026-08-16: 2-минутный delay внутри
+    автоматизации молча погибал при любой перезагрузке автоматизаций (automation.reload отменяет
+    выполняющиеся прогоны без записи в лог), и владелец не получал дайджест вообще. Семантика окна
+    не изменилась: mode single + max_exceeded silent — переключения ВНУТРИ окна попадают в то же
+    одно сообщение, второй прогон не стартует. Переменные t0 и trig передаются вызывающей автоматизацией.'
+  mode: single
+  max_exceeded: silent
+  sequence:
+  - delay: 00:02:00
+  - action: shell_command.price_forecast
+    response_variable: pf
+    continue_on_error: true
+  - variables:
+      pf_raw: '{{ pf.stdout if (pf is defined and pf.stdout is defined and pf.stdout is string) else
+        '''' }}'
+  - action: telegram_bot.send_message
+    data:
+      chat_id: 100000000
+      parse_mode: html
+      message: "{%- set pf_raw = pf_raw | default('', true) -%}\n{%- set watched = [\n  ('switch.smart_plug_2_socket_1', 'Бойлер'),\n  ('switch.kalarifer_socket_1',\
+        \ 'Полотенцесушитель'),\n  ('switch.akvarium_svet_socket_1', 'Аквариум'),\n  ('switch.retserkuliatsiia_goriachai_vody_socket_1',\
+        \ 'Рециркуляция ГВС'),\n  ('switch.zigbee_plug_2_socket_1', 'Гидрофор'),\n  ('climate.floor_heating',\
+        \ 'Тёплый пол ванная'),\n  ('climate.floor_heating_2', 'Тёплый пол душевая')] -%}\n{%- set\
+        \ ns = namespace(lines=[]) -%}\n{%- for eid, nm in watched -%}\n  {%- set st = states[eid]\
+        \ -%}\n  {%- if st is not none -%}\n    {%- set moved = (st.last_changed | as_timestamp(0))\
+        \ >= (t0 | default(0) | float(0)) - 5 -%}\n    {%- if moved or eid == (trig | default(''))\
+        \ -%}\n      {%- if eid[:8] == 'climate.' -%}\n        {%- set val = (st.attributes.preset_mode\
+        \ | default('нет данных'))\n                      if st.state not in ['off', 'unavailable',\
+        \ 'unknown'] else st.state -%}\n      {%- else -%}\n        {%- set val = 'ВКЛ' if st.state\
+        \ == 'on' else ('ВЫКЛ' if st.state == 'off' else st.state) -%}\n      {%- endif -%}\n   \
+        \   {%- set ns.lines = ns.lines + ['• ' ~ nm ~ ': ' ~ (val | e)] -%}\n    {%- endif -%}\n\
+        \  {%- endif -%}\n{%- endfor -%}\n{%- set p_raw = states('sensor.nord_pool_lv_current_price')\
+        \ -%}\n{%- set p = p_raw | float(none) -%}\n{%- set ok = (pf_raw | regex_findall('(?m)^ok=(.*)$')\
+        \ | first | default('0')) | trim == '1' -%}\n{%- set b_txt = (pf_raw | regex_findall('(?m)^boiler_txt=(.*)$')\
+        \ | first | default('')) | trim -%}\n{%- set t_txt = (pf_raw | regex_findall('(?m)^towel_txt=(.*)$')\
+        \ | first | default('')) | trim -%}\n{%- set pf_err = (pf_raw | regex_findall('(?m)^error=(.*)$')\
+        \ | first | default('')) | trim -%}\n{%- set f1 = states.climate.floor_heating -%}\n{%- set\
+        \ f2 = states.climate.floor_heating_2 -%}\n{%- macro floor(st) -%}\n{%- if st is none %}нет\
+        \ данных\n{%- elif st.state in ['unavailable', 'unknown'] %}{{ st.state | e }}\n{%- elif\
+        \ st.state == 'off' %}выключен\n{%- else %}{{ st.attributes.preset_mode | default('?') |\
+        \ e }} {{ st.attributes.temperature | default('?') | e }}°\n{%- endif -%}\n{%- endmacro -%}\n\
+        \U0001F4E3 Изменения в доме {{ now().strftime('%H:%M') }}\n\n{{ ns.lines | join('\\n') if\
+        \ ns.lines else '• (изменения не удалось перечитать — состояния недоступны)' }}\n\n{% if\
+        \ p is none -%}\n⚡ Цена: нет данных\n{%- elif p <= 0.04 -%}\n⚡ Цена: {{ '%.4f' | format(p)\
+        \ }} EUR/kWh — дёшево для всего (бойлер ≤0.10, полотенцесушитель ≤0.04)\n{%- elif p <= 0.10\
+        \ -%}\n⚡ Цена: {{ '%.4f' | format(p) }} EUR/kWh — дёшево для бойлера (≤0.10), дорого для\
+        \ полотенцесушителя (&gt;0.04)\n{%- else -%}\n⚡ Цена: {{ '%.4f' | format(p) }} EUR/kWh —\
+        \ дорого для всего (бойлер &gt;0.10)\n{%- endif %}\n\U0001F525 Тёплые полы сейчас: ванная\
+        \ {{ floor(f1) }}, душевая {{ floor(f2) }}\n{% if ok and b_txt and t_txt -%}\n⏳ Бойлер: {{\
+        \ b_txt | e }}\n⏳ Полотенцесушитель: {{ t_txt | e }}\n{%- else -%}\n⏳ Насколько это удержится\
+        \ — нет данных{{ (' (' ~ pf_err ~ ')') | e if pf_err else '' }}: цены дня из /config/www/today_prices.json\
+        \ прочитать не удалось.\n{%- endif %}"
+ev_cancel_next:
+  alias: 🚗 EV — отменить следующую зарядку (разово)
+  icon: mdi:calendar-remove
+  description: 'Кнопка «Отменить зарядку» (Telegram /ev_cancel + Mini App). Пропускает
+    РОВНО ОДНУ следующую плановую зарядку; автоматическое расписание после этого
+    работает как обычно.
+
+    КАК ЭТО ОДНОРАЗОВО: флаг input_boolean.ev_charge_cancelled гасит сама автозарядка
+    1778800001002 первым же шагом того окна, которое из-за него пропустила, и пишет
+    в input_datetime.ev_cancel_consumed КАКОЕ окно пропущено. Отмена не может зависнуть:
+    последняя ветвь 1790500001001 снимает её по сроку 24 ч, даже если ни одно окно так
+    и не наступило.
+
+    КАК ЕЁ ОТМЕНИТЬ: нажать «Зарядить ночью» или «Зарядить днём» — ev_night2h.py /
+    ev_day2h.py снимают флаг и ставят разовую заявку.
+
+    Разовая заявка, если она была, снимается здесь же (флаг + стабильная ссылка на
+    окно), иначе она продолжала бы блокировать планировщик до истечения срока.
+
+    НИКАКИХ команд устройствам: только input_boolean / input_datetime и Telegram.'
+  mode: single
+  max_exceeded: silent
+  sequence:
+  - action: input_datetime.set_datetime
+    target:
+      entity_id: input_datetime.ev_cancel_armed_at
+    data:
+      timestamp: '{{ now().timestamp() }}'
+  - alias: Сбросить метку пропущенного окна — она относится к прошлой отмене
+    action: input_datetime.set_datetime
+    target:
+      entity_id: input_datetime.ev_cancel_consumed
+    data:
+      datetime: '1970-01-01 00:00:00'
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.ev_charge_cancelled
+  - alias: Снять разовую заявку «Зарядить ночью/днём», если она была
+    action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.ev_night_requested
+  - alias: И её стабильную ссылку на окно, иначе сторож ждал бы отменённое окно
+    action: input_datetime.set_datetime
+    target:
+      entity_id: input_datetime.ev_night_window_start
+    data:
+      datetime: '1970-01-01 00:00:00'
+  - action: telegram_bot.send_message
+    data:
+      chat_id: 100000000
+      parse_mode: html
+      message: |-
+        {%- set dt = states('input_datetime.ev_charge_start') -%}
+        {%- set ts = state_attr('input_datetime.ev_charge_start', 'timestamp') | float(0) -%}
+        ⛔ EV: следующая зарядка отменена
+
+        {% if ts > 0 %}Пропущу окно {{ ts | timestamp_custom('%d.%m %H:%M', true) | e }} → {{ (ts + 7200) | timestamp_custom('%H:%M', true) | e }} (2 ч).{% else %}Плановое время сейчас не задано — пропущу первую же зарядку, которую поставит расписание.{% endif %}
+
+        Это отмена РОВНО ОДНОГО раза: следующая зарядка после неё пройдёт по автоматическому расписанию как обычно.
+
+        Передумал — нажми «Зарядить ночью» или «Зарядить днём», отмена снимется.
+
+        Плановое время <code>input_datetime.ev_charge_start</code>: {{ dt | e }}
+
+# --- Ручная выдержка тёплого пола: снять / продлить (2026-08-26) --------------
+# Ровно те же действия, что у кнопок /floor_hold_off и /floor_hold_plus в Telegram
+# (обработчик 1778700001005). Скрипты нужны потому, что Mini App может вызывать
+# только script.turn_on из белого списка: передать параметры (какую зону, сколько
+# часов) он не может — компонент режет любые лишние поля. Поэтому выдержка
+# снимается/продлевается сразу по ДВУМ зонам, как и в Telegram: флаг
+# input_boolean.floor_hold_forever всё равно общий для обеих.
+# Устройствам эти скрипты не командуют — пишут только хелперы.
+floor_hold_off:
+  alias: 🔥 Тёплый пол — снять ручную выдержку
+  icon: mdi:timer-off-outline
+  mode: single
+  sequence:
+  - action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.floor_hold_forever
+  - action: input_datetime.set_datetime
+    target:
+      entity_id:
+      - input_datetime.floor_hold_vannaia
+      - input_datetime.floor_hold_dushevaia
+    data:
+      timestamp: 0
+  - action: notify.send_message
+    target:
+      entity_id: notify.telegram_owner
+    data:
+      message: 🔥 Ручная выдержка снята — автоматика снова ведёт тёплые полы по цене.
+
+floor_hold_plus:
+  alias: 🔥 Тёплый пол — продлить выдержку на 3 часа
+  icon: mdi:timer-plus-outline
+  mode: single
+  sequence:
+  - variables:
+      plus_ts: '{{ (as_timestamp(now()) + 3 * 3600) | round(0) | int }}'
+  - action: input_datetime.set_datetime
+    target:
+      entity_id:
+      - input_datetime.floor_hold_vannaia
+      - input_datetime.floor_hold_dushevaia
+    data:
+      timestamp: '{{ plus_ts }}'
+  - action: notify.send_message
+    target:
+      entity_id: notify.telegram_owner
+    data:
+      message: >-
+        🔥 Ручная выдержка продлена до {{ plus_ts | timestamp_custom('%H:%M', true) }}
+        — автоматика не тронет тёплые полы до этого времени.

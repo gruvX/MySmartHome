@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280,initial-scale=1">
+<title>Статус автоматизаций — ДЕМО (info-only)</title>
+<!--
+  NON-DEPLOYED WIREFRAME MOCK for the tablet "Статус автоматизаций" panel.
+  Design doc: docs/audit/TABLET_AUTOMATIONS_STATUS.md
+  READ-ONLY / INFO-ONLY: there are NO run / trigger / enable buttons anywhere.
+  Values are DE-IDENTIFIED DEMO placeholders (flag "ДЕМО"). No hass, no token, no network.
+  Every "missing data" path renders "нет данных" (never a fake green all-OK).
+  Do not deploy.
+-->
+<style>
+  :root{
+    --bg:#0e1116; --panel:#171c24; --panel2:#1e2530; --line:#2a3340; --ink:#e6edf3;
+    --muted:#8b97a6; --amber:#e0a63a; --red:#e5534b; --green:#4fb477; --blue:#5aa0e6;
+    --grey:#5b6675; --purple:#a98be6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.4 -apple-system,Segoe UI,Roboto,sans-serif}
+  .frame{width:1280px;height:800px;overflow:hidden;position:relative;margin:0 auto;background:var(--bg)}
+  .top{height:56px;display:flex;align-items:center;gap:16px;padding:0 16px;
+    background:var(--panel);border-bottom:1px solid var(--line)}
+  .brand{font-weight:700;letter-spacing:.3px}
+  .demo-flag{background:var(--amber);color:#111;font-weight:700;border-radius:6px;
+    padding:2px 8px;font-size:12px}
+  .tabs{display:flex;gap:8px;margin-left:8px}
+  .tab{padding:8px 16px;border-radius:8px;color:var(--muted);border:1px solid transparent}
+  .tab.active{background:var(--panel2);color:var(--ink);border-color:var(--line)}
+  .clock{margin-left:auto;color:var(--muted);font-size:13px}
+  .ro-badge{background:#16283a;color:var(--blue);border:1px solid #244a6b;
+    border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600}
+  .screen{height:744px;overflow:hidden;padding:12px}
+
+  /* KPI strip */
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:10px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .kpi .lab{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;
+    display:flex;justify-content:space-between;align-items:center}
+  .kpi .num{font-size:34px;font-weight:800;line-height:1.1;margin-top:4px}
+  .kpi .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .num.green{color:var(--green)} .num.grey{color:var(--grey)} .num.amber{color:var(--amber)}
+  .num.red{color:var(--red)}
+  .stamp{font-size:11px;color:var(--grey);font-weight:500}
+  .stamp.stale{color:var(--amber)}
+  .stamp.audit{color:var(--purple)}
+
+  .grid{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:10px;height:656px}
+  .col{display:flex;flex-direction:column;gap:10px;overflow:hidden}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .card h3{margin:0 0 8px;font-size:12px;font-weight:600;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.4px;display:flex;justify-content:space-between;align-items:center}
+  .row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;gap:8px}
+  .row+.row{border-top:1px solid var(--line)}
+  .row .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .miss{color:var(--grey);font-style:italic}
+  .badge{font-size:11px;border-radius:5px;padding:1px 6px;font-weight:600;white-space:nowrap}
+  .b-amber{background:#3a2f16;color:var(--amber)}
+  .b-red{background:#3a1c1a;color:var(--red)}
+  .b-grey{background:#242b34;color:var(--grey)}
+  .b-green{background:#16301f;color:var(--green)}
+  .b-blue{background:#16283a;color:var(--blue)}
+  .b-purple{background:#241a3a;color:var(--purple)}
+  .pill{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600}
+  .on{background:#16301f;color:var(--green)} .off{background:#242b34;color:var(--muted)}
+  .modes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .mode{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .mode .mn{font-size:12px;color:var(--muted)} .mode .mv{margin-top:4px}
+  .warn{border-left:3px solid var(--line);padding:6px 10px;margin:6px 0;background:var(--panel2);border-radius:0 8px 8px 0}
+  .warn.crit{border-left-color:var(--red)} .warn.high{border-left-color:var(--amber)}
+  .warn.info{border-left-color:var(--blue)}
+  .warn .wt{font-weight:600;font-size:13px;display:flex;justify-content:space-between;gap:8px}
+  .warn .wd{font-size:12px;color:var(--muted);margin-top:2px}
+  .note{font-size:11px;color:var(--grey);margin-top:6px}
+  .foot{font-size:11px;color:var(--grey);text-align:center;padding:6px 0 0}
+  @media (prefers-color-scheme: light){
+    :root{--bg:#f4f6f9;--panel:#fff;--panel2:#eef1f5;--line:#d8dee6;--ink:#1a2029;--muted:#5b6675;--grey:#8b97a6}
+  }
+  :root[data-theme="dark"]{--bg:#0e1116;--panel:#171c24;--panel2:#1e2530;--line:#2a3340;--ink:#e6edf3;--muted:#8b97a6;--grey:#5b6675}
+  :root[data-theme="light"]{--bg:#f4f6f9;--panel:#fff;--panel2:#eef1f5;--line:#d8dee6;--ink:#1a2029;--muted:#5b6675;--grey:#8b97a6}
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="top">
+    <span class="brand">Умный дом</span>
+    <span class="demo-flag">ДЕМО — не реальные данные</span>
+    <div class="tabs">
+      <div class="tab active">Статус автоматизаций</div>
+    </div>
+    <span class="ro-badge">только чтение · без кнопок запуска</span>
+    <span class="clock">обновлено 20:45 · сессия HA</span>
+  </div>
+
+  <section class="screen">
+    <!-- KPI STRIP -->
+    <div class="kpis">
+      <div class="kpi">
+        <div class="lab">Активные<span class="stamp">20:45</span></div>
+        <div class="num green">44</div>
+        <div class="sub">из 47 сущностей</div>
+      </div>
+      <div class="kpi">
+        <div class="lab">Отключены<span class="stamp">20:45</span></div>
+        <div class="num grey">3</div>
+        <div class="sub">EV-старая · Бойлер-старт · Утечка v2</div>
+      </div>
+      <div class="kpi">
+        <div class="lab">Недоступны<span class="stamp">20:45</span></div>
+        <div class="num green">0</div>
+        <div class="sub">орфан 176684… удалён при reload</div>
+      </div>
+      <div class="kpi">
+        <div class="lab">Последняя ошибка<span class="stamp audit">аудит 07-15</span></div>
+        <div class="num red">1</div>
+        <div class="sub">Tuya авто-перезагрузка → мёртвый entry_id</div>
+      </div>
+      <div class="kpi">
+        <div class="lab">Слишком частые<span class="stamp audit">аудит 07-15</span></div>
+        <div class="num amber">3</div>
+        <div class="sub">~280×/3д (тик цены)</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- COL 1 -->
+      <div class="col">
+        <div class="card">
+          <h3>Активные режимы<span class="stamp">20:45 · live</span></h3>
+          <div class="modes">
+            <div class="mode"><div class="mn">Ночная экономия</div><div class="mv"><span class="pill off">OFF</span></div></div>
+            <div class="mode"><div class="mn">Режим «Жара»</div><div class="mv"><span class="pill on">ON</span></div></div>
+            <div class="mode"><div class="mn">EV ручной режим</div><div class="mv"><span class="pill on">ON</span></div></div>
+            <div class="mode"><div class="mn">EV зарядка</div><div class="mv"><span class="badge b-grey">charger_pause</span></div></div>
+          </div>
+          <div class="note">⚠ H2: «Жара» ON, но climate.floor_heating_2 = heat_cool — тёплый пол по цене пересиливает летний режим (инфо, конфликт H2)</div>
+        </div>
+
+        <div class="card" style="flex:1;overflow:hidden">
+          <h3>Предупреждения (инфо)<span class="stamp audit">аудит 07-15</span></h3>
+          <div class="warn crit">
+            <div class="wt"><span>💧 Вода / утечка</span><span class="badge b-red">критично · C1</span></div>
+            <div class="wd">Tuya авто-перезагрузка на реальной протечке перезагружает Tuya → датчики влаги и кран уходят в unavailable → grace блокирует аварийное закрытие крана до ~5 мин. + мёртвый entry_id 01OLDENTRY… ошибается каждый запуск.</div>
+          </div>
+          <div class="warn high">
+            <div class="wt"><span>✈ Telegram-кнопки</span><span class="badge b-amber">высокий · H1</span></div>
+            <div class="wd">Аварийные оповещения (утечка/дым/охрана) шлют кнопки через notify.send_message + inline_keyboard — не поддерживается, кнопки не рендерятся. Нужна проверка живым тестом.</div>
+          </div>
+          <div class="warn info">
+            <div class="wt"><span>🔥 Котёл (REST)</span><span class="badge b-blue">инфо</span></div>
+            <div class="wd">sensor.boiler_* спамят «dict has no attribute alarmOutput/fan/…» (булевы поля не поправлены). Логика ГВС 40↔55° работает; страдает только лог/уведомления.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COL 2 -->
+      <div class="col">
+        <div class="card">
+          <h3>Последняя ошибка<span class="stamp audit">аудит 07-15</span></h3>
+          <div class="row"><span class="name">Tuya авто-перезагрузка</span><span class="badge b-red">открыто</span></div>
+          <div class="note">reload_config_entry на удалённый 01OLDENTRY… → ошибка каждый запуск (C1)</div>
+          <div class="row"><span class="name">Котёл — откл. ГВС · datetime TypeError</span><span class="badge b-green">исправлено</span></div>
+          <div class="note">offset-naive/aware вычитание (18×/3д) — устранено; логика уставки работала и раньше</div>
+        </div>
+
+        <div class="card" style="flex:1;overflow:hidden">
+          <h3>Слишком частые (no-op)<span class="stamp audit">окно 3 дня</span></h3>
+          <div class="row"><span class="name">Бойлер по Nord Pool</span><span class="badge b-amber">~280×/3д</span></div>
+          <div class="row"><span class="name">Полотенцесушитель</span><span class="badge b-amber">~280×/3д</span></div>
+          <div class="row"><span class="name">Тёплый пол душевая</span><span class="badge b-amber">~280×/3д</span></div>
+          <div class="row"><span class="name">Shadow сбор энергии/цены</span><span class="badge b-grey">каждые 15 мин · by design</span></div>
+          <div class="note">триггер = state-тик sensor.nord_pool_lv_current_price. Ср.: «Тёплый пол ванная» на numeric_state-кроссинге → 12×/3д</div>
+        </div>
+      </div>
+
+      <!-- COL 3 -->
+      <div class="col">
+        <div class="card">
+          <h3>Давно не запускались — ожидаемо<span class="stamp audit">аудит 07-15</span></h3>
+          <div class="row"><span class="name">Турбо нагрев акт/деакт</span><span class="badge b-green">сезон · 52д</span></div>
+          <div class="row"><span class="name">Задымление — сирена</span><span class="badge b-green">нет событий</span></div>
+          <div class="row"><span class="name">Охрана — тревога</span><span class="badge b-green">gated · 24д</span></div>
+          <div class="row"><span class="name">Tailscale ключ истекает</span><span class="badge b-green">будущее 11-01</span></div>
+          <div class="row"><span class="name">HA авто-установка 03:00</span><span class="badge b-green">нечего ставить</span></div>
+        </div>
+
+        <div class="card">
+          <h3>Давно не запускались — проверить<span class="stamp audit">аудит 07-15</span></h3>
+          <div class="row"><span class="name">Присутствие: ушёл / вернулся</span><span class="badge b-amber">канарейка</span></div>
+          <div class="row"><span class="name">Устройство недоступно</span><span class="badge b-amber">12.5д</span></div>
+          <div class="row"><span class="name">Микроклимат: алерты</span><span class="badge b-amber">порог не пересечён</span></div>
+        </div>
+
+        <div class="card">
+          <h3>Пример «нет данных»<span class="stamp stale">устарело</span></h3>
+          <div class="row"><span class="name">Счётчик запусков (WS logbook)</span><span class="miss">нет данных</span></div>
+          <div class="note">источник вне hass.states — при недоступности НЕ показываем «0 / всё ОК»</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot">
+      Панель информационная — действий не выполняет. Время аудита: 2026-07-15 · окно улик до 17:45.
+      Источники: automation_inventory.json · AUTOMATION_RUNTIME.md · AUTOMATION_CONFLICTS.md. ДЕМО.
+    </div>
+  </section>
+</div>
+</body>
+</html>

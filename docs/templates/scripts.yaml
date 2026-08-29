@@ -1,0 +1,41 @@
+# =============================================================================
+# Reusable scenes as scripts  →  scripts.yaml
+# Callable uniformly from Telegram (/scene_away), Mini App, and tablet.
+# De-identified. Replace <PLACEHOLDER> entity IDs. No secrets belong here.
+# Reload:  POST /api/services/script/reload
+# =============================================================================
+
+scene_away:
+  alias: "Away (all off + arm)"
+  sequence:
+    - service: switch.turn_off
+      target:
+        entity_id:
+          - <SWITCH_LIGHT_1>
+          - <SWITCH_LIGHT_2>
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.security_armed
+
+scene_cinema:
+  alias: "Cinema (main off, TV zone on)"
+  sequence:
+    - service: switch.turn_off
+      target:
+        entity_id: <SWITCH_MAIN_LIGHTS>
+    - service: switch.turn_on
+      target:
+        entity_id: <SWITCH_TV_ZONE>
+
+# Toggle-pair pattern: an input_boolean guards heating automations so they don't
+# re-enable the heaters while the mode is active. Toggle via these scripts, not
+# by writing the boolean directly.
+heat_mode_off:
+  alias: "Heat mode OFF (summer)"
+  sequence:
+    - service: input_boolean.turn_on
+      target: { entity_id: input_boolean.<HEAT_MODE_FLAG> }
+    - service: switch.turn_off
+      target: { entity_id: <SWITCH_TOWEL_WARMER> }
+    - service: climate.turn_off
+      target: { entity_id: [<CLIMATE_FLOOR_1>, <CLIMATE_FLOOR_2>] }

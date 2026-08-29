@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Умный дом</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Умный дом — Telegram Mini App
+   Дизайн-система: «приборная панель»
+   ============================================================ */
+
+.app {
+  --accent:   #5fe0a6;
+  --accent-2: #56b8f5;
+  --ev:    #5fe0a6;
+  --price: #56b8f5;
+  --boil:  #ffb259;
+  --sec:   #ff5d57;
+  --water: #45d3d8;
+  --floor: #c98cf0;
+  --plug:  #ffd84d;
+  --light: #ffd27a;
+  --ok:   #54d58a;
+  --warn: #ffb259;
+  --err:  #ff5d57;
+  --r-lg: 22px;
+  --r-md: 16px;
+  --r-sm: 11px;
+  --ease: cubic-bezier(.4, 0, .2, 1);
+  --spring: cubic-bezier(.34, 1.56, .64, 1);
+  font-family: 'Manrope', -apple-system, system-ui, sans-serif;
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+.app[data-theme="dark"] {
+  --bg:       #0c0d10;
+  --bg-grad:  radial-gradient(120% 80% at 50% -10%, #15171d 0%, #0c0d10 60%);
+  --surface:  #15171d;
+  --surface-2:#1c1f27;
+  --surface-3:#23262f;
+  --line:     rgba(255,255,255,.07);
+  --line-2:   rgba(255,255,255,.12);
+  --text:     #eceef3;
+  --text-2:   #9aa3b2;
+  --text-3:   #5a6473;
+  --tint:     14%;
+  --shadow:   0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.35);
+  --glow:     .55;
+}
+.app[data-theme="light"] {
+  --bg:       #e9ebef;
+  --bg-grad:  radial-gradient(120% 80% at 50% -10%, #f6f7f9 0%, #e6e8ed 70%);
+  --surface:  #ffffff;
+  --surface-2:#f3f5f8;
+  --surface-3:#e9ecf1;
+  --line:     rgba(15,22,35,.08);
+  --line-2:   rgba(15,22,35,.13);
+  --text:     #161a22;
+  --text-2:   #5d6675;
+  --text-3:   #99a2b0;
+  --tint:     12%;
+  --shadow:   0 1px 2px rgba(15,22,35,.04), 0 10px 24px rgba(15,22,35,.07);
+  --glow:     .32;
+}
+.app * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+.app {
+  background: var(--bg-grad), var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  position: relative;
+  letter-spacing: .1px;
+}
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-feature-settings: "tnum" 1; }
+.eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-3); }
+.t-sub   { font-size: 11px; color: var(--text-2); }
+.t-name  { font-size: 14.5px; font-weight: 700; letter-spacing: .2px; }
+
+.hdr { display: flex; align-items: center; justify-content: space-between; padding: 6px 18px 12px; }
+.hdr-l { display: flex; flex-direction: column; gap: 1px; }
+.hdr-clock { font-size: 25px; font-weight: 800; letter-spacing: -.5px; line-height: 1; }
+.hdr-date  { font-size: 11.5px; color: var(--text-2); font-weight: 600; text-transform: capitalize; }
+.hdr-r { display: flex; align-items: center; gap: 8px; }
+.chip-out { display: flex; align-items: center; gap: 5px; background: var(--surface); border: 1px solid var(--line); border-radius: 99px; padding: 6px 11px 6px 9px; font-weight: 700; font-size: 13px; }
+.chip-out svg { color: var(--accent-2); }
+.icon-btn { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); color: var(--text-2); cursor: pointer; transition: transform .12s var(--ease), background .15s, color .15s; }
+.icon-btn:active { transform: scale(.9); }
+.icon-btn.spin svg { animation: spin .7s var(--ease); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.scroll { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0 14px; scrollbar-width: none; }
+.scroll::-webkit-scrollbar { display: none; }
+.screen { padding-bottom: 96px; animation: screen-in .32s var(--ease); }
+@keyframes screen-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.stagger > * { animation: rise .4s var(--ease) both; }
+.stagger > *:nth-child(1){animation-delay:.02s}
+.stagger > *:nth-child(2){animation-delay:.06s}
+.stagger > *:nth-child(3){animation-delay:.10s}
+.stagger > *:nth-child(4){animation-delay:.14s}
+.stagger > *:nth-child(5){animation-delay:.18s}
+.stagger > *:nth-child(6){animation-delay:.22s}
+.stagger > *:nth-child(7){animation-delay:.26s}
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 15px; box-shadow: var(--shadow); }
+.card-row { display: flex; align-items: center; justify-content: space-between; }
+.tint { background: color-mix(in oklab, var(--c) var(--tint), var(--surface)); border-color: color-mix(in oklab, var(--c) 28%, var(--line)); }
+.card-hd { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+.card-hd .ic { width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0; display: grid; place-items: center; background: color-mix(in oklab, var(--c) 22%, transparent); color: var(--c); }
+.card-hd .tt { font-weight: 700; font-size: 14px; }
+.card-hd .ss { font-size: 11px; color: var(--text-2); font-weight: 600; }
+
+.badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 800; letter-spacing: .3px; }
+.badge.cheap { background: color-mix(in oklab, var(--ev) 22%, transparent); color: var(--ev); }
+.badge.mid   { background: color-mix(in oklab, var(--plug) 22%, transparent); color: var(--plug); }
+.badge.high  { background: color-mix(in oklab, var(--sec) 22%, transparent); color: var(--sec); }
+.badge.dim   { background: var(--surface-3); color: var(--text-2); }
+
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot.ok { background: var(--ok); }
+.dot.warn { background: var(--warn); box-shadow: 0 0 7px var(--warn); animation: blink 1.1s infinite; }
+.dot.err  { background: var(--err); box-shadow: 0 0 8px var(--err); animation: blink .8s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+.readout { display: flex; align-items: flex-end; gap: 7px; }
+.readout .num { font-size: 46px; font-weight: 800; letter-spacing: -2px; line-height: .85; }
+.readout .unit { font-size: 13px; color: var(--text-2); font-weight: 600; padding-bottom: 5px; }
+
+.spark { display: flex; align-items: flex-end; gap: 2px; height: 46px; }
+.spark .b { flex: 1; border-radius: 2px 2px 0 0; min-height: 3px; transition: height .5s var(--ease), opacity .3s; opacity: .5; }
+.spark .b.now { opacity: 1; outline: 1.5px solid var(--text); outline-offset: -.5px; }
+.spark-axis { display: flex; justify-content: space-between; margin-top: 5px; font-size: 9px; color: var(--text-3); }
+
+.bento { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.span2 { grid-column: span 2; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 13px; box-shadow: var(--shadow); cursor: pointer; position: relative; overflow: hidden; transition: transform .14s var(--ease); min-height: 96px; display: flex; flex-direction: column; }
+.tile:active { transform: scale(.975); }
+.tile.tint { background: color-mix(in oklab, var(--c) var(--tint), var(--surface)); }
+.tile-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: auto; }
+.tile-ic { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: color-mix(in oklab, var(--c) 22%, transparent); color: var(--c); }
+.tile-tag { font-size: 9.5px; font-weight: 800; letter-spacing: .6px; color: var(--text-3); text-transform: uppercase; }
+.tile-val { font-size: 20px; font-weight: 800; letter-spacing: -.5px; margin-top: 12px; line-height: 1; }
+.tile-sub { font-size: 11px; color: var(--text-2); font-weight: 600; margin-top: 4px; }
+
+.sw { width: 46px; height: 28px; border-radius: 99px; flex-shrink: 0; background: var(--surface-3); border: 1px solid var(--line); position: relative; cursor: pointer; transition: background .22s var(--ease); }
+.sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,.3); transition: transform .26s var(--spring); }
+.sw.on { background: var(--c, var(--accent)); border-color: transparent; }
+.sw.on::after { transform: translateX(18px); }
+
+.pill { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 11px 12px; border-radius: 13px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text-2); cursor: pointer; font-weight: 700; font-size: 12.5px; font-family: inherit; transition: transform .12s var(--ease), background .18s, color .18s, border-color .18s, box-shadow .18s; user-select: none; }
+.pill:active { transform: scale(.96); }
+.pill .pi { width: 20px; height: 20px; flex-shrink: 0; display: grid; place-items: center; }
+.pill-lbl { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.2; }
+.pill-led { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: var(--text-3); transition: background .2s, box-shadow .2s; }
+.pill.on .pill-led { background: var(--c); box-shadow: 0 0 9px color-mix(in oklab, var(--c) 70%, transparent); }
+.pill.on { color: var(--text); background: color-mix(in oklab, var(--c) 20%, var(--surface)); border-color: color-mix(in oklab, var(--c) 48%, transparent); box-shadow: 0 0 0 1px color-mix(in oklab, var(--c) 30%, transparent), 0 0 18px color-mix(in oklab, var(--c) calc(var(--glow) * 40%), transparent); }
+.pill.on .pi { color: var(--c); }
+
+.seg { display: flex; gap: 3px; padding: 3px; border-radius: 13px; background: var(--surface-2); border: 1px solid var(--line); }
+.seg button { flex: 1; border: none; background: transparent; cursor: pointer; padding: 8px 6px; border-radius: 10px; font-weight: 700; font-size: 12px; color: var(--text-2); font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 6px; transition: color .18s; }
+.seg button.on { color: var(--text); background: var(--surface); box-shadow: var(--shadow); }
+.seg.accent button.on { color: #07140e; background: var(--c, var(--accent)); }
+
+.stepper { display: flex; align-items: center; gap: 10px; }
+.step-btn { width: 40px; height: 40px; border-radius: 12px; cursor: pointer; background: var(--surface-2); border: 1px solid var(--line); color: var(--text); display: grid; place-items: center; transition: transform .1s, background .15s; }
+.step-btn:active { transform: scale(.9); background: var(--surface-3); }
+.step-val { flex: 1; text-align: center; font-size: 26px; font-weight: 800; letter-spacing: -1px; }
+
+.presets { display: flex; gap: 6px; }
+.preset { flex: 1; padding: 8px 4px; border-radius: 10px; cursor: pointer; background: var(--surface-2); border: 1px solid var(--line); color: var(--text-2); font-weight: 700; font-size: 12.5px; font-family: inherit; transition: all .14s; }
+.preset:active { transform: scale(.94); }
+.preset.cur { background: color-mix(in oklab, var(--c) 22%, var(--surface)); border-color: color-mix(in oklab, var(--c) 45%, transparent); color: var(--text); }
+
+.leds { display: flex; gap: 7px; flex-wrap: wrap; }
+.led { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-2); font-weight: 600; background: var(--surface-2); border-radius: 8px; padding: 5px 9px; }
+.led i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); }
+.led.on i { background: var(--ok); box-shadow: 0 0 7px var(--ok); }
+
+.cells { display: grid; gap: 7px; }
+.cells.c3 { grid-template-columns: repeat(3, 1fr); }
+.cells.c2 { grid-template-columns: repeat(2, 1fr); }
+.cell { background: var(--surface-2); border-radius: 11px; padding: 9px 6px; text-align: center; }
+.cell .v { font-size: 17px; font-weight: 800; letter-spacing: -.5px; }
+.cell .l { font-size: 9.5px; color: var(--text-2); font-weight: 600; margin-top: 2px; }
+
+.sep { height: 1px; background: var(--line); margin: 13px 0; }
+.sec-lbl { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--text-3); margin: 14px 4px 8px; }
+
+.scenes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+.scene { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 13px 6px; border-radius: var(--r-md); cursor: pointer; background: var(--surface); border: 1px solid var(--line); color: var(--text); font-weight: 700; font-size: 11.5px; transition: transform .12s var(--ease), border-color .15s; font-family: inherit; }
+.scene:active { transform: scale(.95); }
+.scene .si { width: 22px; height: 22px; color: var(--accent); }
+
+.nav { position: absolute; bottom: 0; left: 0; right: 0; z-index: 40; display: grid; grid-template-columns: repeat(4, 1fr); padding: 9px 10px calc(8px + env(safe-area-inset-bottom, 16px)); background: color-mix(in oklab, var(--bg) 72%, transparent); backdrop-filter: blur(18px) saturate(160%); -webkit-backdrop-filter: blur(18px) saturate(160%); border-top: 1px solid var(--line); }
+.nav-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; cursor: pointer; font-family: inherit; color: var(--text-3); font-size: 10px; font-weight: 700; transition: color .18s; }
+.nav-btn .ni { width: 24px; height: 24px; position: relative; transition: transform .2s var(--spring); }
+.nav-btn.on { color: var(--accent); }
+.nav-btn.on .ni { transform: translateY(-1px); }
+
+.alert { border-radius: var(--r-md); padding: 13px 14px; margin-bottom: 12px; background: color-mix(in oklab, var(--sec) 16%, var(--surface)); border: 1px solid color-mix(in oklab, var(--sec) 45%, transparent); animation: rise .3s var(--ease) both; }
+.alert-hd { display: flex; align-items: center; gap: 8px; font-weight: 800; color: var(--sec); margin-bottom: 8px; }
+.alert ul { list-style: none; margin-bottom: 11px; }
+.alert li { font-size: 12.5px; color: var(--text); padding: 2px 0; font-weight: 600; }
+.alert-btns { display: flex; gap: 7px; }
+.abtn { flex: 1; padding: 9px; border-radius: 10px; border: none; font-weight: 700; font-size: 12px; cursor: pointer; font-family: inherit; }
+.abtn.solid { background: var(--sec); color: #fff; }
+.abtn.out { background: transparent; border: 1px solid color-mix(in oklab, var(--sec) 50%, transparent); color: var(--sec); }
+
+.ring-wrap { position: relative; display: grid; place-items: center; }
+.ring-center { position: absolute; text-align: center; }
+
+.toast { position: absolute; z-index: 90; left: 50%; bottom: 92px; transform: translateX(-50%) translateY(14px); background: var(--surface-3); color: var(--text); border: 1px solid var(--line-2); padding: 10px 16px; border-radius: 13px; font-weight: 700; font-size: 12.5px; white-space: nowrap; max-width: 88%; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 10px 30px rgba(0,0,0,.4); opacity: 0; pointer-events: none; transition: opacity .2s, transform .25s var(--spring); display: flex; align-items: center; gap: 8px; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast .tdot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+
+.bar { height: 6px; border-radius: 4px; background: var(--surface-3); overflow: hidden; }
+.bar > i { display: block; height: 100%; border-radius: 4px; transition: width .5s var(--ease); }
+
+.crow { display: grid; grid-template-columns: 22px 1fr auto auto; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.crow:last-child { border-bottom: none; }
+.crow .cname { font-size: 13px; font-weight: 600; }
+.crow .ckwh { font-size: 12px; color: var(--text-2); font-weight: 600; text-align: right; }
+.crow .ccost { font-size: 13.5px; font-weight: 800; text-align: right; min-width: 52px; }
+.crow .cic { color: var(--c); }
+
+.tg-bar { display: flex; align-items: center; justify-content: space-between; padding: 4px 16px 2px; }
+.tg-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; white-space: nowrap; }
+.tg-logo { width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #06140e; }
+.tg-actions { display: flex; gap: 16px; color: var(--text-2); }
+
+/* ── Production overrides ───────────────────────────────── */
+html, body { height: 100%; margin: 0; overflow: hidden; background: #0c0d10; }
+#root { height: 100%; }
+.app { height: 100dvh !important; min-height: auto; overflow: hidden; }
+</style>
+</head>
+<body>
+<div id="root">
+  <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0c0d10;flex-direction:column;gap:14px;font-family:Manrope,sans-serif">
+    <div style="width:30px;height:30px;border:3px solid rgba(95,224,166,.15);border-top-color:#5fe0a6;border-radius:50%;animation:_spin .8s linear infinite"></div>
+    <span style="color:#5a6473;font-size:13px;font-weight:600">Загрузка…</span>
+  </div>
+</div>
+<style>@keyframes _spin{to{transform:rotate(360deg)}}</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.7/babel.min.js" integrity="sha384-ezQ6HS3FLspd9te19o2McUV6FAK091+GG7KO54f/R8DKgCDi7fULhapNrd5LY+vG" crossorigin="anonymous"></script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<!-- Tweaks panel -->
+<script type="text/babel">
+(function () {
+  const { useState, useEffect, useCallback } = React;
+
+  function useTweaks(defaults) {
+    const stored = (() => { try { const s=JSON.parse(localStorage.getItem('sh7_tweaks')||'{}'); delete s.dark; return s; } catch { return {}; } })();
+    const [t, setT] = useState({ ...defaults, ...stored });
+    const setTweak = useCallback((k, v) => {
+      setT(prev => {
+        const next = { ...prev, [k]: v };
+        try { localStorage.setItem('sh7_tweaks', JSON.stringify(next)); } catch {}
+        return next;
+      });
+    }, []);
+    return [t, setTweak];
+  }
+
+  function TweaksPanel({ title, children }) {
+    const [open, setOpen] = useState(false);
+    useEffect(() => {
+      const h = e => { if ((e.origin===window.location.origin||e.origin==='null') && e.data==='__activate_edit_mode') setOpen(true); };
+      window.addEventListener('message', h);
+      return () => window.removeEventListener('message', h);
+    }, []);
+    if (!open) return null;
+    return (
+      <div style={{ position:'fixed',top:0,right:0,bottom:0,zIndex:999,width:260,background:'var(--surface)',borderLeft:'1px solid var(--line)',padding:16,overflowY:'auto',boxShadow:'-10px 0 30px rgba(0,0,0,.4)' }}>
+        <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16 }}>
+          <b style={{ fontSize:15 }}>{title}</b>
+          <button onClick={() => setOpen(false)} style={{ background:'none',border:'none',cursor:'pointer',color:'var(--text)',fontSize:20,lineHeight:1 }}>✕</button>
+        </div>
+        {children}
+      </div>
+    );
+  }
+
+  function TweakSection({ label }) {
+    return <div style={{ fontSize:10,fontWeight:800,letterSpacing:1.2,textTransform:'uppercase',color:'var(--text-3)',margin:'14px 0 8px' }}>{label}</div>;
+  }
+  function TweakToggle({ label, value, onChange }) {
+    return (
+      <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 0' }}>
+        <span style={{ fontSize:13,fontWeight:600 }}>{label}</span>
+        <div className={'sw'+(value?' on':'')} style={{'--c':'var(--accent)'}} onClick={() => onChange(!value)} />
+      </div>
+    );
+  }
+  function TweakColor({ label, value, options, onChange }) {
+    return (
+      <div style={{ padding:'8px 0' }}>
+        <div style={{ fontSize:13,fontWeight:600,marginBottom:8 }}>{label}</div>
+        <div style={{ display:'flex',gap:8 }}>
+          {options.map(c => <div key={c} onClick={() => onChange(c)} style={{ width:28,height:28,borderRadius:8,background:c,cursor:'pointer',outline:value===c?'2.5px solid var(--text)':'none',outlineOffset:2 }} />)}
+        </div>
+      </div>
+    );
+  }
+  function TweakRadio({ label, value, options, onChange }) {
+    return (
+      <div style={{ padding:'8px 0' }}>
+        <div style={{ fontSize:13,fontWeight:600,marginBottom:8 }}>{label}</div>
+        <div style={{ display:'flex',gap:6 }}>
+          {options.map(o => (
+            <button key={o.value} onClick={() => onChange(o.value)} style={{ padding:'6px 12px',borderRadius:8,border:'1px solid var(--line)',background:value===o.value?'var(--accent)':'var(--surface-2)',color:value===o.value?'#07140e':'var(--text)',fontWeight:700,fontSize:12,cursor:'pointer',fontFamily:'inherit' }}>{o.label}</button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  Object.assign(window, { useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, TweakRadio });
+})();
+</script>
+
+<!-- Icons -->
+<script type="text/babel">
+(function () {
+  const P = {
+    home: <path d="M3 10.5 12 3l9 7.5M5.5 9.5V20h13V9.5M9.5 20v-5h5v5" />,
+    sliders: <g><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2.2" /><circle cx="8" cy="17" r="2.2" /></g>,
+    activity: <path d="M3 13h3l2.5-7 4 14 3-9 1.6 2H21" />,
+    shield: <path d="M12 3 5 5.5V11c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V5.5L12 3Z" />,
+    bolt: <path d="M13 2 5 13h6l-1 9 8-12h-6l1-8Z" />,
+    car: <g><path d="M3 13.5 4.8 8a3 3 0 0 1 2.8-2h8.8a3 3 0 0 1 2.8 2l1.8 5.5" /><path d="M3 13.5h18V18a1 1 0 0 1-1 1h-1.5a1 1 0 0 1-1-1v-1H6.5v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4.5Z" /><path d="M6.5 16h.5M17 16h.5" /></g>,
+    flame: <path d="M12 3c.6 3-2 4-2 7a2.2 2.2 0 0 0 4.3.6c1.4 1 2.2 2.6 2.2 4.4a4.5 4.5 0 1 1-9 0c0-3.2 2.5-4.6 2.5-7.5C10 8 11 6 12 3Z" />,
+    droplet: <path d="M12 3c3 4 6 6.8 6 10.5a6 6 0 0 1-12 0C6 9.8 9 7 12 3Z" />,
+    thermo: <g><path d="M10 13.5V5a2 2 0 0 1 4 0v8.5a4 4 0 1 1-4 0Z" /><circle cx="12" cy="17" r="1.4" fill="currentColor" stroke="none" /></g>,
+    plug: <g><path d="M9 2v5M15 2v5M6 7h12v3a6 6 0 0 1-12 0V7Z" /><path d="M12 16v6" /></g>,
+    bulb: <g><path d="M9 17h6M10 21h4M8.5 14a5.5 5.5 0 1 1 7 0c-.7.6-1 1.3-1 2.2H9.5c0-.9-.3-1.6-1-2.2Z" /></g>,
+    moon: <path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5Z" />,
+    sun: <g><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19" /></g>,
+    refresh: <path d="M20 11a8 8 0 1 0-.8 4.5M20 6v5h-5" />,
+    chevR: <path d="M9 6l6 6-6 6" />,
+    chevD: <path d="M6 9l6 6 6-6" />,
+    leaf: <path d="M5 19c0-8 6-13 14-13 0 8-5 14-13 14-1 0-2-.3-2-.3M9 15c2.5-3 5-4.5 8-5.5" />,
+    battery: <g><rect x="2.5" y="8" width="16" height="8" rx="2" /><path d="M21 11v2" /></g>,
+    door: <g><path d="M5 21V4a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v17M4 21h14" /><circle cx="13" cy="12" r="1" fill="currentColor" stroke="none" /></g>,
+    smoke: <g><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="2.2" /><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2" /></g>,
+    gauge: <g><path d="M4 16a8 8 0 1 1 16 0" /><path d="M12 16l4-4" /><circle cx="12" cy="16" r="1.4" fill="currentColor" stroke="none" /></g>,
+    clock: <g><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></g>,
+    plus: <path d="M12 5v14M5 12h14" />,
+    minus: <path d="M5 12h14" />,
+    power: <g><path d="M12 3v8" /><path d="M6.5 7a8 8 0 1 0 11 0" /></g>,
+    play: <path d="M7 4.5 19 12 7 19.5v-15Z" />,
+    stop: <rect x="6" y="6" width="12" height="12" rx="2" />,
+    x: <path d="M6 6l12 12M18 6 6 18" />,
+    bell: <path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2ZM9.5 20a2.5 2.5 0 0 0 5 0" />,
+    walk: <g><circle cx="13" cy="4.5" r="1.6" /><path d="M11 9l3-1 2 3 2 1M11 9l-1.5 4 2 2 .5 5M9.5 13 7 16" /></g>,
+    check: <path d="M5 12.5 10 17.5 19.5 6.5" />,
+    fan: <g><circle cx="12" cy="12" r="2" /><path d="M12 10c0-4 1-7 0-8-2 1-3 4-2 6M14 12c4 0 7 1 8 0-1-2-4-3-6-2M12 14c0 4-1 7 0 8 2-1 3-4 2-6M10 12c-4 0-7-1-8 0 1 2 4 3 6 2" /></g>,
+    arrowUR: <path d="M7 17 17 7M9 7h8v8" />,
+    wifi: <path d="M5 12.5a10 10 0 0 1 14 0M8 15.5a6 6 0 0 1 8 0M12 18.5h.01" />,
+    temp: <g><path d="M14 13.5V5a2 2 0 0 0-4 0v8.5a4 4 0 1 0 4 0Z" /></g>,
+    dollar: <g><path d="M12 3v18" /><path d="M16 7.5C16 5.5 14.2 4.5 12 4.5S8 5.5 8 7.5 9.8 10.5 12 10.5s4 1 4 3-1.8 3-4 3-4-1-4-3" /></g>,
+    lock: <g><rect x="5" y="10.5" width="14" height="10" rx="2.5" /><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" /><circle cx="12" cy="15.2" r="1.2" fill="currentColor" stroke="none" /></g>,
+    unlock: <g><rect x="5" y="10.5" width="14" height="10" rx="2.5" /><path d="M8 10.5V8a4 4 0 0 1 7.8-1.2" /><circle cx="12" cy="15.2" r="1.2" fill="currentColor" stroke="none" /></g>,
+    valve: <g><circle cx="12" cy="12" r="4" /><path d="M12 8V3M9 3h6M12 16v5M9 21h6M16 12h5M21 9v6M8 12H3M3 9v6" /></g>,
+  };
+  function Icon({ name, size = 22, stroke = 1.7, style, className }) {
+    const node = P[name];
+    if (!node) return null;
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{ display:'block', ...style }} className={className}>
+        {node}
+      </svg>
+    );
+  }
+  window.Icon = Icon;
+})();
+</script>
+
+<!-- UI components -->
+<script type="text/babel">
+(function () {
+  const { useState } = React;
+
+  function tierOf(c) {
+    if (c < 8) return { key: 'cheap', label: 'ДЁШЕВО', v: 'var(--ev)' };
+    if (c < 16) return { key: 'mid', label: 'СРЕДНЕ', v: 'var(--plug)' };
+    return { key: 'high', label: 'ДОРОГО', v: 'var(--sec)' };
+  }
+  const tierColor = (c) => c < 8 ? '#5fe0a6' : c < 16 ? '#ffd84d' : '#ff5d57';
+
+  function Ring({ size = 92, value = 0, color = 'var(--accent)', thickness = 8, track, children, cap = true }) {
+    const r = (size - thickness) / 2;
+    const circ = 2 * Math.PI * r;
+    const off = circ * (1 - Math.max(0, Math.min(1, value)));
+    return (
+      <div className="ring-wrap" style={{ width: size, height: size }}>
+        <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={track || 'var(--surface-3)'} strokeWidth={thickness} />
+          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={thickness} strokeDasharray={circ} strokeDashoffset={off} strokeLinecap={cap ? 'round' : 'butt'} style={{ transition:'stroke-dashoffset .7s cubic-bezier(.4,0,.2,1)' }} />
+        </svg>
+        {children && <div className="ring-center">{children}</div>}
+      </div>
+    );
+  }
+
+  function Spark({ data, nowHour, height = 46, onClick }) {
+    const max = Math.max(...data, 1);
+    return (
+      <div onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
+        <div className="spark" style={{ height }}>
+          {data.map((c, h) => <div key={h} className={'b'+(h===nowHour?' now':'')} style={{ height:`${Math.max(8,c/max*100)}%`, background:tierColor(c) }} />)}
+        </div>
+        <div className="spark-axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
+      </div>
+    );
+  }
+
+  function PriceClock({ data, nowHour, size = 230 }) {
+    const cx = size/2, cy = size/2;
+    const rOut = size/2-6, rIn = size/2-26;
+    const max = Math.max(...data, 1);
+    const seg = [];
+    for (let h = 0; h < 24; h++) {
+      const a0 = h/24*2*Math.PI - Math.PI/2 + 0.012;
+      const a1 = (h+1)/24*2*Math.PI - Math.PI/2 - 0.012;
+      const lvl = 0.45 + 0.55*(data[h]/max);
+      const ri = rIn, ro = rIn + (rOut-rIn)*lvl;
+      const p = (a,r) => [cx+Math.cos(a)*r, cy+Math.sin(a)*r];
+      const [x0,y0]=p(a0,ri),[x1,y1]=p(a1,ri),[x2,y2]=p(a1,ro),[x3,y3]=p(a0,ro);
+      seg.push(<path key={h} d={`M${x0} ${y0} A${ri} ${ri} 0 0 1 ${x1} ${y1} L${x2} ${y2} A${ro} ${ro} 0 0 0 ${x3} ${y3} Z`} fill={tierColor(data[h])} opacity={h===nowHour?1:0.42} style={{ transition:'opacity .4s' }} />);
+    }
+    const ha = nowHour/24*2*Math.PI - Math.PI/2;
+    const hx = cx+Math.cos(ha)*(rOut-1), hy = cy+Math.sin(ha)*(rOut-1);
+    return (
+      <svg width={size} height={size}>
+        {seg}
+        <line x1={cx} y1={cy} x2={hx} y2={hy} stroke="var(--text)" strokeWidth="2.5" strokeLinecap="round" />
+        <circle cx={cx} cy={cy} r="4" fill="var(--text)" />
+      </svg>
+    );
+  }
+
+  function Switch({ on, onChange, color = 'var(--accent)' }) {
+    return <div className={'sw'+(on?' on':'')} style={{'--c':color}} onClick={e => { e.stopPropagation(); onChange(!on); }} />;
+  }
+
+  function Pill({ on, onClick, color, icon, children, knob }) {
+    const { Icon } = window;
+    return (
+      <button className={'pill'+(on?' on':'')} style={{'--c':color}} onClick={onClick}>
+        {icon && <span className="pi"><Icon name={icon} size={18} /></span>}
+        <span className="pill-lbl">{children}</span>
+        {knob ? <Switch on={on} onChange={() => onClick()} color={color} /> : <span className={'pill-led'+(on?' on':'')} />}
+      </button>
+    );
+  }
+
+  function Seg({ value, options, onChange, accent, color = 'var(--accent)' }) {
+    return (
+      <div className={'seg'+(accent?' accent':'')} style={{'--c':color}}>
+        {options.map(o => <button key={o.v} className={value===o.v?'on':''} onClick={() => onChange(o.v)}>{o.icon&&window.Icon&&<window.Icon name={o.icon} size={15} />}{o.t}</button>)}
+      </div>
+    );
+  }
+
+  function Stepper({ value, unit = '°', step = 1, min = 0, max = 99, onChange, color = 'var(--accent)' }) {
+    const { Icon } = window;
+    return (
+      <div className="stepper">
+        <button className="step-btn" onClick={() => onChange(Math.max(min,value-step))}><Icon name="minus" size={20} /></button>
+        <div className="step-val mono" style={{ color }}>{value}<span style={{ fontSize:15,color:'var(--text-2)' }}>{unit}</span></div>
+        <button className="step-btn" onClick={() => onChange(Math.min(max,value+step))}><Icon name="plus" size={20} /></button>
+      </div>
+    );
+  }
+
+  function Card({ system, icon, title, sub, right, children, onClick, style }) {
+    const { Icon } = window;
+    const sysVar = system ? `var(--${system})` : undefined;
+    return (
+      <div className={'card'+(system?' tint':'')} style={{'--c':sysVar,marginBottom:12,...style}} onClick={onClick}>
+        {(title||icon) && (
+          <div className="card-hd">
+            {icon && <div className="ic"><Icon name={icon} size={18} /></div>}
+            <div style={{ flex:1 }}><div className="tt">{title}</div>{sub&&<div className="ss">{sub}</div>}</div>
+            {right}
+          </div>
+        )}
+        {children}
+      </div>
+    );
+  }
+
+  function Tile({ system, icon, tag, value, sub, onClick, children, span2, valueColor }) {
+    const { Icon } = window;
+    const sysVar = system ? `var(--${system})` : undefined;
+    return (
+      <div className={'tile tint'+(span2?' span2':'')} style={{'--c':sysVar}} onClick={onClick}>
+        <div className="tile-hd">
+          <div className="tile-ic"><Icon name={icon} size={18} /></div>
+          {tag && <span className="tile-tag">{tag}</span>}
+        </div>
+        {children || <>
+          <div className="tile-val mono" style={{ color:valueColor }}>{value}</div>
+          {sub && <div className="tile-sub">{sub}</div>}
+        </>}
+      </div>
+    );
+  }
+
+  Object.assign(window, { tierOf, tierColor, Ring, Spark, PriceClock, Switch, Pill, Seg, Stepper, Card, Tile });
+})();
+</script>
+
+<!-- Home screen -->
+<script type="text/babel">
+(function () {
+  const { Card, Tile, Spark, PriceClock, Ring, Icon, tierOf } = window;
+
+  function PriceBadge({ c }) {
+    const t = tierOf(c);
+    return <span className={'badge '+t.key}>{t.label}</span>;
+  }
+
+  function CostBars({ items }) {
+    const max = Math.max(...items.map(i => i.cost), 0.01);
+    return (
+      <div style={{ display:'flex',flexDirection:'column',gap:9,marginTop:13 }}>
+        {items.map(i => (
+          <div key={i.key} style={{ display:'flex',alignItems:'center',gap:10 }}>
+            <span style={{ color:`var(--${i.system})`,display:'grid',placeItems:'center',width:18 }}><Icon name={i.icon} size={16} /></span>
+            <span style={{ width:66,fontSize:12,fontWeight:600 }}>{i.name}</span>
+            <div className="bar" style={{ flex:1 }}><i style={{ width:`${(i.cost/max)*100}%`,background:`var(--${i.system})` }} /></div>
+            <span className="mono" style={{ fontSize:12.5,fontWeight:800,width:44,textAlign:'right' }}>{i.cost.toFixed(2)}€</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  function StatusChip({ system, icon, label, value, dot, onClick }) {
+    return (
+      <div className="tile tint" style={{'--c':`var(--${system})`,minHeight:0,padding:11,cursor:'pointer'}} onClick={onClick}>
+        <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+          <span style={{ color:`var(--${system})` }}><Icon name={icon} size={17} /></span>
+          <span style={{ fontSize:10.5,fontWeight:800,letterSpacing:'.4px',color:'var(--text-3)',textTransform:'uppercase' }}>{label}</span>
+          {dot && <span className={'dot '+dot} style={{ marginLeft:'auto' }} />}
+        </div>
+        <div className="mono" style={{ fontSize:14,fontWeight:800,marginTop:7 }}>{value}</div>
+      </div>
+    );
+  }
+
+  function Scenes({ actions }) {
+    const list = [{ k:'night',t:'Ночь',icon:'moon' },{ k:'away',t:'Ушли',icon:'walk' },{ k:'eco',t:'Экономия',icon:'leaf' }];
+    return (
+      <div className="scenes">
+        {list.map(s => <button key={s.k} className="scene" onClick={() => actions.scene(s.k)}><span className="si"><Icon name={s.icon} size={22} /></span>{s.t}</button>)}
+      </div>
+    );
+  }
+
+  function DirA({ data, actions, go }) {
+    const p = data.price;
+    return (
+      <div className="stagger">
+        <Card system="price" icon="bolt" title="Электричество" sub="Nord Pool · Латвия" right={<PriceBadge c={p.now} />}>
+          <div className="readout" style={{ marginTop:4 }}>
+            <span className="num mono" style={{ color:'var(--price)' }}>{p.now.toFixed(1)}</span>
+            <span className="unit">¢/кВт·ч</span>
+          </div>
+          <div style={{ margin:'13px 0 2px' }}><Spark data={p.arr} nowHour={p.nowHour} onClick={() => go(2)} /></div>
+          <div style={{ display:'flex',alignItems:'center',gap:8,marginTop:11,padding:'9px 11px',background:'var(--surface-2)',borderRadius:12 }}>
+            <span style={{ color:'var(--ev)' }}><Icon name="leaf" size={16} /></span>
+            <span style={{ fontSize:12.5,fontWeight:600 }}>Дешёвое окно: <b className="mono">{p.cheapWindow}</b></span>
+            <span className="mono" style={{ marginLeft:'auto',fontWeight:800,color:'var(--text-2)' }}>след {p.next.toFixed(1)}¢</span>
+          </div>
+        </Card>
+        <Card>
+          <div className="card-row">
+            <div><div className="eyebrow">Расход сегодня</div><div className="readout" style={{ marginTop:6 }}><span className="num mono">{data.cost.total.toFixed(2)}</span><span className="unit">€</span></div></div>
+            <div style={{ textAlign:'right' }}><div className="mono" style={{ fontSize:18,fontWeight:800 }}>{data.cost.kwh.toFixed(1)}</div><div className="t-sub">кВт·ч</div></div>
+          </div>
+          <CostBars items={data.cost.items.slice(0,4)} />
+        </Card>
+        <div className="bento">
+          <StatusChip system="sec" icon={data.security.armed?'lock':'unlock'} label="Охрана" value={data.security.armed?'На охране':'Снята'} dot={data.security.alerts.length?'err':'ok'} onClick={() => go(3)} />
+          <StatusChip system="ev" icon="car" label="Зарядка" value={data.ev.short} onClick={() => go(1)} />
+          <StatusChip system="boil" icon="flame" label="Котёл" value={`${data.boiler.co}° / ${data.boiler.cwu}°`} onClick={() => go(1)} />
+          <StatusChip system="water" icon="valve" label="Кран" value={data.water.open?'Открыт':'Закрыт'} dot={data.water.open?'ok':'err'} onClick={() => actions.openValve()} />
+        </div>
+        <div className="sec-lbl">Быстрые сцены</div>
+        <Scenes actions={actions} />
+      </div>
+    );
+  }
+
+  function DirB({ data, actions, go }) {
+    const p = data.price;
+    return (
+      <div>
+        <div className="bento stagger">
+          <Tile system="price" icon="bolt" tag="Nord Pool" span2 onClick={() => go(2)}>
+            <div style={{ display:'flex',alignItems:'flex-end',justifyContent:'space-between',marginTop:10 }}>
+              <div>
+                <div className="readout"><span className="num mono" style={{ color:'var(--price)',fontSize:40 }}>{p.now.toFixed(1)}</span><span className="unit">¢</span></div>
+                <div style={{ marginTop:8 }}><PriceBadge c={p.now} /></div>
+              </div>
+              <div style={{ width:130 }}><Spark data={p.arr} nowHour={p.nowHour} height={42} /></div>
+            </div>
+          </Tile>
+          <Tile system="ev" icon="dollar" tag="Сегодня" onClick={() => go(2)}>
+            <div className="tile-val mono" style={{ fontSize:26 }}>{data.cost.total.toFixed(2)}€</div>
+            <div className="tile-sub">{data.cost.kwh.toFixed(1)} кВт·ч</div>
+          </Tile>
+          <Tile system="ev" icon="car" tag="EV" onClick={() => go(1)}>
+            <div style={{ display:'flex',alignItems:'center',gap:12,marginTop:10 }}>
+              <Ring size={54} value={data.ev.pct} color="var(--ev)" thickness={6}>
+                <span className="mono" style={{ fontSize:13,fontWeight:800 }}>{data.ev.pct>0?Math.round(data.ev.pct*100):'—'}</span>
+              </Ring>
+              <div>
+                <div className="mono" style={{ fontWeight:800,fontSize:15 }}>{data.ev.kwh.toFixed(1)}</div>
+                <div className="tile-sub">кВт·ч · {data.ev.short}</div>
+              </div>
+            </div>
+          </Tile>
+          <Tile system="boil" icon="flame" tag="Котёл" onClick={() => go(1)}>
+            <div style={{ display:'flex',gap:14,marginTop:12 }}>
+              <div><div className="mono" style={{ fontWeight:800,fontSize:18,color:'var(--boil)' }}>{data.boiler.co}°</div><div className="tile-sub">CO</div></div>
+              <div><div className="mono" style={{ fontWeight:800,fontSize:18,color:'var(--boil)' }}>{data.boiler.cwu}°</div><div className="tile-sub">ГВС</div></div>
+            </div>
+          </Tile>
+          <Tile system="sec" icon={data.security.armed?'lock':'shield'} tag="Охрана" onClick={() => go(3)}>
+            <div className="tile-val" style={{ fontSize:16 }}>{data.security.armed?'На охране':'Снята'}</div>
+            <div className="tile-sub" style={{ display:'flex',alignItems:'center',gap:6 }}>
+              <span className={'dot '+(data.security.alerts.length?'err':'ok')} />{data.security.alerts.length?`${data.security.alerts.length} тревоги`:'Всё ОК'}
+            </div>
+          </Tile>
+          <Tile system="floor" icon="thermo" tag="Пол" onClick={() => go(1)}>
+            <div className="tile-val mono" style={{ fontSize:18,color:'var(--floor)' }}>{data.floor[0].temp}°</div>
+            <div className="tile-sub">{data.floor[0].name} · {data.floor[0].mode==='auto'?'авто':'ручной'}</div>
+          </Tile>
+          <Tile system="light" icon="bulb" tag="Свет" onClick={() => go(1)}>
+            <div className="tile-val mono" style={{ fontSize:22,color:'var(--light)' }}>{data.lights.filter(l=>l.on).length}<span style={{ fontSize:13,fontWeight:600,color:'var(--text-2)' }}>/{data.lights.length}</span></div>
+            <div className="tile-sub">{data.lights.filter(l=>l.on).length===0?'Всё выкл.':'включено'}</div>
+          </Tile>
+        </div>
+        <div className="sec-lbl">Быстрые сцены</div>
+        <Scenes actions={actions} />
+      </div>
+    );
+  }
+
+  function DirC({ data, actions, go }) {
+    const p = data.price;
+    return (
+      <div className="stagger">
+        <div className="card" style={{'--c':'var(--price)',display:'flex',flexDirection:'column',alignItems:'center',padding:'20px 16px 18px'}}>
+          <div className="eyebrow" style={{ marginBottom:12 }}>Цена · 24 часа</div>
+          <div style={{ position:'relative',display:'grid',placeItems:'center' }}>
+            <PriceClock data={p.arr} nowHour={p.nowHour} size={232} />
+            <div style={{ position:'absolute',textAlign:'center' }}>
+              <div className="mono" style={{ fontSize:44,fontWeight:800,letterSpacing:'-2px',color:'var(--price)',lineHeight:.9 }}>{p.now.toFixed(1)}</div>
+              <div className="t-sub" style={{ fontWeight:700 }}>¢/кВт·ч</div>
+              <div style={{ marginTop:8 }}><PriceBadge c={p.now} /></div>
+            </div>
+          </div>
+          <div style={{ display:'flex',gap:16,marginTop:14,fontSize:11,fontWeight:700,color:'var(--text-2)' }}>
+            <span style={{ display:'flex',alignItems:'center',gap:5 }}><i style={{ width:9,height:9,borderRadius:3,background:'var(--ev)' }} />дёшево</span>
+            <span style={{ display:'flex',alignItems:'center',gap:5 }}><i style={{ width:9,height:9,borderRadius:3,background:'var(--plug)' }} />средне</span>
+            <span style={{ display:'flex',alignItems:'center',gap:5 }}><i style={{ width:9,height:9,borderRadius:3,background:'var(--sec)' }} />дорого</span>
+          </div>
+          <div style={{ marginTop:14,padding:'10px 14px',background:'var(--surface-2)',borderRadius:12,fontSize:12.5,fontWeight:600,display:'flex',alignItems:'center',gap:8 }}>
+            <span style={{ color:'var(--ev)' }}><Icon name="leaf" size={16} /></span>Дешёвое окно <b className="mono">{p.cheapWindow}</b>
+          </div>
+        </div>
+        <div className="card card-row">
+          <div><div className="eyebrow">Расход сегодня</div><div className="readout" style={{ marginTop:5 }}><span className="num mono" style={{ fontSize:32 }}>{data.cost.total.toFixed(2)}</span><span className="unit">€</span></div></div>
+          <button className="icon-btn" style={{ width:44,height:44 }} onClick={() => go(2)}><Icon name="arrowUR" size={20} /></button>
+        </div>
+        <div className="sec-lbl">Быстрые сцены</div>
+        <Scenes actions={actions} />
+      </div>
+    );
+  }
+
+  function HomeScreen({ data, actions, go, layout, setLayout }) {
+    const { Seg } = window;
+    const opts = [{ v:'A',t:'Лента' },{ v:'B',t:'Панель' },{ v:'C',t:'Фокус' }];
+    return (
+      <div className="screen">
+        <div style={{ margin:'2px 0 14px' }}><Seg value={layout} options={opts} onChange={setLayout} /></div>
+        {layout==='A' && <DirA data={data} actions={actions} go={go} />}
+        {layout==='B' && <DirB data={data} actions={actions} go={go} />}
+        {layout==='C' && <DirC data={data} actions={actions} go={go} />}
+      </div>
+    );
+  }
+
+  window.HomeScreen = HomeScreen;
+})();
+</script>
+
+<!-- Control screen -->
+<script type="text/babel">
+(function () {
+  const { Card, Seg, Pill, Icon, Ring } = window;
+
+  function ModeBadge({ mode }) {
+    const map = { work:{t:'Работа',c:'var(--ev)'}, watch:{t:'Надзор',c:'var(--plug)'}, off:{t:'Выключен',c:'var(--text-2)'}, alarm:{t:'Авария',c:'var(--sec)'} };
+    const m = map[mode] || map.off;
+    return <span className="badge" style={{ background:`color-mix(in oklab, ${m.c} 20%, transparent)`,color:m.c }}><span className="dot" style={{ background:m.c,width:6,height:6 }} />{m.t}</span>;
+  }
+
+  function ControlScreen({ data, actions }) {
+    const b = data.boiler, ev = data.ev;
+    return (
+      <div className="screen stagger">
+        <Card system="boil" icon="flame" title="Котёл ecoNET24" sub={`CO ${b.co}°→${b.coSet}° · ГВС ${b.cwu}°→${b.cwuSet}°`} right={<ModeBadge mode={b.mode} />}>
+          <div className="cells c3" style={{ marginTop:2 }}>
+            <div className="cell"><div className="v mono" style={{ color:'var(--boil)' }}>{b.co}°</div><div className="l">CO темп</div></div>
+            <div className="cell"><div className="v mono">{b.coSet}°</div><div className="l">CO задано</div></div>
+            <div className="cell"><div className="v mono">{b.ret}°</div><div className="l">Обратка</div></div>
+            <div className="cell"><div className="v mono" style={{ color:'var(--boil)' }}>{b.cwu}°</div><div className="l">ГВС темп</div></div>
+            <div className="cell"><div className="v mono">{b.cwuSet}°</div><div className="l">ГВС задано</div></div>
+            <div className="cell"><div className="v mono">{b.fan}%</div><div className="l">Вентилятор</div></div>
+          </div>
+          <div className="leds" style={{ marginTop:11 }}>
+            <span className={'led'+(b.pumpCo?' on':'')}><i />CO насос</span>
+            <span className={'led'+(b.pumpCwu?' on':'')}><i />ГВС насос</span>
+            <span className={'led'+(b.pumpCirc?' on':'')}><i />Циркуляция</span>
+          </div>
+          <div className="sep" />
+          <Seg value={b.power?'on':'off'} accent color="var(--boil)" options={[{v:'on',t:'Включён',icon:'power'},{v:'off',t:'Выключен'}]} onChange={v => actions.boilerPower(v==='on')} />
+          <div className="sec-lbl" style={{ marginLeft:0 }}>ГВС уставка</div>
+          <div className="presets" style={{'--c':'var(--boil)'}}>
+            {[40,45,50,55,60].map(t => <button key={t} className={'preset'+(b.cwuSet===t?' cur':'')} onClick={() => actions.setCwu(t)}>{t}°</button>)}
+          </div>
+          <div className="sec-lbl" style={{ marginLeft:0 }}>CO уставка</div>
+          <div className="presets" style={{'--c':'var(--boil)'}}>
+            {[50,60,68,75].map(t => <button key={t} className={'preset'+(b.coSet===t?' cur':'')} onClick={() => actions.setCo(t)}>{t}°</button>)}
+          </div>
+        </Card>
+
+        <Card system="ev" icon="car" title="EV зарядка" sub={ev.sub}>
+          <div style={{ display:'flex',alignItems:'center',gap:16 }}>
+            <Ring size={84} value={ev.pct} color="var(--ev)" thickness={8}>
+              <div style={{ textAlign:'center' }}>
+                <div className="mono" style={{ fontSize:18,fontWeight:800 }}>{ev.pct>0?Math.round(ev.pct*100)+'%':'—'}</div>
+              </div>
+            </Ring>
+            <div style={{ flex:1 }}>
+              <div className="cells c2">
+                <div className="cell"><div className="v mono" style={{ color:'var(--ev)' }}>{ev.kwh.toFixed(1)}</div><div className="l">кВт·ч сессия</div></div>
+                <div className="cell"><div className="v mono">{ev.sched}</div><div className="l">план старт</div></div>
+              </div>
+            </div>
+          </div>
+          <div className="sep" />
+          <div style={{ display:'flex',gap:8 }}>
+            <button className="pill" style={{'--c':'var(--ev)',flex:1,justifyContent:'center'}} onClick={actions.evStart}>
+              <span className="pi" style={{ color:'var(--ev)' }}><Icon name="play" size={16} /></span>Зарядить</button>
+            <button className="pill" style={{ flex:1,justifyContent:'center' }} onClick={actions.evStop}>
+              <span className="pi"><Icon name="stop" size={16} /></span>Стоп</button>
+          </div>
+          <div style={{ marginTop:8 }}>
+            <Pill on={ev.manual} color="var(--ev)" icon="sliders" knob onClick={actions.evManual}>Ручной режим</Pill>
+          </div>
+        </Card>
+
+        <Card system="floor" icon="thermo" title="Тёплый пол" sub={data.floor.map(f=>`${f.name} ${f.temp}°`).join(' · ')}>
+          {data.floor.map((f,i) => (
+            <div key={i} style={{ marginBottom:i===0?12:0 }}>
+              <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8 }}>
+                <span className="t-name">{f.name}</span>
+                <span className="mono" style={{ fontWeight:800,fontSize:17,color:'var(--floor)' }}>{f.temp}°</span>
+              </div>
+              <Seg value={f.mode} color="var(--floor)" accent options={[{v:'auto',t:'Авто',icon:'refresh'},{v:'manual',t:'Ручной 30°',icon:'flame'}]} onChange={v => actions.setFloor(i,v)} />
+            </div>
+          ))}
+        </Card>
+
+        <Card system="light" icon="bulb" title="Освещение" sub={`${data.lights.filter(l=>l.on).length} включено`}>
+          <div className="bento" style={{ gap:8 }}>
+            {data.lights.map(l => <Pill key={l.id} on={l.on} color="var(--light)" icon={l.icon} onClick={() => actions.toggleLight(l.id)}>{l.name}</Pill>)}
+          </div>
+          <button className="scene" style={{ width:'100%',flexDirection:'row',gap:9,marginTop:10 }} onClick={actions.allLightsOff}>
+            <span style={{ color:'var(--text-2)' }}><Icon name="moon" size={18} /></span>Выключить весь свет</button>
+        </Card>
+
+        <Card system="plug" icon="plug" title="Розетки" sub="Аквариум · Рециркуляция · Гидрофор · Полотенцесушитель">
+          <div className="bento" style={{ gap:8 }}>
+            {data.plugs.map(p => <Pill key={p.id} on={p.on} color="var(--plug)" icon={p.icon} onClick={() => actions.togglePlug(p.id)}>{p.name}</Pill>)}
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  window.ControlScreen = ControlScreen;
+})();
+</script>
+
+<!-- Energy screen -->
+<script type="text/babel">
+(function () {
+  const { useState } = React;
+  const { Card, Seg, Icon, tierColor, tierOf } = window;
+
+  function Chart({ data, nowHour }) {
+    const max = Math.max(...data, 1);
+    return (
+      <div>
+        <div style={{ position:'relative',height:158,display:'flex',alignItems:'flex-end',gap:2 }}>
+          {[0.25,0.5,0.75].map(g => <div key={g} style={{ position:'absolute',left:0,right:0,bottom:`${g*100}%`,height:1,background:'var(--line)' }} />)}
+          {data.map((c,h) => (
+            <div key={h} style={{ flex:1,height:`${Math.max(4,(c/max)*100)}%`,position:'relative',borderRadius:'3px 3px 0 0',background:tierColor(c),opacity:h===nowHour?1:0.46,outline:h===nowHour?'1.5px solid var(--text)':'none',outlineOffset:-1,transition:'height .5s var(--ease),opacity .3s' }}>
+              {h===nowHour && <span style={{ position:'absolute',top:-17,left:'50%',transform:'translateX(-50%)',fontSize:9,fontWeight:800,color:'var(--text)' }} className="mono">{c.toFixed(1)}</span>}
+            </div>
+          ))}
+        </div>
+        <div className="spark-axis" style={{ marginTop:6 }}><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
+      </div>
+    );
+  }
+
+  function EnergyScreen({ data }) {
+    const [period, setPeriod] = useState('1д');
+    const p = data.price;
+    const items = data.cost.items;
+    const maxCost = Math.max(...items.map(i => i.cost), 0.01);
+    return (
+      <div className="screen stagger">
+        <Card system="price" icon="activity" title="Nord Pool" sub="Цена за сегодня · ¢/кВт·ч">
+          <Chart data={p.arr} nowHour={p.nowHour} />
+          <div style={{ display:'flex',gap:10,marginTop:12 }}>
+            <div className="cell" style={{ flex:1,textAlign:'left',padding:'10px 12px' }}>
+              <div className="l" style={{ marginBottom:3 }}>Минимум</div>
+              <div className="v mono" style={{ color:'var(--ev)' }}>{p.min.toFixed(1)}¢ <span style={{ fontSize:11,color:'var(--text-2)' }}>в {String(p.minH).padStart(2,'0')}:00</span></div>
+            </div>
+            <div className="cell" style={{ flex:1,textAlign:'left',padding:'10px 12px' }}>
+              <div className="l" style={{ marginBottom:3 }}>Максимум</div>
+              <div className="v mono" style={{ color:'var(--sec)' }}>{p.max.toFixed(1)}¢ <span style={{ fontSize:11,color:'var(--text-2)' }}>в {String(p.maxH).padStart(2,'0')}:00</span></div>
+            </div>
+          </div>
+        </Card>
+        <Card icon="dollar" title="Потребление" sub={`Итого ${data.cost.total.toFixed(2)} € · ${data.cost.kwh.toFixed(1)} кВт·ч`} right={<span className="badge dim mono">{period}</span>}>
+          <div style={{ marginTop:2 }}>
+            {items.map(i => (
+              <div key={i.key} className="crow">
+                <span className="cic" style={{ color:`var(--${i.system})` }}><Icon name={i.icon} size={18} /></span>
+                <div><div className="cname">{i.name}</div><div className="bar" style={{ marginTop:5,height:4 }}><i style={{ width:`${(i.cost/maxCost)*100}%`,background:`var(--${i.system})` }} /></div></div>
+                <span className="ckwh mono">{i.kwh.toFixed(1)} кВт·ч</span>
+                <span className="ccost mono">{i.cost.toFixed(2)}€</span>
+              </div>
+            ))}
+          </div>
+          <div className="sep" />
+          <Seg value={period} options={['1д','3д','7д','30д'].map(v=>({v,t:v}))} onChange={setPeriod} accent color="var(--price)" />
+        </Card>
+      </div>
+    );
+  }
+
+  window.EnergyScreen = EnergyScreen;
+})();
+</script>
+
+<!-- Status screen -->
+<script type="text/babel">
+(function () {
+  const { Card, Seg, Icon } = window;
+
+  function SensorRow({ icon, name, ok, value }) {
+    return (
+      <div style={{ display:'flex',alignItems:'center',gap:10,padding:'11px 0',borderBottom:'1px solid var(--line)' }}>
+        <span className={'dot '+(ok?'ok':'err')} />
+        <span style={{ color:'var(--text-2)',display:'grid',placeItems:'center' }}><Icon name={icon} size={18} /></span>
+        <span style={{ flex:1,fontSize:13.5,fontWeight:600 }}>{name}</span>
+        <span className="mono" style={{ fontWeight:800,fontSize:13,color:ok?'var(--text-2)':'var(--err)' }}>{value}</span>
+      </div>
+    );
+  }
+
+  function BatItem({ name, pct }) {
+    const col = pct<=15?'var(--err)':pct<=30?'var(--warn)':'var(--ok)';
+    return (
+      <div className="cell" style={{ textAlign:'left',padding:'10px 12px' }}>
+        <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:7 }}>
+          <span style={{ fontSize:11.5,color:'var(--text-2)',fontWeight:600 }}>{name}</span>
+          <span className="mono" style={{ fontSize:12,fontWeight:800,color:col }}>{pct}%</span>
+        </div>
+        <div className="bar" style={{ height:5 }}><i style={{ width:pct+'%',background:col }} /></div>
+      </div>
+    );
+  }
+
+  function StatusScreen({ data, actions }) {
+    const s = data.security;
+    return (
+      <div className="screen stagger">
+        <Card system="sec" icon={s.armed?'lock':'shield'} title="Охрана" sub={s.armed?'Дом под охраной':'Охрана снята'}
+          right={<span className="badge" style={{ background:s.armed?'color-mix(in oklab, var(--sec) 22%, transparent)':'var(--surface-3)',color:s.armed?'var(--sec)':'var(--text-2)' }}>{s.armed?'На охране':'Снята'}</span>}>
+          <Seg value={s.armed?'arm':'dis'} accent color="var(--sec)" options={[{v:'arm',t:'Поставить',icon:'lock'},{v:'dis',t:'Снять',icon:'unlock'}]} onChange={v => actions.armSecurity(v==='arm')} />
+        </Card>
+        <Card icon="wifi" title="Датчики" sub="Протечки · дверь · дым">
+          <SensorRow icon="door"    name="Входная дверь" ok={!data.sensors.door}    value={data.sensors.door?'Открыта':'Закрыта'} />
+          <SensorRow icon="smoke"   name="Дым"           ok={!data.sensors.smoke}   value={data.sensors.smoke?'ДЫМ!':'Норма'} />
+          <SensorRow icon="droplet" name="Ванная"        ok={!data.sensors.bath}    value={data.sensors.bath?'ТЕЧЬ!':'Сухо'} />
+          <SensorRow icon="droplet" name="Душевая 1эт"   ok={!data.sensors.shower}  value={data.sensors.shower?'ТЕЧЬ!':'Сухо'} />
+          <SensorRow icon="droplet" name="Гараж"          ok={!data.sensors.garage}  value={data.sensors.garage?'ТЕЧЬ!':'Сухо'} />
+          <SensorRow icon="droplet" name="Кухня"         ok={!data.sensors.kitchen} value={data.sensors.kitchen?'ТЕЧЬ!':'Сухо'} />
+          <div style={{ height:1 }} />
+        </Card>
+        <Card icon="battery" title="Батареи" sub="Беспроводные датчики">
+          <div className="bento" style={{ gap:8 }}>
+            {data.batteries.map(b => <BatItem key={b.name} name={b.name} pct={b.pct} />)}
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  window.StatusScreen = StatusScreen;
+})();
+</script>
+
+<!-- Production App -->
+<script type="text/babel">
+(function () {
+  const { useState, useEffect, useRef, useCallback } = React;
+  const { Icon, tierOf, useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, TweakRadio } = window;
+
+  const tg = window.Telegram?.WebApp;
+  const IS_PREVIEW = window.location.protocol === 'file:';
+  const HA_URL = (window.location.protocol === 'file:' || window.location.hostname === 'localhost')
+    ? 'https://YOUR_HA_EXTERNAL_URL' : '';
+
+  const PRICE_MOCK = [5.2,4.6,4.1,3.8,4.0,5.5,9.8,14.2,17.6,15.1,11.3,8.4,6.2,5.1,5.6,7.8,11.4,16.2,20.8,22.3,19.1,14.6,10.2,7.1];
+
+  function cheapWindow(arr, from) {
+    for (let i = 0; i < 24; i++) {
+      const h = (from+i)%24;
+      if (arr[h] < 4) {
+        let end = h;
+        while (arr[(end+1)%24] < 6 && ((end+1)%24) !== from) end = (end+1)%24;
+        return `${String(h).padStart(2,'0')}:00–${String((end+1)%24).padStart(2,'0')}:00`;
+      }
+    }
+    return '—';
+  }
+
+  function makeData(nowHour) {
+    const arr = PRICE_MOCK;
+    const min = Math.min(...arr), max = Math.max(...arr);
+    const items = [
+      { key:'ev',  name:'EV зарядка',  system:'ev',    icon:'car',     kwh:22.6,cost:1.42 },
+      { key:'boil',name:'Котёл',        system:'boil',  icon:'flame',   kwh:8.4, cost:0.71 },
+      { key:'akv', name:'Аквариум',     system:'plug',  icon:'plug',    kwh:1.2, cost:0.13 },
+      { key:'rec', name:'Рециркуляция', system:'water', icon:'refresh', kwh:0.8, cost:0.09 },
+      { key:'hyd', name:'Гидрофор',     system:'water', icon:'droplet', kwh:0.6, cost:0.06 },
+    ];
+    return {
+      outside: 7.4,
+      price: { now:arr[nowHour],next:arr[(nowHour+1)%24],arr,nowHour,min,max,minH:arr.indexOf(min),maxH:arr.indexOf(max),cheapWindow:cheapWindow(arr,nowHour) },
+      cost: { total:items.reduce((s,i)=>s+i.cost,0),kwh:items.reduce((s,i)=>s+i.kwh,0),items },
+      ev: { pct:0.62,kwh:14.2,short:'Заряжается',sub:'Заряжается · план 02:00',sched:'02:00',manual:false },
+      boiler: { mode:'work',co:64,coSet:68,cwu:49,cwuSet:50,ret:52,fan:42,power:true,pumpCo:true,pumpCwu:false,pumpCirc:true },
+      floor: [{ name:'Ванная',temp:24,mode:'auto' },{ name:'Душевая 1эт',temp:23,mode:'auto' }],
+      lights: [
+        { id:'entr', name:'Прихожая',       icon:'bulb',on:false },
+        { id:'fanar',name:'Фонарь у входа', icon:'bulb',on:false },
+        { id:'isl',  name:'Кухня: Остров',  icon:'bulb',on:true  },
+        { id:'tbl',  name:'Кухня: Стол',    icon:'bulb',on:false },
+        { id:'hall', name:'Коридор 2эт',    icon:'bulb',on:false },
+        { id:'sauna',name:'Подсветка бани', icon:'bulb',on:false },
+        { id:'ver',  name:'Веранда',         icon:'bulb',on:false },
+        { id:'led1', name:'Кухня LED1',      icon:'bulb',on:false },
+        { id:'led2', name:'Кухня LED2',      icon:'bulb',on:false },
+        { id:'tv1',  name:'ТВ зона 1',       icon:'bulb',on:false },
+        { id:'tv2',  name:'ТВ зона 2',       icon:'bulb',on:false },
+        { id:'gir',  name:'Гирлянда',        icon:'bulb',on:false },
+        { id:'proj', name:'Прожектор',       icon:'bulb',on:true  },
+        { id:'akv',  name:'Над аквариумом',  icon:'bulb',on:false },
+        { id:'wall', name:'Стена',           icon:'bulb',on:false },
+        { id:'cur',  name:'Занавески',       icon:'bulb',on:false },
+        { id:'stair',name:'Лестница',        icon:'bulb',on:false },
+      ],
+      plugs: [
+        { id:'akv',name:'Аквариум',  icon:'plug',   on:true  },
+        { id:'rec',name:'Рециркул.', icon:'refresh',on:true  },
+        { id:'hyd',name:'Гидрофор',  icon:'droplet',on:false },
+        { id:'cal',name:'Полотенцесушитель', icon:'fan',    on:false },
+      ],
+      water: { open:true },
+      security: { armed:false },
+      sensors: { door:false,smoke:false,bath:false,shower:false,garage:false,kitchen:false },
+      batteries: [
+        { name:'Дверь',pct:84 },{ name:'Дым',pct:92 },
+        { name:'Ванная',pct:61 },{ name:'Гараж',pct:28 },
+        { name:'Кухня',pct:73 },{ name:'Датчик 4',pct:12 },
+      ],
+    };
+  }
+
+  const EV_STATUS_MAP = { charger_charging:'Заряжается',charger_insert:'Подключён',charger_pause:'Пауза',charger_free:'Свободен',charger_end:'Завершено',cloud_error:'Ошибка' };
+  function mapEvStatus(s) { return EV_STATUS_MAP[s] || s || '—'; }
+  function mapBoilerMode(s) {
+    if (!s) return 'off';
+    const l = String(s).toLowerCase();
+    if (l.includes('work')||l.includes('работ')) return 'work';
+    if (l.includes('watch')||l.includes('надзор')||l.includes('dogoran')||l.includes('догор')) return 'watch';
+    if (l.includes('alarm')||l.includes('авар')) return 'alarm';
+    if (l==='off'||l==='выключен'||l==='выкл') return 'off';
+    return 'watch';
+  }
+
+  function stV(S, eid) { const e = S.find(x=>x.entity_id===eid); return e?e.state:''; }
+  function stF(S, eid) { return parseFloat(stV(S,eid))||0; }
+  function stA(S, eid, key) { const e = S.find(x=>x.entity_id===eid); return e?.attributes?.[key]; }
+
+  function mapStates(S, priceArr) {
+    const nowH = new Date().getHours();
+    const priceNow = stF(S,'sensor.nord_pool_lv_current_price');
+    const arr = priceArr.length===24 ? priceArr.map(v=>v*100) : PRICE_MOCK;
+    const min = Math.min(...arr), max = Math.max(...arr);
+    const kwh = (eid,snap) => Math.max(0, stF(S,eid) - stF(S,snap));
+    const avgP = arr.reduce((a,b)=>a+b,0)/2400;
+    const schedRaw = stV(S,'input_datetime.ev_charge_start');
+    const sched = schedRaw ? schedRaw.replace('T',' ').split(' ').pop().slice(0,5) : '—';
+    const costItems = [
+      { key:'ev',  name:'EV зарядка',  system:'ev',    icon:'car',     kwh:kwh('sensor.ev_charger_energy','input_number.midnight_ev_energy') },
+      { key:'boil',name:'Котёл',        system:'boil',  icon:'flame',   kwh:kwh('sensor.boiler_total_energy','input_number.midnight_boiler_energy') },
+      { key:'akv', name:'Аквариум',     system:'plug',  icon:'plug',    kwh:kwh('sensor.akvarium_svet_total_energy','input_number.midnight_akv_energy') },
+      { key:'rec', name:'Рециркуляция', system:'water', icon:'refresh', kwh:kwh('sensor.cherepakha_total_energy','input_number.midnight_chep_energy') },
+      { key:'hyd', name:'Гидрофор',     system:'water', icon:'droplet', kwh:kwh('sensor.zigbee_plug_2_total_energy','input_number.midnight_gidro_energy') },
+    ].map(i=>({...i,cost:i.kwh*avgP}));
+    return {
+      outside: parseFloat(stV(S,'sensor.smart_weather_station_temperature'))||parseFloat(stA(S,'weather.forecast_home','temperature'))||parseFloat(stA(S,'weather.home','temperature'))||0,
+      price: { now:priceNow*100,next:arr[(nowH+1)%24],arr,nowHour:nowH,min,max,minH:arr.indexOf(min),maxH:arr.indexOf(max),cheapWindow:cheapWindow(arr,nowH) },
+      cost: { total:costItems.reduce((s,i)=>s+i.cost,0),kwh:costItems.reduce((s,i)=>s+i.kwh,0),items:costItems },
+      ev: { pct:0,kwh:parseFloat(stA(S,'sensor.ev_charger_energy','session_kwh'))||0,short:mapEvStatus(stV(S,'sensor.ev_charger_status')),sub:mapEvStatus(stV(S,'sensor.ev_charger_status'))+(sched!=='—'?` · план ${sched}`:''),sched,manual:stV(S,'input_boolean.ev_manual_mode')==='on' },
+      boiler: { mode:mapBoilerMode(stV(S,'sensor.boiler_mode')),co:Math.round(stF(S,'sensor.boiler_co_temperature')),coSet:Math.round(stF(S,'sensor.boiler_co_setpoint')),cwu:Math.round(stF(S,'sensor.boiler_cwu_temperature')),cwuSet:Math.round(stF(S,'sensor.boiler_cwu_setpoint')),ret:Math.round(stF(S,'sensor.boiler_return_temperature')),fan:Math.round(stF(S,'sensor.boiler_fan_power')),power:stV(S,'switch.smart_plug_2_socket_1')==='on',pumpCo:stV(S,'binary_sensor.boiler_co_pump')==='on',pumpCwu:stV(S,'binary_sensor.boiler_cwu_pump')==='on',pumpCirc:stV(S,'binary_sensor.boiler_circulation_pump')==='on' },
+      floor: [
+        { name:'Ванная',      temp:parseFloat(stA(S,'climate.floor_heating',  'current_temperature'))||0, mode:stA(S,'climate.floor_heating',  'preset_mode')||'auto' },
+        { name:'Душевая 1эт', temp:parseFloat(stA(S,'climate.floor_heating_2','current_temperature'))||0, mode:stA(S,'climate.floor_heating_2','preset_mode')||'auto' },
+      ],
+      lights: [
+        { id:'entr', name:'Прихожая',       icon:'bulb',on:stV(S,'light.prikhozhaia_i_fanar_light')==='on' },
+        { id:'fanar',name:'Фонарь у входа', icon:'bulb',on:stV(S,'light.prikhozhaia_i_fanar_light_2')==='on' },
+        { id:'isl',  name:'Кухня: Остров',  icon:'bulb',on:stV(S,'light.svet_pervyi_etazh_1_light')==='on' },
+        { id:'tbl',  name:'Кухня: Стол',    icon:'bulb',on:stV(S,'light.svet_pervyi_etazh_1_light_2')==='on' },
+        { id:'hall', name:'Коридор 2эт',    icon:'bulb',on:stV(S,'light.vtoroi_etazh_light')==='on' },
+        { id:'sauna',name:'Подсветка бани', icon:'bulb',on:stV(S,'light.dream_color_rgb')==='on' },
+        { id:'ver',  name:'Веранда',         icon:'bulb',on:stV(S,'light.veranda_light')==='on' },
+        { id:'led1', name:'Кухня LED1',      icon:'bulb',on:stV(S,'switch.kukhnia_poloski_switch_1')==='on' },
+        { id:'led2', name:'Кухня LED2',      icon:'bulb',on:stV(S,'switch.kukhnia_poloski_switch_2')==='on' },
+        { id:'tv1',  name:'ТВ зона 1',       icon:'bulb',on:stV(S,'switch.svet_tv_zona_switch_1')==='on' },
+        { id:'tv2',  name:'ТВ зона 2',       icon:'bulb',on:stV(S,'switch.svet_tv_zona_switch_2')==='on' },
+        { id:'gir',  name:'Гирлянда',        icon:'bulb',on:stV(S,'switch.smart_switch_2ch_switch_1')==='on' },
+        { id:'proj', name:'Прожектор',       icon:'bulb',on:stV(S,'switch.smart_switch_2ch_switch_2')==='on' },
+        { id:'akv',  name:'Над аквариумом',  icon:'bulb',on:stV(S,'switch.vkliuchit_svet_nad_akvariumom')==='on' },
+        { id:'wall', name:'Стена',           icon:'bulb',on:stV(S,'switch.vkliuchit_svet_stena')==='on' },
+        { id:'cur',  name:'Занавески',       icon:'bulb',on:stV(S,'switch.vkliuchit_svet_zanaveski')==='on' },
+        { id:'stair',name:'Лестница',        icon:'bulb',on:stV(S,'switch.vkliuchit_svet_u_lestnitsy')==='on' },
+      ],
+      plugs: [
+        { id:'akv',name:'Аквариум',  icon:'plug',   on:stV(S,'switch.akvarium_svet_socket_1')==='on' },
+        { id:'rec',name:'Рециркул.', icon:'refresh',on:stV(S,'switch.retserkuliatsiia_goriachai_vody_socket_1')==='on' },
+        { id:'hyd',name:'Гидрофор',  icon:'droplet',on:stV(S,'switch.zigbee_plug_2_socket_1')==='on' },
+        { id:'cal',name:'Полотенцесушитель', icon:'fan',    on:stV(S,'switch.kalarifer_socket_1')==='on' },
+      ],
+      water: { open:stV(S,'switch.voda_kran_switch_1')==='on' },
+      security: { armed:stV(S,'input_boolean.security_armed')==='on' },
+      sensors: { door:stV(S,'binary_sensor.door_sensor_door')==='on',smoke:stV(S,'binary_sensor.wifi_th_smoke_sensor_smoke')==='on',bath:stV(S,'binary_sensor.vannaia_moisture')==='on',shower:stV(S,'binary_sensor.water_sensor_4_moisture')==='on',garage:stV(S,'binary_sensor.garazh_moisture')==='on',kitchen:stV(S,'binary_sensor.kukhnia_moisture')==='on' },
+      batteries: [
+        { name:'Дверь',   pct:Math.round(stF(S,'sensor.door_sensor_battery')) },
+        { name:'Дым',     pct:Math.round(stF(S,'sensor.wifi_th_smoke_sensor_battery')) },
+        { name:'Ванная',  pct:Math.round(stF(S,'sensor.vannaia_battery')) },
+        { name:'Душевая', pct:Math.round(stF(S,'sensor.water_sensor_4_battery')) },
+        { name:'Кухня',   pct:Math.round(stF(S,'sensor.kukhnia_battery')) },
+        { name:'Гараж',   pct:Math.round(stF(S,'sensor.garazh_battery')) },
+      ],
+    };
+  }
+
+  const LIGHT_IDS = { entr:'light.prikhozhaia_i_fanar_light',fanar:'light.prikhozhaia_i_fanar_light_2',isl:'light.svet_pervyi_etazh_1_light',tbl:'light.svet_pervyi_etazh_1_light_2',hall:'light.vtoroi_etazh_light',sauna:'light.dream_color_rgb',ver:'light.veranda_light' };
+  const SWITCH_LIGHT_IDS = { led1:'switch.kukhnia_poloski_switch_1',led2:'switch.kukhnia_poloski_switch_2',tv1:'switch.svet_tv_zona_switch_1',tv2:'switch.svet_tv_zona_switch_2',gir:'switch.smart_switch_2ch_switch_1',proj:'switch.smart_switch_2ch_switch_2' };
+  const SCENE_LIGHT_IDS  = { akv:{on:'switch.vkliuchit_svet_nad_akvariumom',off:'switch.vykliuchit_svet_nad_akvariumom'},wall:{on:'switch.vkliuchit_svet_stena',off:'switch.vykliuchit_svet_stena'},cur:{on:'switch.vkliuchit_svet_zanaveski',off:'switch.vykliuchit_svet_zanaveski'},stair:{on:'switch.vkliuchit_svet_u_lestnitsy',off:'switch.vykliuchit_svet_u_lestnitsi'} };
+  const PLUG_IDS  = { akv:'switch.akvarium_svet_socket_1',rec:'switch.retserkuliatsiia_goriachai_vody_socket_1',hyd:'switch.zigbee_plug_2_socket_1',cal:'switch.kalarifer_socket_1' };
+
+  const getSystemDark = () => tg?.colorScheme==='dark' || (tg?.colorScheme!=='light' && (window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ?? true));
+  const TWEAK_DEFAULTS = { dark:getSystemDark(),accent:'#5fe0a6',home:'B',demoLeak:false };
+  const NAV = [{ t:'Главная',icon:'home' },{ t:'Управление',icon:'sliders' },{ t:'Энергия',icon:'activity' },{ t:'Статус',icon:'shield' }];
+
+  function App() {
+    const [tw, setTweak] = useTweaks(TWEAK_DEFAULTS);
+    const nowHour = new Date().getHours();
+    const [authState, setAuthState] = useState('init');
+    const tokenRef = useRef(null);
+    const [data, setData] = useState(() => makeData(nowHour));
+    const [tab, setTab] = useState(0);
+    const [home, setHome] = useState(tw.home);
+    const [clock, setClock] = useState('');
+    const [toastMsg, setToastState] = useState(null);
+    const [spin, setSpin] = useState(false);
+    const [dismissed, setDismissed] = useState(false);
+    const toastTmr = useRef(null);
+    const pollRef = useRef(null);
+    const refreshTimer = useRef(null);
+    const prevSensorsRef = useRef('');
+    useEffect(() => () => clearTimeout(toastTmr.current), []);
+    useEffect(() => {
+      const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
+      const handler = (e) => setTweak('dark', e.matches);
+      mq?.addEventListener('change', handler);
+      if (tg?.onEvent) tg.onEvent('themeChanged', () => {
+        if (tg.colorScheme) setTweak('dark', tg.colorScheme === 'dark');
+      });
+      return () => mq?.removeEventListener('change', handler);
+    }, []);
+
+    useEffect(() => { setHome(tw.home); }, [tw.home]);
+    useEffect(() => {
+      if (tw.demoLeak) { setData(d=>({...d,sensors:{...d.sensors,bath:true}})); setDismissed(false); }
+      else { setData(d=>({...d,sensors:{...d.sensors,bath:false}})); }
+    }, [tw.demoLeak]);
+
+    useEffect(() => {
+      const tick = () => { const n=new Date(),p=x=>String(x).padStart(2,'0'); setClock(`${p(n.getHours())}:${p(n.getMinutes())}`); };
+      tick(); const id = setInterval(tick,10000); return () => clearInterval(id);
+    }, []);
+
+    const dateStr = (() => {
+      const n=new Date();
+      const days=['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+      const mon=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+      return `${days[n.getDay()]}, ${n.getDate()} ${mon[n.getMonth()]}`;
+    })();
+
+    function toast(msg, color) {
+      setToastState({ msg,color });
+      clearTimeout(toastTmr.current);
+      toastTmr.current = setTimeout(() => setToastState(null), 2400);
+    }
+    function haptic(t='light') { try { tg?.HapticFeedback?.impactOccurred(t); } catch {} }
+
+    const fetchData = useCallback(async (tok) => {
+      try {
+        const H = { 'Authorization':`Bearer ${tok}`,'Content-Type':'application/json' };
+        const sr = await fetch(`${HA_URL}/api/states`,{ headers:H });
+        if (!sr.ok) throw new Error(sr.status);
+        const S = await sr.json();
+        let priceArr = [];
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const hr = await fetch(`${HA_URL}/api/history/period/${today}T00:00:00?filter_entity_id=sensor.nord_pool_lv_current_price&minimal_response=true`,{ headers:H });
+          if (hr.ok) {
+            const pts = (await hr.json())[0] || [];
+            const slots = new Array(24).fill(null);
+            for (const p of pts) { const h=new Date(p.last_changed||p.last_updated).getHours(),v=parseFloat(p.state); if(!isNaN(v)) slots[h]=v; }
+            let last=null; for(let i=0;i<24;i++){if(slots[i]!==null)last=slots[i];else if(last!==null)slots[i]=last;}
+            if (slots.filter(v=>v!==null).length>=6) priceArr=slots.map(v=>v||0);
+          }
+        } catch {}
+        setData(mapStates(S, priceArr));
+        setAuthState('ok');
+      } catch(e) { console.error('fetchData:',e); setAuthState(prev => prev === 'ok' ? 'ok' : 'error'); }
+    }, []);
+
+    const callSvc = useCallback((domain, service, entityId, extra={}) => {
+      if (IS_PREVIEW) return;
+      const tok = tokenRef.current; if (!tok) return;
+      const body = entityId ? { entity_id:entityId,...extra } : extra;
+      fetch(`${HA_URL}/api/services/${domain}/${service}`,{ method:'POST',headers:{'Authorization':`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify(body) })
+        .then(() => { clearTimeout(refreshTimer.current); refreshTimer.current = setTimeout(() => fetchData(tok), 800); })
+        .catch(console.error);
+    }, [fetchData]);
+
+    useEffect(() => {
+      if (IS_PREVIEW) { setAuthState('ok'); return; }
+      if (!tg?.initData) { setAuthState('blocked'); return; }
+      if (tg) { tg.ready(); tg.expand(); }
+      const initData = tg.initData;
+      (async () => {
+        try {
+          const r = await fetch(`${HA_URL}/api/miniapp-auth`,{ method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData}) });
+          if (!r.ok) throw new Error(r.status);
+          const { token } = await r.json();
+          tokenRef.current = token;
+          await fetchData(token);
+          pollRef.current = setInterval(() => fetchData(token), 30000);
+        } catch(e) { console.error('auth:',e); setAuthState('error'); }
+      })();
+      return () => clearInterval(pollRef.current);
+    }, []);
+
+    const alerts = [];
+    if (data.sensors.smoke) alerts.push('Обнаружен дым');
+    if (data.sensors.bath) alerts.push('Утечка: Ванная');
+    if (data.sensors.shower) alerts.push('Утечка: Душевая 1эт');
+    if (data.sensors.garage) alerts.push('Утечка: Гараж');
+    if (data.sensors.kitchen) alerts.push('Утечка: Кухня');
+    if (data.sensors.door && data.security.armed) alerts.push('Дверь открыта (охрана)');
+    const security = { ...data.security, alerts };
+
+    useEffect(() => {
+      const key = [data.sensors.smoke, data.sensors.bath, data.sensors.shower, data.sensors.garage, data.sensors.kitchen].join(',');
+      if (key !== prevSensorsRef.current) {
+        const hadAlerts = prevSensorsRef.current.includes('true');
+        const hasAlerts = key.includes('true');
+        if (hasAlerts && !hadAlerts) setDismissed(false);
+        prevSensorsRef.current = key;
+      }
+    }, [data.sensors.smoke, data.sensors.bath, data.sensors.shower, data.sensors.garage, data.sensors.kitchen]);
+
+    const actions = {
+      scene(k) {
+        haptic('medium');
+        if (k==='night') {
+          data.lights.forEach(l => { if(LIGHT_IDS[l.id]){callSvc('light','turn_off',LIGHT_IDS[l.id]);if(l.id==='sauna')callSvc('light','turn_off','light.dream_color_rgb_2');}else if(SWITCH_LIGHT_IDS[l.id])callSvc('switch','turn_off',SWITCH_LIGHT_IDS[l.id]);else if(SCENE_LIGHT_IDS[l.id])callSvc('switch','turn_on',SCENE_LIGHT_IDS[l.id].off); });
+          setData(d=>({...d,lights:d.lights.map(l=>({...l,on:false}))}));
+          toast('Ночной режим активирован','var(--floor)');
+        }
+        if (k==='away') {
+          data.lights.forEach(l => { if(LIGHT_IDS[l.id]){callSvc('light','turn_off',LIGHT_IDS[l.id]);if(l.id==='sauna')callSvc('light','turn_off','light.dream_color_rgb_2');}else if(SWITCH_LIGHT_IDS[l.id])callSvc('switch','turn_off',SWITCH_LIGHT_IDS[l.id]);else if(SCENE_LIGHT_IDS[l.id])callSvc('switch','turn_on',SCENE_LIGHT_IDS[l.id].off); });
+          callSvc('input_boolean','turn_on','input_boolean.security_armed');
+          setData(d=>({...d,lights:d.lights.map(l=>({...l,on:false})),security:{armed:true}}));
+          toast('Ушли · охрана включена','var(--sec)');
+        }
+        if (k==='eco') {
+          callSvc('climate','set_preset_mode','climate.floor_heating',{preset_mode:'auto'});
+          callSvc('climate','set_preset_mode','climate.floor_heating_2',{preset_mode:'auto'});
+          setData(d=>({...d,floor:d.floor.map(f=>({...f,mode:'auto'}))}));
+          toast('Режим экономии активирован','var(--ev)');
+        }
+      },
+      openValve() { haptic('medium'); callSvc('switch','turn_on','switch.voda_kran_switch_1'); setData(d=>({...d,water:{open:true}})); toast('Вода открыта','var(--water)'); },
+      armSecurity(v) { haptic('medium'); callSvc('input_boolean',v?'turn_on':'turn_off','input_boolean.security_armed'); setData(d=>({...d,security:{armed:v}})); toast(v?'Охрана поставлена':'Охрана снята','var(--sec)'); },
+      setCwu(temp) { haptic('light'); callSvc('rest_command','set_boiler_cwu_temp',null,{temp}); setData(d=>({...d,boiler:{...d.boiler,cwuSet:temp}})); toast(`ГВС уставка ${temp}°`,'var(--boil)'); },
+      setCo(temp) { haptic('light'); callSvc('rest_command','set_boiler_co_temp',null,{temp}); setData(d=>({...d,boiler:{...d.boiler,coSet:temp}})); toast(`CO уставка ${temp}°`,'var(--boil)'); },
+      boilerPower(on) { haptic('medium'); callSvc('switch',on?'turn_on':'turn_off','switch.smart_plug_2_socket_1'); setData(d=>({...d,boiler:{...d.boiler,power:on,mode:on?'work':'off'}})); toast(`Котёл ${on?'включён':'выключен'}`,'var(--boil)'); },
+      evStart() { haptic('medium'); callSvc('switch','turn_on','switch.ev_charger_switch'); callSvc('input_boolean','turn_on','input_boolean.ev_manual_mode'); setData(d=>({...d,ev:{...d.ev,short:'Заряжается',sub:'Заряжается · ручной'}})); toast('Зарядка запущена','var(--ev)'); },
+      evStop() { haptic('medium'); callSvc('switch','turn_off','switch.ev_charger_switch'); setData(d=>({...d,ev:{...d.ev,short:'Остановлено',sub:'Остановлено'}})); toast('Зарядка остановлена','var(--ev)'); },
+      evManual() { haptic('light'); const v=!data.ev.manual; callSvc('input_boolean',v?'turn_on':'turn_off','input_boolean.ev_manual_mode'); setData(d=>({...d,ev:{...d.ev,manual:v}})); },
+      setFloor(i,mode) { haptic('light'); const eid=i===0?'climate.floor_heating':'climate.floor_heating_2'; callSvc('climate','set_preset_mode',eid,{preset_mode:mode}); if(mode==='manual') callSvc('climate','set_temperature',eid,{temperature:30}); setData(d=>({...d,floor:d.floor.map((f,idx)=>idx===i?{...f,mode,temp:mode==='manual'?30:f.temp}:f)})); toast(`${data.floor[i].name}: ${mode==='manual'?'ручной 30°':'авто'}`,'var(--floor)'); },
+      toggleLight(id) { haptic('light'); const on=!data.lights.find(l=>l.id===id)?.on; if(LIGHT_IDS[id]){callSvc('light',on?'turn_on':'turn_off',LIGHT_IDS[id]);if(id==='sauna')callSvc('light',on?'turn_on':'turn_off','light.dream_color_rgb_2');}else if(SWITCH_LIGHT_IDS[id]){callSvc('switch',on?'turn_on':'turn_off',SWITCH_LIGHT_IDS[id]);}else if(SCENE_LIGHT_IDS[id]){callSvc('switch','turn_on',on?SCENE_LIGHT_IDS[id].on:SCENE_LIGHT_IDS[id].off);} setData(d=>({...d,lights:d.lights.map(l=>l.id===id?{...l,on:!l.on}:l)})); },
+      togglePlug(id) { haptic('light'); const on=!data.plugs.find(p=>p.id===id)?.on; const eid=PLUG_IDS[id]; if(eid)callSvc('switch',on?'turn_on':'turn_off',eid); setData(d=>({...d,plugs:d.plugs.map(p=>p.id===id?{...p,on:!p.on}:p)})); },
+      allLightsOff() { haptic('medium'); [...Object.values(LIGHT_IDS),'light.dream_color_rgb_2'].forEach(eid=>callSvc('light','turn_off',eid)); Object.values(SWITCH_LIGHT_IDS).forEach(eid=>callSvc('switch','turn_off',eid)); Object.values(SCENE_LIGHT_IDS).forEach(p=>callSvc('switch','turn_on',p.off)); setData(d=>({...d,lights:d.lights.map(l=>({...l,on:false}))})); toast('Весь свет выключен','var(--light)'); },
+    };
+
+    function refresh() {
+      haptic('light'); setSpin(true); setTimeout(()=>setSpin(false),750);
+      if (!IS_PREVIEW && tokenRef.current) fetchData(tokenRef.current).then(()=>toast('Данные обновлены'));
+      else toast('Preview — реальных данных нет');
+    }
+
+    if (authState==='init') return (
+      <div style={{ display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100dvh',background:'#0c0d10',color:'#eceef3',gap:16,fontFamily:'Manrope,sans-serif' }}>
+        <div style={{ width:32,height:32,border:'3px solid rgba(95,224,166,.15)',borderTopColor:'#5fe0a6',borderRadius:'50%',animation:'_spin .8s linear infinite' }} />
+        <span style={{ color:'#5a6473',fontSize:13,fontWeight:600 }}>Авторизация…</span>
+      </div>
+    );
+    if (authState==='blocked') return (
+      <div style={{ display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100dvh',background:'#0c0d10',color:'#eceef3',gap:16,fontFamily:'Manrope,sans-serif',padding:24,textAlign:'center' }}>
+        <Icon name="lock" size={48} style={{ color:'#5a6473' }} />
+        <div style={{ fontWeight:800,fontSize:20 }}>Доступ закрыт</div>
+        <div style={{ color:'#9aa3b2',fontSize:14,lineHeight:1.5 }}>Это приложение доступно только через Telegram</div>
+        <a href="https://t.me/YOUR_BOT_NAME/smarthome" style={{ marginTop:8,padding:'12px 24px',background:'#5fe0a6',color:'#0c0d10',borderRadius:12,fontWeight:800,fontSize:15,textDecoration:'none' }}>Открыть в Telegram</a>
+      </div>
+    );
+    if (authState==='error') return (
+      <div style={{ display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100dvh',background:'#0c0d10',color:'#eceef3',gap:12,fontFamily:'Manrope,sans-serif',padding:24,textAlign:'center' }}>
+        <Icon name="x" size={40} style={{ color:'#ff5d57' }} />
+        <div style={{ fontWeight:800,fontSize:18 }}>Ошибка авторизации</div>
+        <div style={{ color:'#9aa3b2',fontSize:13 }}>Откройте приложение через Telegram</div>
+      </div>
+    );
+
+    const isDark = tw.dark;
+    const dataF = { ...data, price:{...data.price}, security };
+
+    return (
+      <div className="app" data-theme={isDark?'dark':'light'} style={{'--accent':tw.accent,height:'100dvh',position:'relative',overflow:'hidden'}}>
+
+        <div className="tg-bar" style={{ paddingTop:`calc(8px + env(safe-area-inset-top, 0px))` }}>
+          <div className="tg-title">
+            <span className="tg-logo"><Icon name="home" size={15} /></span>Умный дом
+            {IS_PREVIEW && <span style={{ fontSize:9,background:'rgba(255,184,73,.18)',color:'#ffb259',padding:'2px 6px',borderRadius:5,fontWeight:800,letterSpacing:.5 }}>PREVIEW</span>}
+          </div>
+          <div className="tg-actions">
+            <button className="icon-btn" style={{ width:34,height:34 }} onClick={() => setTweak('dark',!isDark)}>
+              <Icon name={isDark?'sun':'moon'} size={17} />
+            </button>
+          </div>
+        </div>
+
+        <div className="hdr">
+          <div className="hdr-l">
+            <div className="hdr-clock mono">{clock}</div>
+            <div className="hdr-date">{dateStr}</div>
+          </div>
+          <div className="hdr-r">
+            <div className="chip-out"><Icon name="temp" size={15} /><span className="mono">{data.outside.toFixed(1)}°</span></div>
+            <button className={'icon-btn'+(spin?' spin':'')} onClick={refresh}><Icon name="refresh" size={18} /></button>
+          </div>
+        </div>
+
+        <div className="scroll">
+          {alerts.length>0 && !dismissed && (
+            <div className="alert" style={{ marginTop:6 }}>
+              <div className="alert-hd"><Icon name="bell" size={18} />Тревога</div>
+              <ul>{alerts.map((a,i)=><li key={i}>{a}</li>)}</ul>
+              <div className="alert-btns">
+                <button className="abtn solid" onClick={actions.openValve}>Открыть кран</button>
+                <button className="abtn out" onClick={()=>{ haptic(); toast('Сирена выключена'); }}>Выкл. сирену</button>
+                <button className="abtn out" onClick={()=>setDismissed(true)}>Ложная</button>
+              </div>
+            </div>
+          )}
+          {tab===0 && <window.HomeScreen data={dataF} actions={actions} go={setTab} layout={home} setLayout={setHome} />}
+          {tab===1 && <window.ControlScreen data={dataF} actions={actions} />}
+          {tab===2 && <window.EnergyScreen data={dataF} />}
+          {tab===3 && <window.StatusScreen data={dataF} actions={actions} />}
+        </div>
+
+        <div className={'toast'+(toastMsg?' show':'')}>
+          {toastMsg && <><span className="tdot" style={{ background:toastMsg.color||'var(--accent)' }} />{toastMsg.msg}</>}
+        </div>
+
+        <nav className="nav">
+          {NAV.map((n,i)=>(
+            <button key={i} className={'nav-btn'+(tab===i?' on':'')} onClick={()=>{ haptic(); setTab(i); }}>
+              <span className="ni"><Icon name={n.icon} size={23} stroke={tab===i?2:1.7} /></span>{n.t}
+            </button>
+          ))}
+        </nav>
+
+        <TweaksPanel title="Tweaks">
+          <TweakSection label="Тема" />
+          <TweakToggle label="Тёмная тема" value={isDark} onChange={v=>setTweak('dark',v)} />
+          <TweakColor label="Акцент" value={tw.accent} options={['#5fe0a6','#56b8f5','#b98cff','#ffb259']} onChange={v=>setTweak('accent',v)} />
+          <TweakSection label="Главный экран" />
+          <TweakRadio label="Раскладка" value={tw.home} options={[{value:'A',label:'Лента'},{value:'B',label:'Панель'},{value:'C',label:'Фокус'}]} onChange={v=>setTweak('home',v)} />
+          <TweakSection label="Демо" />
+          <TweakToggle label="Тревога: протечка" value={tw.demoLeak} onChange={v=>setTweak('demoLeak',v)} />
+        </TweaksPanel>
+      </div>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+})();
+</script>
+</body>
+</html>

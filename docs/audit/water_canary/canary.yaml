@@ -1,0 +1,206 @@
+# =============================================================================
+# WATER-LEAK CANARY  —  FULLY ISOLATED MOCK TEST
+# =============================================================================
+# Purpose: prove the leak -> shutoff -> read-back -> confirm chain (mirrors the
+#          production leak-v4 logic, INCLUDING FIX C read-back) using ONLY mock
+#          helpers. NOTHING here touches a real device.
+#
+# ISOLATION GUARANTEE (verified by verify_isolation.py):
+#   * NO real water valve entity           -> uses input_boolean.dummy_valve
+#   * NO real moisture binary_sensor       -> uses input_boolean.test_moisture_1/2
+#   * NO real siren entity                  -> notify-only (persistent_notification)
+#   * NO real security flag                 -> not referenced
+#   * NO real switch/siren/climate/number/select service calls on prod entities
+#   * Notifications = persistent_notification.create (LOCAL dev notifier, no Telegram,
+#     no real device). Every message text starts with the TEST banner.
+#   * Only callback referenced is /noop_test (a no-op; not wired to any real handler).
+#
+# Timings are COMPRESSED vs production (prod: for 3m / delay 5m / wait 20s / settle 3s)
+# so the canary runs in ~30s. The STRUCTURE mirrors leak-v4 exactly.
+#
+# Two parts below (separated by `---` so each is a valid YAML document):
+#   PART 1 -> paste under `input_boolean:` in /config/configuration.yaml
+#   PART 2 -> append into /config/automations.yaml
+# (See run_plan.md for install + drive + teardown. DO NOT DEPLOY without review.)
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# PART 1 — MOCK HELPERS  (goes under the `input_boolean:` key in configuration.yaml)
+# -----------------------------------------------------------------------------
+# NOTE: the `input_boolean:` line is shown for placement context only; when
+# merging into an existing configuration.yaml, add just the child keys.
+input_boolean:
+  test_moisture_1:
+    name: "TEST mock moisture sensor 1"
+    icon: mdi:test-tube
+    initial: false
+  test_moisture_2:
+    name: "TEST mock moisture sensor 2"
+    icon: mdi:test-tube
+    initial: false
+  dummy_valve:
+    name: "DUMMY water valve (on = OPEN/normal, off = CLOSED)"
+    icon: mdi:pipe-valve
+    initial: true          # OPEN by default, like a healthy valve
+  dummy_hydro:
+    name: "DUMMY hydrophore plug"
+    icon: mdi:water-pump
+    initial: true
+  test_grace:
+    name: "TEST grace gate (mirrors startup / tuya-reconnect grace)"
+    icon: mdi:shield-off-outline
+    initial: false
+  test_valve_fail:
+    name: "TEST knob: when ON the canary SKIPS the dummy valve turn_off (simulates a failed/unavailable close -> CRITICAL not-confirmed path)"
+    icon: mdi:alert-octagon-outline
+    initial: false
+
+---
+# -----------------------------------------------------------------------------
+# PART 2 — CANARY AUTOMATION  (append into /config/automations.yaml)
+# -----------------------------------------------------------------------------
+- id: 'test_water_canary_0001'
+  alias: "🧪 ТЕСТ Канарейка утечки (mock, изолировано)"
+  description: >-
+    Изолированная канарейка. Зеркалит логику leak-v4 (включая FIX C read-back)
+    но ТОЛЬКО на mock-хелперах test_/dummy_. Ни один реальный кран/датчик/сирена
+    не затрагивается. Все уведомления — persistent_notification с TEST-баннером.
+  triggers:
+    # leak_check: mock sensor on for a (compressed) debounce window
+    - trigger: state
+      entity_id:
+        - input_boolean.test_moisture_1
+        - input_boolean.test_moisture_2
+      to: 'on'
+      for: 00:00:10
+      id: leak_check
+    # leak_cleared: mock sensor off for a settle window
+    - trigger: state
+      entity_id:
+        - input_boolean.test_moisture_1
+        - input_boolean.test_moisture_2
+      to: 'off'
+      for: 00:00:05
+      id: leak_cleared
+  conditions:
+    # (mirror) valid transition
+    - condition: template
+      value_template: "{{ trigger.to_state is not none and trigger.from_state is not none }}"
+    - condition: template
+      value_template: "{{ trigger.to_state.state in ['on', 'off'] }}"
+    # (mirror) leak_check ignores reconnect from unavailable/unknown
+    - condition: template
+      value_template: "{{ trigger.id != 'leak_check' or trigger.from_state.state not in ['unavailable', 'unknown'] }}"
+    # (mirror GATE) leak_check requires grace OFF  -> NEGATIVE CASE: grace on = blocked here
+    - condition: template
+      value_template: "{{ trigger.id != 'leak_check' or is_state('input_boolean.test_grace', 'off') }}"
+    # (mirror) leak_cleared needs a settled window (compressed to 5s)
+    - condition: template
+      value_template: "{{ trigger.id != 'leak_cleared' or (trigger.to_state.last_changed - trigger.from_state.last_changed).total_seconds() >= 5 }}"
+  actions:
+    - variables:
+        sensor_name: "{{ trigger.to_state.name }}"
+        now_ts: "{{ now().strftime('%d.%m.%Y %H:%M:%S') }}"
+        sensor_entity: "{{ trigger.entity_id }}"
+        valve_entity: input_boolean.dummy_valve
+        hydro_entity: input_boolean.dummy_hydro
+    - choose:
+        # ============================ LEAK_CHECK ============================
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.id == 'leak_check' }}"
+          sequence:
+            # 1) initial warning (mirrors telegram warn+buttons -> local dev notifier)
+            - action: persistent_notification.create
+              data:
+                notification_id: "test_canary_warn_{{ sensor_entity }}"
+                title: "🧪 ТЕСТ — реальной протечки нет"
+                message: >-
+                  🧪 ТЕСТ — реальной протечки нет. Канарейка: {{ sensor_name }} — mock-сигнал {{ now_ts }}.
+                  Через задержку без ответа закрою DUMMY-кран автоматически. (callback: /noop_test)
+            # 2) grace period before auto-shutoff (prod: 5m; compressed to 10s)
+            - delay: 00:00:10
+            # 3) recheck branch (mirror)
+            - choose:
+                # (a) sensor cleared itself -> valve untouched
+                - conditions:
+                    - condition: template
+                      value_template: "{{ not is_state(sensor_entity, 'on') }}"
+                  sequence:
+                    - action: persistent_notification.create
+                      data:
+                        notification_id: "test_canary_result_{{ sensor_entity }}"
+                        title: "🧪 ТЕСТ — реальной протечки нет"
+                        message: "🧪 ТЕСТ — реальной протечки нет. ✅ {{ sensor_name }} снялся сам. DUMMY-кран не трогал."
+                # (b) grace toggled ON during the delay -> false alarm, valve untouched
+                - conditions:
+                    - condition: template
+                      value_template: "{{ is_state('input_boolean.test_grace', 'on') }}"
+                  sequence:
+                    - action: persistent_notification.create
+                      data:
+                        notification_id: "test_canary_result_{{ sensor_entity }}"
+                        title: "🧪 ТЕСТ — реальной протечки нет"
+                        message: "🧪 ТЕСТ — реальной протечки нет. ✅ Ложная тревога по {{ sensor_name }} (grace ON). DUMMY-кран не трогал."
+              # (c) SHUTOFF branch (mirror) — turn off dummy hydro + dummy valve
+              default:
+                - action: input_boolean.turn_off
+                  target:
+                    entity_id: "{{ hydro_entity }}"
+                # simulate the close command; SKIP it when test_valve_fail is ON
+                # (models a failed / unavailable valve -> read-back will not confirm)
+                - if:
+                    - condition: template
+                      value_template: "{{ is_state('input_boolean.test_valve_fail', 'off') }}"
+                  then:
+                    - action: input_boolean.turn_off
+                      target:
+                        entity_id: "{{ valve_entity }}"
+                # FIX C read-back (mirror): bounded wait for valve == off,
+                # then a settle + re-check to filter a transient off.
+                - wait_template: "{{ is_state(valve_entity, 'off') }}"
+                  timeout: 00:00:05
+                  continue_on_timeout: true
+                - delay: 00:00:03
+                - choose:
+                    # CONFIRMED: valve reports off
+                    - conditions:
+                        - condition: template
+                          value_template: "{{ is_state(valve_entity, 'off') }}"
+                      sequence:
+                        - action: persistent_notification.create
+                          data:
+                            notification_id: "test_canary_result_{{ sensor_entity }}"
+                            title: "🧪 ТЕСТ — реальной протечки нет"
+                            message: >-
+                              🧪 ТЕСТ — реальной протечки нет. 🚨 {{ sensor_name }} всё ещё ON после задержки.
+                              DUMMY-гидрофор выключен. ✅ DUMMY-кран закрыт, состояние ПОДТВЕРЖДЕНО.
+                              (сирена/Telegram НЕ вызывались — это тест). callback: /noop_test
+                  # NOT CONFIRMED (valve stayed on / timed out / "unavailable"): CRITICAL
+                  default:
+                    - action: persistent_notification.create
+                      data:
+                        notification_id: "test_canary_result_{{ sensor_entity }}"
+                        title: "🧪 ТЕСТ — реальной протечки нет"
+                        message: >-
+                          🧪 ТЕСТ — реальной протечки нет. 🚨 CRITICAL {{ sensor_name }}:
+                          команда закрытия отправлена, состояние DUMMY-крана НЕ ПОДТВЕРЖДЕНО
+                          (сейчас: {{ states(valve_entity) }}). Проверьте физически (в реале).
+                          callback: /noop_test
+        # =========================== LEAK_CLEARED ==========================
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.id == 'leak_cleared' }}"
+          sequence:
+            - action: persistent_notification.create
+              data:
+                notification_id: "test_canary_cleared_{{ sensor_entity }}"
+                title: "🧪 ТЕСТ — реальной протечки нет"
+                message: >-
+                  🧪 ТЕСТ — реальной протечки нет. {{ sensor_name }}: mock-датчик снят.
+                  DUMMY-кран НЕ открывается автоматически (открытие — только вручную).
+  # (mirror) parallel + max: repeated triggers & multiple sensors run independently,
+  # bounded by the `for:` debounce -> no infinite loop, no notification storm.
+  mode: parallel
+  max: 10

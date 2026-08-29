@@ -1,0 +1,47 @@
+--- a/config/automations.yaml
++++ b/config/automations.yaml
+@@ -2797,37 +2797,37 @@
+     target:
+       entity_id: input_number.midnight_boiler_energy
+     data:
+-      value: '{{ states(''sensor.boiler_total_energy'') | float(0) }}'
++      value: '{{ states(''sensor.boiler_total_energy'') | float(states(''input_number.midnight_boiler_energy'') | float(0)) }}'
+   - action: input_number.set_value
+     target:
+       entity_id: input_number.midnight_kalarifer_energy
+     data:
+-      value: '{{ states(''sensor.terarium_total_energy'') | float(0) }}'
++      value: '{{ states(''sensor.terarium_total_energy'') | float(states(''input_number.midnight_kalarifer_energy'') | float(0)) }}'
+   - action: input_number.set_value
+     target:
+       entity_id: input_number.midnight_akv_energy
+     data:
+-      value: '{{ states(''sensor.akvarium_svet_total_energy'') | float(0) }}'
++      value: '{{ states(''sensor.akvarium_svet_total_energy'') | float(states(''input_number.midnight_akv_energy'') | float(0)) }}'
+   - action: input_number.set_value
+     target:
+       entity_id: input_number.midnight_chep_energy
+     data:
+-      value: '{{ states(''sensor.cherepakha_total_energy'') | float(0) }}'
++      value: '{{ states(''sensor.cherepakha_total_energy'') | float(states(''input_number.midnight_chep_energy'') | float(0)) }}'
+   - action: input_number.set_value
+     target:
+       entity_id: input_number.midnight_gidro_energy
+     data:
+-      value: '{{ states(''sensor.zigbee_plug_2_total_energy'') | float(0) }}'
++      value: '{{ states(''sensor.zigbee_plug_2_total_energy'') | float(states(''input_number.midnight_gidro_energy'') | float(0)) }}'
+   - action: input_number.set_value
+     target:
+       entity_id: input_number.midnight_ev_energy
+     data:
+-      value: '{{ states(''sensor.ev_charger_energy'') | float(0) }}'
++      value: '{{ states(''sensor.ev_charger_energy'') | float(states(''input_number.midnight_ev_energy'') | float(0)) }}'
+   - action: input_number.set_value
+     target:
+       entity_id: input_number.midnight_tv_energy
+     data:
+-      value: '{{ states(''sensor.75_qled_energy'') | float(0) }}'
++      value: '{{ states(''sensor.75_qled_energy'') | float(states(''input_number.midnight_tv_energy'') | float(0)) }}'
+   mode: single
+ - id: '1778700001003'
+   alias: "\U0001F4CA Ежедневный отчёт потребления"

@@ -1,0 +1,368 @@
+# PROPOSAL — NOT APPLIED. DO NOT auto-apply / auto-deploy. Orchestrator deploys after owner review.
+#
+# WHAT: Add FIVE new NOTIFICATION-ONLY automations (ids 1789500001001..1789500001005)
+# that watch the Proxmox `mylab` infrastructure and alert on Telegram. They issue
+# ZERO device commands — the ONLY action anywhere is telegram_bot.send_message
+# (chat_id 100000000). No Proxmox button/switch/service, no climate/script/
+# input_boolean, no `target:`. Verified by tests/test_proxmox_watchdog.py.
+#
+# CONDITIONS MODELED (each: DOWN alert with a `for:` debounce + a RECOVERY message):
+#   1789500001001  NODE OFFLINE      binary_sensor.mylab_status -> off/unavailable/
+#                                    unknown for 5m; recovery on -> for 2m.
+#   1789500001002  VM STOPPED        the 5 RUNNING non-template VM status
+#                                    binary_sensors on->off for 2m; recovery off->on.
+#                                    Template/base vmid 9000
+#                                    (binary_sensor.homelab_clean_ubuntu_2404_status)
+#                                    is EXCLUDED — a stopped template is NOT an alert.
+#   1789500001003  STORAGE CRITICAL  active storage %used sensors (nas,
+#                                    local-btrfs) >= 90% for 10m; recovery < 90% for
+#                                    5m. Inactive `local` (usage unknown) excluded.
+#                                    This is DISK, not RAM.
+#   1789500001004  BACKUP ERR/STALE  binary_sensor.mylab_backup_status (problem) = on
+#                                    for 10m, OR sensor.mylab_last_backup age > 36h
+#                                    (checked twice daily 09:00/21:00 to avoid spam);
+#                                    recovery on problem-clear and on a fresh backup
+#                                    landing after a >36h gap.
+#   1789500001005  STALE METRIC      sensor.mylab_cpu_usage unavailable/unknown for
+#                                    30m OR last_updated age > 30m (reminder throttled
+#                                    to <= 1/3h); recovery when it updates again.
+#
+# RAM-PRESSURE ALERTING — DEFERRED (owner rule): NO RAM%-threshold alert is created.
+#   Proxmox mem% (e.g. homelab-dev 98.6%, mylab 80.9%) counts Linux page cache and is
+#   NOT a pressure signal. The inventory (metrics_available) exposes NO OOM, NO swap,
+#   NO PSI/pressure, NO load sensor (`node_load: false`), and a grep of the 159
+#   entities finds none. Alerting on RAM% alone would be a chronic false alarm, so it
+#   is intentionally omitted until a real OOM/swap/pressure signal exists. If such a
+#   signal appears later, add a separate conservative watchdog then.
+#
+# COOLDOWN / ANTI-SPAM: mode: single on every automation; `for:` debounce on both
+#   the DOWN and RECOVERY edges of the state-based conditions so WiFi/poll flaps do
+#   not page; the two time-driven checks (backup staleness, metric staleness) are
+#   rate-limited (twice-daily fixed times / a last_triggered 3h gate).
+#
+# CHOSEN IDS + UNIQUENESS: 1789500001001, ...002, ...003, ...004, ...005 — all
+#   verified UNIQUE against the read-only fetched /config/automations.yaml (53
+#   existing automation blocks, no collision). The patch is purely additive: it
+#   appends 5 blocks at end of file; NO existing automation is modified (the only
+#   "-" line is the file's last context line `  max: 20`, re-added verbatim because
+#   the file has no trailing newline — a pure diff artifact).
+#
+# TARGET FILE ON HA: /config/automations.yaml (fetched read-only via `sudo cat`,
+#   190764 bytes, 4355 lines, 53 automations, NO trailing newline — hence the
+#   "\ No newline at end of file" marker on the last unchanged context line).
+#
+# APPLY (after review, from a dir containing the fetched automations.yaml):
+#   patch -p1 --dry-run < docs/audit/proxmox_watchdog.patch   # verify
+#   patch -p1          < docs/audit/proxmox_watchdog.patch     # apply to working copy
+#   # then, on HA: back up first, sanity-check, deploy, reload:
+#   #   sudo cp /config/automations.yaml /config/automations.yaml.bak_proxmox_$(date +%s)
+#   #   (copy patched file to /config/automations.yaml)
+#   #   POST /api/config/core/check_config      # sanity BEFORE reload
+#   #   POST /api/services/automation/reload
+#
+# ROLLBACK:
+#   patch -p1 -R < docs/audit/proxmox_watchdog.patch           # revert working copy
+#   # on HA: restore the .bak_proxmox_* backup to /config/automations.yaml, then
+#   #   POST /api/services/automation/reload
+#   # OR simply delete automation ids 1789500001001..005 (all additive & device-inert).
+#
+--- a/automations.yaml
++++ b/automations.yaml
+@@ -4352,4 +4352,295 @@
+       message: >-
+         {{ '🚨' if trigger.json.kind | default('') == 'alert' else '✅' if trigger.json.kind | default('') == 'recovery' else '🧪' if trigger.json.kind | default('') == 'test' else 'ℹ️' }} Proxmox: {{ trigger.json.message | default('Событие без описания') | string | truncate(900, true) }}
+   mode: queued
+-  max: 20
+\ No newline at end of file
++  max: 20
++- id: '1789500001001'
++  alias: "\U0001F5A5️ Proxmox: узел mylab офлайн (только уведомление)"
++  description: >-
++    NOTIFICATION-ONLY watchdog. Следит за binary_sensor.mylab_status (device_class
++    running) — доступность узла Proxmox mylab. Единственное действие —
++    telegram_bot.send_message (chat_id 100000000). НЕ управляет устройствами,
++    НЕ вызывает Proxmox button/switch/service.
++  mode: single
++  triggers:
++  - trigger: state
++    entity_id: binary_sensor.mylab_status
++    to: 'off'
++    for: 00:05:00
++    id: down
++  - trigger: state
++    entity_id: binary_sensor.mylab_status
++    to: unavailable
++    for: 00:05:00
++    id: down
++  - trigger: state
++    entity_id: binary_sensor.mylab_status
++    to: unknown
++    for: 00:05:00
++    id: down
++  - trigger: state
++    entity_id: binary_sensor.mylab_status
++    from: 'off'
++    to: 'on'
++    for: 00:02:00
++    id: up
++  - trigger: state
++    entity_id: binary_sensor.mylab_status
++    from: unavailable
++    to: 'on'
++    for: 00:02:00
++    id: up
++  - trigger: state
++    entity_id: binary_sensor.mylab_status
++    from: unknown
++    to: 'on'
++    for: 00:02:00
++    id: up
++  conditions: []
++  actions:
++  - choose:
++    - conditions:
++      - condition: template
++        value_template: '{{ trigger.id == ''down'' }}'
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: "⚠️ Proxmox: узел mylab недоступен > 5 мин (состояние {{ states('binary_sensor.mylab_status') }}). ВМ и резервное копирование могут не работать. Проверьте хост."
++    - conditions:
++      - condition: template
++        value_template: '{{ trigger.id == ''up'' }}'
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: "✅ Proxmox: узел mylab снова онлайн."
++- id: '1789500001002'
++  alias: "\U0001F6D1 Proxmox: ВМ неожиданно остановлена (только уведомление)"
++  description: >-
++    NOTIFICATION-ONLY watchdog. Следит за статусом 5 рабочих ВМ (device_class
++    running) и сообщает, когда running-ВМ переходит в stopped. Шаблон/база
++    vmid 9000 (binary_sensor.homelab_clean_ubuntu_2404_status) НАМЕРЕННО исключён —
++    остановленный шаблон это норма, не тревога. Единственное действие —
++    telegram_bot.send_message (chat_id 100000000). НЕ управляет устройствами,
++    НЕ вызывает Proxmox button/switch/service.
++  mode: single
++  triggers:
++  - trigger: state
++    entity_id:
++    - binary_sensor.homelab_staging_status
++    - binary_sensor.homelab_dev_status
++    - binary_sensor.termix_status
++    - binary_sensor.homeassistant_status
++    - binary_sensor.homelab_ci_runner_status
++    from: 'on'
++    to: 'off'
++    for: 00:02:00
++    id: down
++  - trigger: state
++    entity_id:
++    - binary_sensor.homelab_staging_status
++    - binary_sensor.homelab_dev_status
++    - binary_sensor.termix_status
++    - binary_sensor.homeassistant_status
++    - binary_sensor.homelab_ci_runner_status
++    from: 'off'
++    to: 'on'
++    for: 00:02:00
++    id: up
++  conditions: []
++  actions:
++  - choose:
++    - conditions:
++      - condition: template
++        value_template: '{{ trigger.id == ''down'' }}'
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: "\U0001F6D1 Proxmox: ВМ остановлена — {{ trigger.to_state.attributes.friendly_name | default(trigger.entity_id) }} ({{ trigger.entity_id }}). Незапланированная остановка? Проверьте на хосте."
++    - conditions:
++      - condition: template
++        value_template: '{{ trigger.id == ''up'' }}'
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: "✅ Proxmox: ВМ снова запущена — {{ trigger.to_state.attributes.friendly_name | default(trigger.entity_id) }}."
++- id: '1789500001003'
++  alias: "\U0001F5C4️ Proxmox: хранилище заполнено (только уведомление)"
++  description: >-
++    NOTIFICATION-ONLY watchdog. Следит за % использования активных хранилищ
++    (nas, local-btrfs) и сообщает при >= 90% дольше 10 мин. Неактивное
++    хранилище local (usage unknown) исключено. НЕ RAM. Единственное действие —
++    telegram_bot.send_message (chat_id 100000000). НЕ управляет устройствами,
++    НЕ вызывает Proxmox button/switch/service.
++  mode: single
++  triggers:
++  - trigger: numeric_state
++    entity_id:
++    - sensor.storage_mycloud_home_storage_usage_percentage
++    - sensor.storage_local_btrfs_storage_usage_percentage
++    above: 90
++    for: 00:10:00
++    id: down
++  - trigger: numeric_state
++    entity_id:
++    - sensor.storage_mycloud_home_storage_usage_percentage
++    - sensor.storage_local_btrfs_storage_usage_percentage
++    below: 90
++    for: 00:05:00
++    id: up
++  conditions: []
++  actions:
++  - choose:
++    - conditions:
++      - condition: template
++        value_template: '{{ trigger.id == ''down'' }}'
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: "\U0001F5C4️ Proxmox: хранилище заполнено — {{ trigger.to_state.attributes.friendly_name | default(trigger.entity_id) }} = {{ trigger.to_state.state }}% (>= 90%). Освободите место."
++    - conditions:
++      - condition: template
++        value_template: '{{ trigger.id == ''up'' }}'
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: "✅ Proxmox: хранилище в норме — {{ trigger.to_state.attributes.friendly_name | default(trigger.entity_id) }} = {{ trigger.to_state.state }}%."
++- id: '1789500001004'
++  alias: "\U0001F4BE Proxmox: ошибка/устаревание бэкапа (только уведомление)"
++  description: >-
++    NOTIFICATION-ONLY watchdog. Сообщает, когда binary_sensor.mylab_backup_status
++    (device_class problem) = проблема, ИЛИ когда последний бэкап
++    (sensor.mylab_last_backup) старше 36 ч. Проверка устаревания дважды в день
++    (09:00 / 21:00), чтобы не спамить. Единственное действие —
++    telegram_bot.send_message (chat_id 100000000). НЕ управляет устройствами,
++    НЕ вызывает Proxmox button/switch/service.
++  mode: single
++  triggers:
++  - trigger: state
++    entity_id: binary_sensor.mylab_backup_status
++    to: 'on'
++    for: 00:10:00
++    id: problem
++  - trigger: state
++    entity_id: binary_sensor.mylab_backup_status
++    from: 'on'
++    to: 'off'
++    for: 00:05:00
++    id: problem_ok
++  - trigger: time
++    at: '09:00:00'
++    id: stale
++  - trigger: time
++    at: '21:00:00'
++    id: stale
++  - trigger: state
++    entity_id: sensor.mylab_last_backup
++    id: fresh
++  conditions: []
++  actions:
++  - choose:
++    - conditions:
++      - condition: template
++        value_template: '{{ trigger.id == ''problem'' }}'
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: "\U0001F6D1 Proxmox: статус резервного копирования = проблема. Последняя копия: {{ states('sensor.mylab_last_backup') }}. Проверьте задание бэкапа."
++    - conditions:
++      - condition: template
++        value_template: '{{ trigger.id == ''problem_ok'' }}'
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: "✅ Proxmox: статус резервного копирования снова в норме."
++    - conditions:
++      - condition: template
++        value_template: >-
++          {{ trigger.id == 'stale'
++             and states('sensor.mylab_last_backup') not in ['unknown', 'unavailable']
++             and (now() - as_datetime(states('sensor.mylab_last_backup'))).total_seconds() > 129600 }}
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: "\U0001F552 Proxmox: бэкап устарел — последняя копия {{ states('sensor.mylab_last_backup') }} (> 36 ч назад). Проверьте расписание бэкапа."
++    - conditions:
++      - condition: template
++        value_template: >-
++          {{ trigger.id == 'fresh' and trigger.from_state is not none
++             and trigger.from_state.state not in ['unknown', 'unavailable']
++             and trigger.to_state.state not in ['unknown', 'unavailable']
++             and (as_datetime(trigger.to_state.state) - as_datetime(trigger.from_state.state)).total_seconds() > 129600 }}
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: "✅ Proxmox: бэкап снова свежий ({{ states('sensor.mylab_last_backup') }}) после длительного перерыва."
++- id: '1789500001005'
++  alias: "\U0001F4E1 Proxmox: метрика узла зависла (только уведомление)"
++  description: >-
++    NOTIFICATION-ONLY watchdog. Следит за конвейером данных: ключевая метрика узла
++    sensor.mylab_cpu_usage. Тревога, если метрика недоступна > 30 мин ИЛИ не
++    обновлялась > 30 мин (напоминание не чаще раза в 3 ч). Единственное действие —
++    telegram_bot.send_message (chat_id 100000000). НЕ управляет устройствами,
++    НЕ вызывает Proxmox button/switch/service.
++  mode: single
++  triggers:
++  - trigger: state
++    entity_id: sensor.mylab_cpu_usage
++    to: unavailable
++    for: 00:30:00
++    id: down
++  - trigger: state
++    entity_id: sensor.mylab_cpu_usage
++    to: unknown
++    for: 00:30:00
++    id: down
++  - trigger: time_pattern
++    minutes: /30
++    id: stale_check
++  - trigger: state
++    entity_id: sensor.mylab_cpu_usage
++    id: up
++  conditions: []
++  actions:
++  - choose:
++    - conditions:
++      - condition: template
++        value_template: '{{ trigger.id == ''down'' }}'
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: "\U0001F4E1 Proxmox: метрика узла (ЦП) недоступна > 30 мин ({{ states('sensor.mylab_cpu_usage') }}). Конвейер данных Proxmox мог зависнуть — проверьте интеграцию/узел."
++    - conditions:
++      - condition: template
++        value_template: >-
++          {{ trigger.id == 'stale_check'
++             and states('sensor.mylab_cpu_usage') not in ['unavailable', 'unknown']
++             and (now() - states.sensor.mylab_cpu_usage.last_updated).total_seconds() > 1800
++             and (this.attributes.last_triggered is none
++                  or (now() - this.attributes.last_triggered).total_seconds() > 10800) }}
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: "\U0001F4E1 Proxmox: метрика узла (ЦП) не обновлялась > 30 мин. Конвейер данных Proxmox мог зависнуть — проверьте интеграцию/узел."
++    - conditions:
++      - condition: template
++        value_template: >-
++          {{ trigger.id == 'up' and trigger.from_state is not none
++             and states('sensor.mylab_cpu_usage') not in ['unavailable', 'unknown']
++             and (trigger.from_state.state in ['unavailable', 'unknown']
++                  or (now() - trigger.from_state.last_updated).total_seconds() > 1800) }}
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: "✅ Proxmox: метрика узла (ЦП) снова обновляется ({{ states('sensor.mylab_cpu_usage') }})."

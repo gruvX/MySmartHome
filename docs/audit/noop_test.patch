@@ -1,0 +1,126 @@
+# PROPOSAL — NOT APPLIED. DO NOT auto-apply / auto-deploy. Orchestrator deploys after review.
+#
+# WHAT: Add a safe `/noop_test` Telegram button handler. It is a *diagnostic*
+# button: it proves the callback pipeline (bot -> HA -> answer) works WITHOUT
+# touching any device. It never calls water/siren/security/switch/climate/
+# input_boolean/script — only telegram_bot.answer_callback_query (+ one fixed
+# confirmation message). Clearly labelled non-emergency.
+#
+# TWO additive changes to /config/automations.yaml (no existing branch altered):
+#   1) Automation 1778700001005 «Telegram обработчик кнопок» (queued handler):
+#      a new `/noop_test` branch is inserted right before `default:`. Its whole
+#      sequence is a single `stop:` — this suppresses the handler's default
+#      "unknown command" reply AND its trailing answer_callback_query for this
+#      command, so /noop_test is answered exactly once (by change #2) with no
+#      duplicate-answer warning and no "unknown command" spam. All life-safety
+#      branches (/leak_confirm, /siren_off, /security_disarm, /siren_alarm, ...)
+#      are untouched.
+#   2) New dedicated automation 1778700001006 «Telegram: /noop_test»:
+#        - triggers on telegram_callback, conditions gate to chat_id 100000000
+#          AND callback_data == '/noop_test' (so it can never fire on anything
+#          else — zero interference with other callbacks).
+#        - FIRST action always answers the callback (clears the Telegram
+#          spinner) even when throttled, so a rapidly-tapped button never hangs.
+#        - a throttled `telegram_bot.send_message` sends the fixed text
+#          «✅ Тестовая кнопка работает. Действия с домом не выполнялись.»
+#          at most once per cooldown window.
+#
+# COOLDOWN (robust, HA-native, no new helper entities):
+#   mode: single  -> concurrent duplicate taps are dropped while a run executes.
+#   + a `last_triggered` guard: because this automation fires ONLY on
+#     /noop_test, `this.attributes.last_triggered` is a per-command timestamp of
+#     the previous run (HA snapshots `this` before the current run updates it).
+#     send_ok = (last_triggered is none) OR (now() - last_triggered >= 10s).
+#     Spinner is always cleared; the chat message is rate-limited to 1 / 10s.
+#   Change cooldown by editing `cooldown_s`.
+#
+# NO DEVICE COMMANDS: verified structurally (tests/test_noop_callback.py) — the
+# only service calls anywhere in the new logic are telegram_bot.answer_callback_query
+# and telegram_bot.send_message. The handler's /noop_test branch has zero service
+# calls (just `stop`).
+#
+# DEPLOY PLAN (orchestrator, in a maintenance window):
+#   1. Back up: `sudo cp /config/automations.yaml /config/automations.yaml.bak_noop_$(date +%Y%m%d_%H%M%S)`
+#   2. Apply this patch to /config/automations.yaml (context/fuzz OK; line numbers
+#      below reflect the copy fetched read-only 2026-07-15, 4184 lines).
+#   3. Validate: `ha core check` (or Developer Tools -> YAML -> Check config).
+#   4. Reload: POST /api/services/automation/reload  (no HA restart needed —
+#      no new helpers/integrations are introduced).
+#   5. Smoke test: in Telegram tap a button whose callback_data is `/noop_test`
+#      (add one to any menu, or send the callback via Developer Tools). Expect:
+#      spinner clears + one «✅ Тестовая кнопка работает...» message; tap again
+#      within 10s -> spinner clears, NO second message; no device state changes.
+#
+# ROLLBACK:
+#   Restore the backup: `sudo cp /config/automations.yaml.bak_noop_* /config/automations.yaml`
+#   then POST /api/services/automation/reload. (Or reverse-apply: `patch -R`.)
+#   The change is additive and isolated, so simply disabling/deleting automation
+#   1778700001006 + removing the /noop_test branch also fully reverts it.
+#
+# Target file on HA: /config/automations.yaml
+--- a/automations.yaml
++++ b/automations.yaml
+@@ -2667,6 +2667,15 @@
+         data:
+           callback_query_id: '{{ callback_id }}'
+           message: "\U0001F389 Гости: свет включён"
++    # /noop_test — safe test button. Handled by dedicated automation
++    # 1778700001006 (throttled). Stop here so the default "unknown command"
++    # reply and the trailing answer do not fire (avoids duplicate answers /
++    # spam). No device actions. Life-safety branches above are untouched.
++    - conditions:
++      - condition: template
++        value_template: '{{ callback_data == ''/noop_test'' }}'
++      sequence:
++      - stop: /noop_test handled by automation 1778700001006 (test, no actions)
+     default:
+     - action: telegram_bot.send_message
+       data:
+@@ -2679,6 +2688,47 @@
+       show_alert: false
+   mode: queued
+   max: 10
++- id: '1778700001006'
++  alias: "\U0001F9EA Telegram: /noop_test (тест, без действий)"
++  description: >-
++    Безопасная тестовая кнопка. Только подтверждает callback (гасит «часики» в
++    Telegram) и опционально шлёт одно сообщение. НИКАКИХ действий с
++    устройствами (вода/сирена/охрана/хелперы не трогаются). Троттлинг через
++    last_triggered, чтобы частые нажатия не спамили чат.
++  triggers:
++  - platform: event
++    event_type: telegram_callback
++  conditions:
++  - condition: template
++    value_template: '{{ trigger.event.data.chat_id | string == ''100000000'' }}'
++  - condition: template
++    value_template: '{{ trigger.event.data.data == ''/noop_test'' }}'
++  actions:
++  - variables:
++      callback_id: '{{ trigger.event.data.id }}'
++      cooldown_s: 10
++      send_ok: >-
++        {{ this.attributes.last_triggered is none
++           or (now() - this.attributes.last_triggered).total_seconds()
++              >= cooldown_s }}
++  # Always clear the Telegram spinner first — even when throttled — so a
++  # rapidly-tapped button never hangs. No device services are ever called.
++  - action: telegram_bot.answer_callback_query
++    data:
++      callback_query_id: '{{ callback_id }}'
++      message: "✅ Тест OK"
++      show_alert: false
++  # Throttled confirmation: only one message per cooldown_s window.
++  - choose:
++    - conditions:
++      - condition: template
++        value_template: '{{ send_ok }}'
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: "✅ Тестовая кнопка работает. Действия с домом не выполнялись."
++  mode: single
+ - id: '1778700001001'
+   alias: ☀️ Утренний брифинг
+   description: Ежедневный утренний брифинг в 07:00 через Telegram

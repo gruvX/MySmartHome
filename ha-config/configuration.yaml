@@ -1,0 +1,1178 @@
+# Home Assistant — configuration.yaml этого дома, ОБЕЗЛИЧЕННАЯ копия.
+# Публикуется как рабочий пример, а не файл для копирования целиком: entity_id,
+# модели устройств и адреса специфичны для конкретного дома.
+#
+# ЗАМЕНЕНО на плейсхолдеры (в живом файле там настоящие значения):
+#   BOILER_USER / BOILER_PASSWORD — доступ к контроллеру котла ecoNET24;
+#   192.168.1.x — локальные адреса; 100000000 — Telegram chat_id владельца.
+# Настоящие значения держите в secrets.yaml / local_secrets.json, не здесь.
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+input_number:
+  cost_month_boiler:
+    name: Cost month boiler
+    min: 0
+    max: 999999
+    step: 0.01
+    mode: box
+  cost_month_kalarifer:
+    name: Cost month kalarifer
+    min: 0
+    max: 999999
+    step: 0.01
+    mode: box
+  cost_month_akv:
+    name: Cost month akv
+    min: 0
+    max: 999999
+    step: 0.01
+    mode: box
+  cost_month_chep:
+    name: Cost month chep
+    min: 0
+    max: 999999
+    step: 0.01
+    mode: box
+  cost_month_gidro:
+    name: Cost month gidro
+    min: 0
+    max: 999999
+    step: 0.01
+    mode: box
+  cost_month_ev:
+    name: Cost month ev
+    min: 0
+    max: 999999
+    step: 0.01
+    mode: box
+  cost_month_total:
+    name: Cost month total
+    min: 0
+    max: 999999
+    step: 0.01
+    mode: box
+  midnight_boiler_energy:
+    name: Snapshot boiler midnight
+    min: 0
+    max: 9999999
+    step: 0.001
+    mode: box
+  midnight_kalarifer_energy:
+    name: Snapshot kalarifer midnight
+    min: 0
+    max: 9999999
+    step: 0.001
+    mode: box
+  midnight_akv_energy:
+    name: Snapshot aquarium midnight
+    min: 0
+    max: 9999999
+    step: 0.001
+    mode: box
+  midnight_chep_energy:
+    name: Snapshot turtle midnight
+    min: 0
+    max: 9999999
+    step: 0.001
+    mode: box
+  midnight_gidro_energy:
+    name: Snapshot hydrophore midnight
+    min: 0
+    max: 9999999
+    step: 0.001
+    mode: box
+  midnight_ev_energy:
+    name: Snapshot EV midnight
+    min: 0
+    max: 9999999
+    step: 0.001
+    mode: box
+  midnight_tv_energy:
+    name: Snapshot TV midnight
+    min: 0
+    max: 9999999
+    step: 0.001
+    mode: box
+  # --- Гидрофор: ночная проверка и среднее за неделю (2026-08-26) -------------
+  # -1 означает «замера нет» (розетка была офлайн). Ноль означал бы «насос стоял»,
+  # а это разные вещи: путать их нельзя, иначе отчёт соврёт про причину.
+  gidro_night_start:
+    name: Pump night counter start
+    min: -1
+    max: 9999999
+    step: 0.001
+    mode: box
+  gidro_night_kwh:
+    name: Pump night kWh
+    min: -1
+    max: 1000
+    step: 0.001
+    mode: box
+  gidro_minutes_avg7:
+    name: Pump minutes avg 7d
+    min: -1
+    max: 3000
+    step: 0.1
+    mode: box
+  # Длина фактического ночного окна в часах. Нужна и для порога (он на час), и для
+  # честности: «12 мин за 4 часа» и «12 мин за 2 часа» — разные вещи.
+  gidro_night_hours:
+    min: 0
+    max: 12
+    step: 0.01
+    mode: box
+    name: Pump night window hours
+  # --- EV: счётчик переносов зарядки за сутки (2026-08-19) -------------------
+  # Плановое окно наступило, машина не подключена -> ev_replan_next.py переносит
+  # зарядку на следующее дешёвое окно. Без счётчика это могло бы повторяться
+  # весь день. Лимит 2 переноса в местные сутки; обнуляется, когда
+  # input_datetime.ev_replan_day не сегодняшний.
+  ev_replan_count:
+    name: EV — переносов зарядки за сутки
+    min: 0
+    max: 9
+    step: 1
+    mode: box
+
+  # --- тёплый пол: ручная выдержка (2026-08-21) ---------------------------------------
+  # Сколько часов автоматика не трогает пол после того, как температуру поставил ЧЕЛОВЕК.
+  # Человек отличается от автоматики по context.user_id события: HA заполняет его, когда
+  # действие пришло от пользователя (UI, панель, приложение), и оставляет пустым для
+  # автоматизаций и скриптов. Догадок здесь нет.
+  floor_hold_hours:
+    name: Тёплый пол — ручная выдержка, часов
+    min: 1
+    max: 24
+    step: 1
+    initial: 3
+    mode: box
+    icon: mdi:timer-sand
+  # Температура, которую человек поставил. Её и возвращает сторож 1791100001003, если
+  # что-то (ночная экономия, собственное расписание термостата, неизвестный писатель)
+  # перебило установку во время выдержки.
+  floor_hold_temp_vannaia:
+    name: Тёплый пол ванная — ручная температура
+    min: 5
+    max: 40
+    step: 0.5
+    initial: 25
+    mode: box
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer
+  floor_hold_temp_dushevaia:
+    name: Тёплый пол душевая — ручная температура
+    min: 5
+    max: 40
+    step: 0.5
+    initial: 25
+    mode: box
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer
+
+input_datetime:
+  # Момент, на который взят ночной снимок счётчика. Точного 01:00 не ждём: розетка
+  # офлайн ~78% времени, поэтому снимок берётся ПОСЛЕДНИМ удачным чтением в окне
+  # 00:05-01:30, а вердикт — ПЕРВЫМ удачным чтением в окне 04:00-05:30.
+  gidro_night_start_at:
+    name: Pump night window start
+    has_date: true
+    has_time: true
+  gvs_last_notify_on:
+    name: ГВС — последнее уведомление plug_on
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  gvs_last_notify_off:
+    name: ГВС — последнее уведомление plug_off
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  ev_charge_start:
+    name: EV Charge Start Time
+    has_date: true
+    has_time: true
+  tuya_cmd_fail_boiler:
+    name: Бойлер — последнее уведомление о непрошедшей команде
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  tuya_cmd_fail_towel:
+    name: Полотенцесушитель — последнее уведомление о непрошедшей команде
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  tuya_cmd_fail_ev:
+    name: EV зарядка — последнее уведомление о непрошедшей команде
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  ev_overrun_notify:
+    name: EV зарядка — последнее уведомление о переработке окна
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+
+  tuya_selfheal_r1:
+    name: Tuya self-heal — метка перезагрузки 1
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  tuya_selfheal_r2:
+    name: Tuya self-heal — метка перезагрузки 2
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  tuya_selfheal_r3:
+    name: Tuya self-heal — метка перезагрузки 3
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  tuya_selfheal_r4:
+    name: Tuya self-heal — метка перезагрузки 4
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  tuya_selfheal_r5:
+    name: Tuya self-heal — метка перезагрузки 5
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  tuya_selfheal_r6:
+    name: Tuya self-heal — метка перезагрузки 6
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  tuya_selfheal_msg:
+    name: Tuya self-heal — последнее уведомление
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  tuya_selfheal_giveup_msg:
+    name: Tuya self-heal — последнее уведомление об отказе
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  proxmox_metric_last_alert:
+    name: Proxmox — последнее уведомление о зависшей метрике узла
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  # --- EV: стабильная ссылка на ЗАПРОШЕННОЕ ночное окно (2026-08-19) ----------
+  # ЗАЧЕМ: сторож 1790100001001 и автозарядка 1778800001002 оба висели на
+  # input_datetime.ev_charge_start. Планировщик (ev_best2h.py) перезаписал его
+  # 18.08 19:49 (03:45 -> 14:15), time-триггеры молча перевелись на новое время,
+  # и в 03:45 не сработало НИЧЕГО — владелец не получил даже предупреждения.
+  # Этот helper пишет ТОЛЬКО ночной путь (ev_night2h.py); планировщик его не
+  # трогает, поэтому он остаётся стабильной точкой отсчёта для сторожа.
+  ev_night_window_start:
+    name: EV — начало запрошенного ночного окна (стабильная ссылка)
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  # Метка «зарядка в запрошенном окне реально наблюдалась» (status ->
+  # charger_charging). Поздний вердикт 1790500001001 сравнивает её с началом
+  # окна, чтобы не сообщать об успешной зарядке как о провале.
+  ev_night_charge_seen:
+    name: EV — зарядка наблюдалась в запрошенном ночном окне
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  # --- EV: разовая отмена «Отменить зарядку» (2026-08-19) -------------------
+  # ev_cancel_armed_at — когда отмену поставили. Срок истечения: +24 ч
+  # (автоматизация 1790500001001, последняя ветвь), чтобы отмена не могла
+  # зависнуть и молча выключить автоматическую зарядку навсегда.
+  ev_cancel_armed_at:
+    name: EV — разовая отмена поставлена
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  # ev_cancel_consumed — метка «КАКОЕ плановое время было пропущено» (равна
+  # ev_charge_start того окна). Ставится автозарядкой 1778800001002 в момент
+  # пропуска. Сторож 1790100001001 и перенос 1791000001001 по этой метке молчат
+  # именно про это окно: отменённая зарядка не является сбоем.
+  ev_cancel_consumed:
+    name: EV — пропущенное по отмене плановое время
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+  # ev_replan_day — местные сутки, к которым относится input_number.ev_replan_count.
+  ev_replan_day:
+    name: EV — сутки счётчика переносов
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+
+  # --- тёплый пол: до какого момента автоматика не трогает пол ------------------------
+  # Пишется автоматизацией 1791100001001. Считать срок сам не должен НИКТО кроме
+  # binary_sensor.floor_hold_* — это единственная точка правды о выдержке.
+  floor_hold_vannaia:
+    name: Тёплый пол ванная — выдержка до
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+    icon: mdi:timer-sand
+  floor_hold_dushevaia:
+    name: Тёплый пол душевая — выдержка до
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+    icon: mdi:timer-sand
+
+input_boolean:
+  # Держать ручную установку без срока, пока владелец сам не снимет.
+  floor_hold_forever:
+    name: Тёплый пол — держать вручную, пока не отменю
+    icon: mdi:hand-back-right
+
+  ev_manual_mode:
+    name: EV Manual Mode
+    icon: mdi:car-electric
+  security_armed:
+    name: Охрана
+    icon: mdi:shield-home
+  ha_startup_grace:
+    name: HA Startup Grace
+  moisture_bypass_kukhnia:
+    name: Bypass влага кухня
+  moisture_bypass_vannaia:
+    name: Bypass влага ванная
+  moisture_bypass_garazh:
+    name: Bypass влага гараж
+  moisture_bypass_water_sensor_4:
+    name: Bypass влага душевая 1эт Period
+    icon: mdi:shield-refresh
+  tuya_reconnect_grace:
+    name: Tuya Reconnect Grace Period
+    icon: mdi:cloud-refresh
+  turbo_hot_water:
+    name: Турбо нагрев воды
+    icon: mdi:fire-alert
+  night_saver:
+    name: Ночная экономия
+    icon: mdi:weather-night
+  rezhim_zhara:
+    name: Режим Жара (лето, нагрев выкл)
+    icon: mdi:weather-sunny-alert
+  tuya_stale_alert:
+    name: Tuya — активен алерт зависших состояний
+    icon: mdi:cloud-alert
+  boiler_manual_mode:
+    name: Бойлер — ручной режим (цена не трогает)
+    icon: mdi:water-boiler
+  # --- EV: заявка на ночную зарядку «липкая» (2026-08-19) --------------------
+  # Ставится ev_night2h.py ПОСЛЕ успешной записи input_datetime.ev_charge_start.
+  # Пока заявка активна, планировщик 1778800001001 не имеет права перезаписывать
+  # плановое время НИ ПО ОДНОМУ из своих триггеров (price_update, ha_start, 14:05).
+  # Флаг же служит токеном «вердикт ещё не отправлен»: любая ветка, отправившая
+  # сообщение, гасит его, поэтому владелец получает РОВНО ОДНО сообщение.
+  # СРОК ИСТЕЧЕНИЯ: гасится не позже начала окна + 3 ч (1790500001001), и условие
+  # планировщика перестаёт его учитывать в тот же момент независимо от флага —
+  # зависший флаг не может заблокировать планировщик навсегда.
+  ev_night_requested:
+    name: EV — заявка на ночную зарядку активна
+    icon: mdi:weather-night
+  # --- EV: разовая отмена следующей зарядки (2026-08-19) -------------------
+  # Ставится script.ev_cancel_next (кнопка «Отменить зарядку» в Telegram и в
+  # Mini App). Гасится РОВНО ОДИН РАЗ — первым же плановым окном, которое
+  # автозарядка 1778800001002 из-за неё пропустила, либо по сроку 24 ч, либо
+  # нажатием «Зарядить ночью/днём» (ev_night2h.py / ev_day2h.py снимают её).
+  # Отмена НЕ отключает автоматику: пропускается ровно одно окно.
+  ev_charge_cancelled:
+    name: EV — следующая зарядка отменена (разово)
+    icon: mdi:calendar-remove
+
+# 2026-08-16: http: block removed - HA migrated it to .storage/http
+# (yaml_migration_done: true). ip_ban_enabled/login_attempts_threshold/
+# use_x_forwarded_for/trusted_proxies now live THERE. External access via
+# Tailscale Funnel depends on use_x_forwarded_for + trusted_proxies, so do
+# NOT re-add them here: YAML is ignored after migration.
+
+# --- Диагностика: файловый лог и глубина истории (добавлено 2026-08-17) -----
+# ПОЧЕМУ /config/home-assistant.log отсутствовал: HA Core под Supervisor
+# полностью отключает файловый лог-хендлер. bootstrap.py::_log_file_disabled_reason():
+#   if ENV_SUPERVISOR in os.environ and ENV_DUPLICATE_LOG_FILE not in os.environ
+# -> err_log_path = None -> нет hass.data[DATA_LOGGING] -> GET /api/error_log = 404.
+# Файл включается НЕ здесь, а опцией Supervisor: POST /core/options
+#   {"duplicate_log_file": true}   (видно в GET /core/info), затем restart core.
+# Этот блок задаёт только УРОВНИ. Ротация файла: RotatingFileHandler(backupCount=1),
+# rollover вызывается лишь при старте HA => глубина = текущий запуск + предыдущий
+# (home-assistant.log.1). Долгая история остаётся в journal (Supervisor /core/logs).
+#
+# default: warning — паритет с текущим поведением: без -v корневой логгер HA уже
+# стоит на WARNING (bootstrap: logger.setLevel(INFO if verbose else WARNING)),
+# поэтому этот default НЕ увеличивает объём. default: info добавил бы тысячи
+# строк setup/service на каждый рестарт без диагностической ценности.
+#
+# Точечный debug включается на живой системе БЕЗ рестарта:
+#   service logger.set_level  {"homeassistant.components.automation": "debug"}
+logger:
+  default: warning
+  logs:
+    # --- то, что уже вызывало инциденты в этом доме: держим видимым ---
+    # Tuya `sign invalid` / ApiRequestException: заморозил счётчики энергии на
+    # 14.6 суток и рвёт automation посреди скрипта.
+    homeassistant.components.tuya: info
+    tuya_sharing: info
+    # Automation: ошибки и падения действий. NB: "triggered" и "Conditions not
+    # met" пишутся на DEBUG, поэтому info по объёму == warning; ERROR ловится всегда.
+    homeassistant.components.automation: info
+    homeassistant.components.telegram_bot: info
+    homeassistant.components.command_line: info
+    # rest = котёл ecoNET (WiFi флапает, IP дрейфует .10/.11/.12). Только warning:
+    # на info это опрос каждые 10 с по нескольким ресурсам = флуд.
+    homeassistant.components.rest: warning
+    homeassistant.helpers.template: warning
+    # --- известный шум: оставляем только ERROR ---
+    custom_components.xiaomi_home: error
+    homeassistant.components.roborock: error
+    homeassistant.components.homekit: error
+    homeassistant.components.ipp: error
+    homeassistant.components.androidtv_remote: error
+
+recorder:
+  # Было 10 суток (default) — не хватало на разбор инцидентов (самая старая
+  # запись в states была 2026-08-07). Расчёт: рабочий набор (states +
+  # state_attributes + events + short-term statistics + индексы) = 226 МБ за
+  # 10.37 суток = 21.8 МБ/сут; 30 суток => ~654 МБ + 40 МБ долгосрочной
+  # статистики = ~0.7 ГБ при 19.6 ГБ свободных на /data.
+  # Исключений (exclude) намеренно НЕТ: они ослепляют будущую диагностику.
+  purge_keep_days: 30
+
+# Required by automation 1790200001001 (Tuya self-heal): system_log only
+# publishes the system_log_event bus event when fire_event is true
+# (DEFAULT_FIRE_EVENT = False). Takes effect on the next HA restart.
+system_log:
+  fire_event: true
+command_line:
+  - sensor:
+      name: "EV Charger Energy"
+      unique_id: ev_charger_energy_cloud
+      command: "python3 /config/ev_query.py"
+      # scan_interval 300 -> 900 (2026-08-19, снижение нагрузки на квоту Tuya).
+      # Это накопительный счётчик kWh: суточный/месячный учёт и вечерний отчёт
+      # берут разницу с полуночным снимком, 15-минутного разрешения хватает.
+      # "EV Charger Status" ниже НАМЕРЕННО остаётся на 300 с: он резервный триггер
+      # интерлока EV+бойлер, его задержку увеличивать нельзя.
+      # Оба сенсора вызывают ОДИН скрипт с общим кэшем результата (RESULT_TTL 290 с),
+      # поэтому число облачных вызовов задаёт более частый из двух (status, 300 с):
+      # ~288/сутки до и после правки. Экономия здесь — 192 запуска процесса в сутки
+      # и столько же потенциальных обращений в облако на путях промаха кэша.
+      scan_interval: 900
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      value_template: "{{ value_json.energy }}"
+      # src / stale_age: ev_query.py may serve a cached payload for up to 24 h after a
+      # Tuya failure and re-stamps the cache on quota errors. These two attributes make
+      # that visible (src: cloud|cache|stale|quota|error, stale_age in seconds since the
+      # data really came off the cloud) instead of a silent lag.
+      json_attributes:
+        - status
+        - mode
+        - switch
+        - session_kwh
+        - src
+        - stale_age
+  - sensor:
+      name: "EV Charger Status"
+      unique_id: ev_charger_status_cloud
+      command: "python3 /config/ev_query.py"
+      scan_interval: 300
+      value_template: "{{ value_json.status }}"
+      # See the note on EV Charger Energy: this sensor is the one consumers trust for
+      # "is the car charging", so it must be able to say how old that answer is.
+      json_attributes:
+        - src
+        - stale_age
+  - sensor:
+      name: "Tuya Leak Cloud"
+      unique_id: tuya_leak_cloud
+      command: "python3 /config/tuya_leak_query.py"
+      # scan_interval 30 -> 180 (2026-08-19). ПРИЧИНА: 30 с = 2880 обращений к облаку
+      # Tuya в сутки поверх трафика самой интеграции; в логе появились
+      # "network error:(-9999999) API_QPS_LIMIT_OR_DEGRADE" — квота Tuya исчерпана,
+      # сессия деградирует, сущности массово уходят в unavailable, и это порождает
+      # шторм уведомлений. 180 с = 480 обращений/сутки (-83 %).
+      # ЧУВСТВИТЕЛЬНОСТЬ НЕ ОСЛАБЛЕНА: облако — РЕЗЕРВНЫЙ путь, основной —
+      # binary_sensor.*_moisture + 3-секундное подтверждение в утечке v4. Когда
+      # основной путь слепнет (любой из 4 датчиков unavailable/unknown),
+      # automation 1790400001001 форсирует homeassistant.update_entity этого
+      # сенсора каждые 30 с — быстро, когда это важно, дёшево, когда всё здорово.
+      # ОКНО СВЕЖЕСТИ: sensor.leak_protection_status считает облако «usable» при
+      # cloud_age_sec < 300. Жёсткая граница возраста ts здесь =
+      # scan_interval + command_timeout = 180 + 20 = 200 с < 300 с, поэтому при
+      # здоровом облаке truth-сенсор НИКОГДА не проваливается в HA-ветку из-за
+      # интервала. Если поднимать scan_interval выше 280 — сначала расширить окно
+      # в четырёх шаблонах leak_protection_status (и в tests/test_leak_truth.py).
+      scan_interval: 180
+      command_timeout: 20
+      value_template: "{{ value_json.state }}"
+      json_attributes:
+        - alarm_entities
+        - raw
+        - online
+        - ts
+        - src
+
+rest:
+  - resource: http://BOILER_USER:BOILER_PASSWORD@ecoNET300.local/econet/regParams
+    scan_interval: 30
+    sensor:
+      - name: "Boiler CO Temperature"
+        unique_id: boiler_co_temperature
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.tempCO is defined %}{{ value_json.curr.tempCO | default(0) | round(1) }}{% else %}0{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.tempCO is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+
+      - name: "Boiler CO Setpoint"
+        unique_id: boiler_co_setpoint
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.tempCOSet is defined %}{{ value_json.curr.tempCOSet | default(0) | int }}{% else %}0{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.tempCOSet is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+
+      - name: "Boiler CWU Temperature"
+        unique_id: boiler_cwu_temperature
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.tempCWU is defined %}{{ value_json.curr.tempCWU | default(0) | round(1) }}{% else %}0{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.tempCWU is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+
+      - name: "Boiler CWU Setpoint"
+        unique_id: boiler_cwu_setpoint
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.tempCWUSet is defined %}{{ value_json.curr.tempCWUSet | default(0) | int }}{% else %}0{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.tempCWUSet is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+
+      - name: "Boiler Return Temperature"
+        unique_id: boiler_return_temperature
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.tempBack is defined %}{{ value_json.curr.tempBack | default(0) | round(1) }}{% else %}0{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.tempBack is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+
+      - name: "Boiler Flue Gas Temperature"
+        unique_id: boiler_flue_gas_temperature
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.tempFlueGas is defined %}{{ value_json.curr.tempFlueGas | default(0) | round(1) }}{% else %}0{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.tempFlueGas is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+
+      - name: "Boiler Outside Temperature"
+        unique_id: boiler_outside_temperature
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.tempExternalSensor is defined %}{{ value_json.curr.tempExternalSensor | default(0) | round(1) }}{% else %}0{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.tempExternalSensor is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+
+      - name: "Boiler Feeder Temperature"
+        unique_id: boiler_feeder_temperature
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.tempFeeder is defined %}{{ value_json.curr.tempFeeder | default(0) | round(1) }}{% else %}0{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.tempFeeder is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+
+      - name: "Boiler Fan Power"
+        unique_id: boiler_fan_power
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.fanPower is defined %}{{ value_json.curr.fanPower | default(0) | round(0) | int }}{% else %}0{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.fanPower is defined }}"
+        unit_of_measurement: "%"
+        state_class: measurement
+        icon: mdi:fan
+
+      - name: "Boiler Power"
+        unique_id: boiler_power
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.boilerPower is defined %}{{ value_json.curr.boilerPower | default(0) | round(0) | int }}{% else %}0{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.boilerPower is defined }}"
+        unit_of_measurement: "%"
+        state_class: measurement
+        icon: mdi:fire
+
+
+      - name: "Boiler Fuel Level"
+        unique_id: boiler_fuel_level
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.fuelLevel is defined %}{{ value_json.curr.fuelLevel | default(0) | int }}{% else %}0{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.fuelLevel is defined }}"
+        unit_of_measurement: "%"
+        state_class: measurement
+        icon: mdi:silo
+
+      - name: "Boiler Mixer Temperature"
+        unique_id: boiler_mixer_temperature
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.mixerTemp1 is defined %}{{ value_json.curr.mixerTemp1 | default(0) | round(1) }}{% else %}0{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.mixerTemp1 is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+
+      - name: "Boiler Mixer Setpoint"
+        unique_id: boiler_mixer_setpoint
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.mixerSetTemp1 is defined %}{{ value_json.curr.mixerSetTemp1 | default(0) | int }}{% else %}0{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.mixerSetTemp1 is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+
+      - name: "Boiler Mode"
+        unique_id: boiler_mode
+        value_template: >-
+          {% set modes = {
+            0: 'Выключен',
+            1: 'Розжиг',
+            2: 'Работа',
+            3: 'Надзор',
+            4: 'Ожидание',
+            5: 'Догорание',
+            6: 'Нагрев ГВС',
+            7: 'Нагрев ЦО',
+            8: 'Надзор расш.',
+            9: 'Авария',
+            10: 'Ручной',
+            14: 'Работа'
+          } %}
+          {% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.mode is defined %}{{ modes.get(value_json.curr.mode | int, 'Режим ' + (value_json.curr.mode | string)) }}{% else %}unknown{% endif %}
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.mode is defined }}"
+        icon: mdi:fire-circle
+
+    binary_sensor:
+
+      - name: "Boiler Alarm"
+        unique_id: boiler_alarm
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.alarmOutput is defined %}{{ value_json.curr.alarmOutput }}{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.alarmOutput is defined }}"
+        device_class: problem
+        icon: mdi:alarm-light
+
+      - name: "Boiler Circulation Pump"
+        unique_id: boiler_circulation_pump
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.pumpCirculation is defined %}{{ value_json.curr.pumpCirculation }}{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.pumpCirculation is defined }}"
+        device_class: running
+        icon: mdi:pump
+
+      - name: "Boiler Thermostat"
+        unique_id: boiler_thermostat
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.thermostat is defined %}{{ value_json.curr.thermostat | int > 0 }}{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.thermostat is defined }}"
+        device_class: heat
+        icon: mdi:thermostat
+
+      - name: "Boiler CO Pump"
+        unique_id: boiler_co_pump
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.pumpCO is defined %}{{ value_json.curr.pumpCO }}{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.pumpCO is defined }}"
+        device_class: running
+        icon: mdi:pump
+
+      - name: "Boiler CWU Pump"
+        unique_id: boiler_cwu_pump
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.pumpCWU is defined %}{{ value_json.curr.pumpCWU }}{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.pumpCWU is defined }}"
+        device_class: running
+        icon: mdi:pump
+
+      - name: "Boiler Fan"
+        unique_id: boiler_fan
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.fan is defined %}{{ value_json.curr.fan }}{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.fan is defined }}"
+        device_class: running
+        icon: mdi:fan
+
+      - name: "Boiler Feeder"
+        unique_id: boiler_feeder
+        value_template: "{% if value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.feeder is defined %}{{ value_json.curr.feeder }}{% endif %}"
+        availability: "{{ value_json is defined and value_json is mapping and value_json.curr is defined and value_json.curr.feeder is defined }}"
+        icon: mdi:transfer-right
+
+rest_command:
+  boiler_turn_on:
+    url: "http://ecoNET300.local/econet/rmNewParam?newParamIndex=75&newParamValue=1"
+    method: GET
+    username: admin
+    password: BOILER_PASSWORD
+  boiler_turn_off:
+    url: "http://ecoNET300.local/econet/rmNewParam?newParamIndex=75&newParamValue=0"
+    method: GET
+    username: admin
+    password: BOILER_PASSWORD
+  set_boiler_cwu_temp:
+    url: "http://ecoNET300.local/econet/rmCurrNewParam?newParamKey=1281&newParamValue={{ temp }}"
+    method: GET
+    username: admin
+    password: BOILER_PASSWORD
+  set_boiler_co_temp:
+    url: "http://ecoNET300.local/econet/rmCurrNewParam?newParamKey=1280&newParamValue={{ temp }}"
+    method: GET
+    username: admin
+    password: BOILER_PASSWORD
+  disable_boiler_cwu:
+    url: "http://ecoNET300.local/econet/rmCurrNewParam?newParamKey=1281&newParamValue=40"
+    method: GET
+    username: admin
+    password: BOILER_PASSWORD
+  enable_boiler_cwu:
+    url: "http://ecoNET300.local/econet/rmCurrNewParam?newParamKey=1281&newParamValue=55"
+    method: GET
+    username: admin
+    password: BOILER_PASSWORD
+  turbo_boiler_cwu:
+    url: "http://ecoNET300.local/econet/rmCurrNewParam?newParamKey=1281&newParamValue=65"
+    method: GET
+    username: admin
+    password: BOILER_PASSWORD
+
+shell_command:
+  update_today_prices: python3 /config/update_today_prices.py
+  ev_find_best2h: python3 /config/ev_best2h.py
+  ev_night2h: python3 /config/ev_night2h.py
+  ev_day2h:   python3 /config/ev_day2h.py
+  # Автоматическое расписание: самое дешёвое 2ч окно на ближайшие 24 ч.
+  # ev_find_best2h (ev_best2h.py) НЕ удалён — он закреплён тестом
+  # tests/test_ev_notify_surgical.py и остаётся доступен вручную; на
+  # автоматическом пути его заменил ev_auto2h (см. автоматизацию 1778800001001).
+  ev_auto2h: python3 /config/ev_auto2h.py
+  # Перенос зарядки, когда в плановое окно машина не подключена (лимит 2/сутки).
+  ev_replan_next: python3 /config/ev_replan_next.py
+  shadow_energy_collect: python3 /config/shadow_energy_collect.py
+  price_forecast: python3 /config/price_forecast.py
+
+miniapp_auth:
+
+# --- Presence: combined GPS + WiFi(SSID) signal with debounce (added 2026-07) ---
+template:
+  - binary_sensor:
+      - name: "Присутствие Владелец"
+        unique_id: presence_owner_combined
+        device_class: presence
+        icon: mdi:home-account
+        state: >
+          {{ is_state('person.owner','home')
+             or is_state('device_tracker.myiphone','home')
+             or is_state('sensor.ssid','HOME_WIFI') }}
+        delay_on: "00:00:10"
+        delay_off: "00:10:00"
+
+  # --- SINGLE SOURCE OF TRUTH for leak protection (added 2026-07-27) -----------
+  # Every UI (tablet panel, Telegram Mini App) reads THIS entity and nothing else.
+  # Do NOT re-implement "is this sensor OK" anywhere else - that is exactly the bug
+  # that recurred for two months (~10 divergent copies of the rule).
+  #
+  # state: leak | blind | ok   (worst first: any leak -> leak; else any blind -> blind; else ok)
+  # PER-SENSOR RULE (the one rule):
+  #   1. leak   if HA state == 'on' OR the Tuya-cloud raw value == '1'  ('1'=wet, '2'=dry, MEASURED)
+  #   2. else ALIVE:  cloud is USABLE when sensor.tuya_leak_cloud is not unavailable/unknown,
+  #                   its src != 'error' and (now - ts) < 300 s.
+  #                   USABLE     -> alive := online[entity] is true
+  #                   NOT usable -> alive := HA state in ('on','off') AND last_updated age < 24 h
+  #   3. blind  if not alive, otherwise dry
+  # CONSEQUENCE: these are battery SLEEPERS - they report only on wet/dry events. Silence for
+  # hours or a whole day is NORMAL. A silent-but-cloud-online sensor is `dry`, NEVER `blind`.
+  # Silence alone must never produce `blind`. There is NO 3-hour staleness rule any more.
+  # The 4 heavy templates below (state, per_sensor, leak_names, blind_names) hold the
+  # BYTE-IDENTICAL rule text; tests/test_leak_truth.py asserts they stay identical.
+  - sensor:
+      - name: "Защита от протечки"
+        unique_id: leak_protection_status
+        # NOTE: entity_id is pinned to sensor.leak_protection_status via the ENTITY
+        # REGISTRY (.storage/core.entity_registry), because HA derives entity_id from
+        # `name`, which here is Russian ("Защита от протечки" -> sensor.zashchita_ot_protechki).
+        # If that registry entry is ever deleted the entity reappears under the slugified
+        # Russian name and every UI falls back to «неизвестно» (safe, but wrong). Re-pin with
+        # WS config/entity_registry/update -> new_entity_id: sensor.leak_protection_status.
+        icon: mdi:water-alert-outline
+        state: |
+          {%- set ids = [
+              ['binary_sensor.vannaia_moisture','Ванная'],
+              ['binary_sensor.garazh_moisture','Гараж'],
+              ['binary_sensor.kukhnia_moisture','Кухня'],
+              ['binary_sensor.water_sensor_4_moisture','Душевая 1эт'] ] -%}
+          {%- set cl = 'sensor.tuya_leak_cloud' -%}
+          {%- set cs = states(cl) -%}
+          {%- set src = state_attr(cl,'src') -%}
+          {%- set ts = state_attr(cl,'ts') -%}
+          {%- set raw = state_attr(cl,'raw') -%}
+          {%- set onl = state_attr(cl,'online') -%}
+          {%- set nsx = namespace(h=[], a=[]) -%}
+          {%- for id, nm in ids -%}
+            {%- set nsx.h = nsx.h + [[id, states(id)]] -%}
+            {%- set so = states[id] -%}
+            {%- set nsx.a = nsx.a + [[id, (as_timestamp(now()) - as_timestamp(so.last_updated)) if so is not none else -1]] -%}
+          {%- endfor -%}
+          {%- set hsmap = dict(nsx.h) -%}
+          {%- set hagemap = dict(nsx.a) -%}
+          {%- set raw = raw if raw is mapping else {} -%}
+          {%- set onl = onl if onl is mapping else {} -%}
+          {%- set hsmap = hsmap if hsmap is mapping else {} -%}
+          {%- set hagemap = hagemap if hagemap is mapping else {} -%}
+          {%- set has_ts = ts is not none and (ts | float(0)) > 0 -%}
+          {%- set cage = ((as_timestamp(now()) - (ts | float(0))) | round(0) | int) if has_ts else -1 -%}
+          {%- set usable = (cs not in ['unavailable','unknown','none','None','']) and (src is string) and (src != 'error') and has_ts and cage >= 0 and cage < 300 -%}
+          {%- set ns = namespace(pairs=[], leak=[], blind=[]) -%}
+          {%- for id, nm in ids -%}
+            {%- set hs = hsmap.get(id) | string -%}
+            {%- set rv = raw.get(id) | string -%}
+            {%- if hs == 'on' or rv == '1' -%}
+              {%- set ns.pairs = ns.pairs + [[id,'leak']] -%}
+              {%- set ns.leak = ns.leak + [nm] -%}
+            {%- else -%}
+              {%- if usable -%}
+                {%- set alive = (onl.get(id) | string | lower) == 'true' -%}
+              {%- else -%}
+                {%- set ha = hagemap.get(id) | float(-1) -%}
+                {%- set alive = (hs in ['on','off']) and ha >= 0 and ha < 86400 -%}
+              {%- endif -%}
+              {%- if alive -%}
+                {%- set ns.pairs = ns.pairs + [[id,'dry']] -%}
+              {%- else -%}
+                {%- set ns.pairs = ns.pairs + [[id,'blind']] -%}
+                {%- set ns.blind = ns.blind + [nm] -%}
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {%- set per = dict(ns.pairs) -%}
+          {%- set status = 'leak' if ns.leak | count > 0 else ('blind' if ns.blind | count > 0 else 'ok') -%}
+          {{ status }}
+        attributes:
+          per_sensor: |
+            {%- set ids = [
+                ['binary_sensor.vannaia_moisture','Ванная'],
+                ['binary_sensor.garazh_moisture','Гараж'],
+                ['binary_sensor.kukhnia_moisture','Кухня'],
+                ['binary_sensor.water_sensor_4_moisture','Душевая 1эт'] ] -%}
+            {%- set cl = 'sensor.tuya_leak_cloud' -%}
+            {%- set cs = states(cl) -%}
+            {%- set src = state_attr(cl,'src') -%}
+            {%- set ts = state_attr(cl,'ts') -%}
+            {%- set raw = state_attr(cl,'raw') -%}
+            {%- set onl = state_attr(cl,'online') -%}
+            {%- set nsx = namespace(h=[], a=[]) -%}
+            {%- for id, nm in ids -%}
+              {%- set nsx.h = nsx.h + [[id, states(id)]] -%}
+              {%- set so = states[id] -%}
+              {%- set nsx.a = nsx.a + [[id, (as_timestamp(now()) - as_timestamp(so.last_updated)) if so is not none else -1]] -%}
+            {%- endfor -%}
+            {%- set hsmap = dict(nsx.h) -%}
+            {%- set hagemap = dict(nsx.a) -%}
+            {%- set raw = raw if raw is mapping else {} -%}
+            {%- set onl = onl if onl is mapping else {} -%}
+            {%- set hsmap = hsmap if hsmap is mapping else {} -%}
+            {%- set hagemap = hagemap if hagemap is mapping else {} -%}
+            {%- set has_ts = ts is not none and (ts | float(0)) > 0 -%}
+            {%- set cage = ((as_timestamp(now()) - (ts | float(0))) | round(0) | int) if has_ts else -1 -%}
+            {%- set usable = (cs not in ['unavailable','unknown','none','None','']) and (src is string) and (src != 'error') and has_ts and cage >= 0 and cage < 300 -%}
+            {%- set ns = namespace(pairs=[], leak=[], blind=[]) -%}
+            {%- for id, nm in ids -%}
+              {%- set hs = hsmap.get(id) | string -%}
+              {%- set rv = raw.get(id) | string -%}
+              {%- if hs == 'on' or rv == '1' -%}
+                {%- set ns.pairs = ns.pairs + [[id,'leak']] -%}
+                {%- set ns.leak = ns.leak + [nm] -%}
+              {%- else -%}
+                {%- if usable -%}
+                  {%- set alive = (onl.get(id) | string | lower) == 'true' -%}
+                {%- else -%}
+                  {%- set ha = hagemap.get(id) | float(-1) -%}
+                  {%- set alive = (hs in ['on','off']) and ha >= 0 and ha < 86400 -%}
+                {%- endif -%}
+                {%- if alive -%}
+                  {%- set ns.pairs = ns.pairs + [[id,'dry']] -%}
+                {%- else -%}
+                  {%- set ns.pairs = ns.pairs + [[id,'blind']] -%}
+                  {%- set ns.blind = ns.blind + [nm] -%}
+                {%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {%- set per = dict(ns.pairs) -%}
+            {%- set status = 'leak' if ns.leak | count > 0 else ('blind' if ns.blind | count > 0 else 'ok') -%}
+            {{ per | to_json }}
+          leak_names: |
+            {%- set ids = [
+                ['binary_sensor.vannaia_moisture','Ванная'],
+                ['binary_sensor.garazh_moisture','Гараж'],
+                ['binary_sensor.kukhnia_moisture','Кухня'],
+                ['binary_sensor.water_sensor_4_moisture','Душевая 1эт'] ] -%}
+            {%- set cl = 'sensor.tuya_leak_cloud' -%}
+            {%- set cs = states(cl) -%}
+            {%- set src = state_attr(cl,'src') -%}
+            {%- set ts = state_attr(cl,'ts') -%}
+            {%- set raw = state_attr(cl,'raw') -%}
+            {%- set onl = state_attr(cl,'online') -%}
+            {%- set nsx = namespace(h=[], a=[]) -%}
+            {%- for id, nm in ids -%}
+              {%- set nsx.h = nsx.h + [[id, states(id)]] -%}
+              {%- set so = states[id] -%}
+              {%- set nsx.a = nsx.a + [[id, (as_timestamp(now()) - as_timestamp(so.last_updated)) if so is not none else -1]] -%}
+            {%- endfor -%}
+            {%- set hsmap = dict(nsx.h) -%}
+            {%- set hagemap = dict(nsx.a) -%}
+            {%- set raw = raw if raw is mapping else {} -%}
+            {%- set onl = onl if onl is mapping else {} -%}
+            {%- set hsmap = hsmap if hsmap is mapping else {} -%}
+            {%- set hagemap = hagemap if hagemap is mapping else {} -%}
+            {%- set has_ts = ts is not none and (ts | float(0)) > 0 -%}
+            {%- set cage = ((as_timestamp(now()) - (ts | float(0))) | round(0) | int) if has_ts else -1 -%}
+            {%- set usable = (cs not in ['unavailable','unknown','none','None','']) and (src is string) and (src != 'error') and has_ts and cage >= 0 and cage < 300 -%}
+            {%- set ns = namespace(pairs=[], leak=[], blind=[]) -%}
+            {%- for id, nm in ids -%}
+              {%- set hs = hsmap.get(id) | string -%}
+              {%- set rv = raw.get(id) | string -%}
+              {%- if hs == 'on' or rv == '1' -%}
+                {%- set ns.pairs = ns.pairs + [[id,'leak']] -%}
+                {%- set ns.leak = ns.leak + [nm] -%}
+              {%- else -%}
+                {%- if usable -%}
+                  {%- set alive = (onl.get(id) | string | lower) == 'true' -%}
+                {%- else -%}
+                  {%- set ha = hagemap.get(id) | float(-1) -%}
+                  {%- set alive = (hs in ['on','off']) and ha >= 0 and ha < 86400 -%}
+                {%- endif -%}
+                {%- if alive -%}
+                  {%- set ns.pairs = ns.pairs + [[id,'dry']] -%}
+                {%- else -%}
+                  {%- set ns.pairs = ns.pairs + [[id,'blind']] -%}
+                  {%- set ns.blind = ns.blind + [nm] -%}
+                {%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {%- set per = dict(ns.pairs) -%}
+            {%- set status = 'leak' if ns.leak | count > 0 else ('blind' if ns.blind | count > 0 else 'ok') -%}
+            {{ ns.leak | to_json }}
+          blind_names: |
+            {%- set ids = [
+                ['binary_sensor.vannaia_moisture','Ванная'],
+                ['binary_sensor.garazh_moisture','Гараж'],
+                ['binary_sensor.kukhnia_moisture','Кухня'],
+                ['binary_sensor.water_sensor_4_moisture','Душевая 1эт'] ] -%}
+            {%- set cl = 'sensor.tuya_leak_cloud' -%}
+            {%- set cs = states(cl) -%}
+            {%- set src = state_attr(cl,'src') -%}
+            {%- set ts = state_attr(cl,'ts') -%}
+            {%- set raw = state_attr(cl,'raw') -%}
+            {%- set onl = state_attr(cl,'online') -%}
+            {%- set nsx = namespace(h=[], a=[]) -%}
+            {%- for id, nm in ids -%}
+              {%- set nsx.h = nsx.h + [[id, states(id)]] -%}
+              {%- set so = states[id] -%}
+              {%- set nsx.a = nsx.a + [[id, (as_timestamp(now()) - as_timestamp(so.last_updated)) if so is not none else -1]] -%}
+            {%- endfor -%}
+            {%- set hsmap = dict(nsx.h) -%}
+            {%- set hagemap = dict(nsx.a) -%}
+            {%- set raw = raw if raw is mapping else {} -%}
+            {%- set onl = onl if onl is mapping else {} -%}
+            {%- set hsmap = hsmap if hsmap is mapping else {} -%}
+            {%- set hagemap = hagemap if hagemap is mapping else {} -%}
+            {%- set has_ts = ts is not none and (ts | float(0)) > 0 -%}
+            {%- set cage = ((as_timestamp(now()) - (ts | float(0))) | round(0) | int) if has_ts else -1 -%}
+            {%- set usable = (cs not in ['unavailable','unknown','none','None','']) and (src is string) and (src != 'error') and has_ts and cage >= 0 and cage < 300 -%}
+            {%- set ns = namespace(pairs=[], leak=[], blind=[]) -%}
+            {%- for id, nm in ids -%}
+              {%- set hs = hsmap.get(id) | string -%}
+              {%- set rv = raw.get(id) | string -%}
+              {%- if hs == 'on' or rv == '1' -%}
+                {%- set ns.pairs = ns.pairs + [[id,'leak']] -%}
+                {%- set ns.leak = ns.leak + [nm] -%}
+              {%- else -%}
+                {%- if usable -%}
+                  {%- set alive = (onl.get(id) | string | lower) == 'true' -%}
+                {%- else -%}
+                  {%- set ha = hagemap.get(id) | float(-1) -%}
+                  {%- set alive = (hs in ['on','off']) and ha >= 0 and ha < 86400 -%}
+                {%- endif -%}
+                {%- if alive -%}
+                  {%- set ns.pairs = ns.pairs + [[id,'dry']] -%}
+                {%- else -%}
+                  {%- set ns.pairs = ns.pairs + [[id,'blind']] -%}
+                  {%- set ns.blind = ns.blind + [nm] -%}
+                {%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {%- set per = dict(ns.pairs) -%}
+            {%- set status = 'leak' if ns.leak | count > 0 else ('blind' if ns.blind | count > 0 else 'ok') -%}
+            {{ ns.blind | to_json }}
+          checked: |
+            {{ now().isoformat(timespec='seconds') }}
+          cloud_src: |
+            {%- set cl = 'sensor.tuya_leak_cloud' -%}
+            {%- set ts = state_attr(cl,'ts') -%}
+            {%- set src = state_attr(cl,'src') -%}
+            {%- set has_ts = ts is not none and (ts | float(0)) > 0 -%}
+            {%- set cage = ((as_timestamp(now()) - (ts | float(0))) | round(0) | int) if has_ts else -1 -%}
+            {{ src if src is string else 'unknown' }}
+          cloud_age_sec: |
+            {%- set cl = 'sensor.tuya_leak_cloud' -%}
+            {%- set ts = state_attr(cl,'ts') -%}
+            {%- set src = state_attr(cl,'src') -%}
+            {%- set has_ts = ts is not none and (ts | float(0)) > 0 -%}
+            {%- set cage = ((as_timestamp(now()) - (ts | float(0))) | round(0) | int) if has_ts else -1 -%}
+            {{ cage }}
+
+  # --- тёплый пол: ОДНА точка правды о ручной выдержке (2026-08-21) -------------------
+  # ВНИМАНИЕ, ЛОВУШКА: entity_id у template-сущности берётся из `name`, а НЕ из unique_id.
+  # По этим именам HA создал binary_sensor.teplyi_pol_vannaia_ruchnaia_vyderzhka; оба сенсора
+  # ПЕРЕИМЕНОВАНЫ в реестре в binary_sensor.floor_hold_vannaia / _dushevaia, потому что
+  # сторож 1791100001003 собирает id из trigger.id: 'binary_sensor.floor_hold_' ~ комната.
+  # Переименование живёт в .storage/core.entity_registry и переживает reload. Если менять
+  # `name` ниже — id НЕ изменится (реестр держит его за unique_id), а если удалить сенсор и
+  # создать заново с другим unique_id, id вернётся к слагу от имени и сторож ослепнет.
+  # on = автоматика не должна трогать этот пол. Причина в атрибуте reason:
+  #   forever — включён input_boolean.floor_hold_forever, без срока;
+  #   timer   — до момента в input_datetime.floor_hold_*.
+  # Каждый писатель по полу проверяет ЭТОТ сенсор и ничего не вычисляет сам — ровно так же,
+  # как sensor.leak_protection_status для протечки. Шаблон использует now(), поэтому HA
+  # пересчитывает его каждую минуту и выдержка гаснет сама.
+  - binary_sensor:
+      - name: "Тёплый пол ванная — ручная выдержка"
+        unique_id: floor_hold_vannaia
+        icon: mdi:hand-back-right
+        state: >
+          {{ is_state('input_boolean.floor_hold_forever','on')
+             or (state_attr('input_datetime.floor_hold_vannaia','timestamp') | float(0)) > as_timestamp(now()) }}
+        attributes:
+          reason: >
+            {{ 'forever' if is_state('input_boolean.floor_hold_forever','on')
+               else ('timer' if (state_attr('input_datetime.floor_hold_vannaia','timestamp') | float(0)) > as_timestamp(now()) else 'none') }}
+          until: >
+            {% set t = state_attr('input_datetime.floor_hold_vannaia','timestamp') | float(0) %}
+            {{ t | timestamp_custom('%H:%M', true) if t > as_timestamp(now()) else '' }}
+          mins_left: >
+            {% set t = state_attr('input_datetime.floor_hold_vannaia','timestamp') | float(0) %}
+            {{ ((t - as_timestamp(now())) / 60) | round(0) | int if t > as_timestamp(now()) else 0 }}
+          held_temp: "{{ states('input_number.floor_hold_temp_vannaia') | float(0) }}"
+      - name: "Тёплый пол душевая — ручная выдержка"
+        unique_id: floor_hold_dushevaia
+        icon: mdi:hand-back-right
+        state: >
+          {{ is_state('input_boolean.floor_hold_forever','on')
+             or (state_attr('input_datetime.floor_hold_dushevaia','timestamp') | float(0)) > as_timestamp(now()) }}
+        attributes:
+          reason: >
+            {{ 'forever' if is_state('input_boolean.floor_hold_forever','on')
+               else ('timer' if (state_attr('input_datetime.floor_hold_dushevaia','timestamp') | float(0)) > as_timestamp(now()) else 'none') }}
+          until: >
+            {% set t = state_attr('input_datetime.floor_hold_dushevaia','timestamp') | float(0) %}
+            {{ t | timestamp_custom('%H:%M', true) if t > as_timestamp(now()) else '' }}
+          mins_left: >
+            {% set t = state_attr('input_datetime.floor_hold_dushevaia','timestamp') | float(0) %}
+            {{ ((t - as_timestamp(now())) / 60) | round(0) | int if t > as_timestamp(now()) else 0 }}
+          held_temp: "{{ states('input_number.floor_hold_temp_dushevaia') | float(0) }}"
+
+
+  # --- ГИДРОФОР: СКОЛЬКО НАСОС РЕАЛЬНО РАБОТАЛ (2026-08-26) --------------------
+  # Мощность насоса ЗАМЕРЕНА по sensor.zigbee_plug_2_power: 992 Вт. Эта розетка
+  # никогда не показывала ничего третьего — либо ~0, либо 992, поэтому энергия
+  # честно переводится во время: минуты = кВт·ч / 0.992 * 60.
+  #
+  # ЧИСЛО ПУСКОВ ЭТИМИ СЕНСОРАМИ НЕ СЧИТАЕТСЯ, и это не упущение:
+  #   * розетка офлайн ~78% времени (197 ч пропусков >30 мин из 253 ч);
+  #   * из 7 случаев, когда насос был застан работающим, ВСЕ 7 закончились уходом
+  #     розетки в unavailable через 60-200 с — пусковой ток мотора сбивает саму
+  #     розетку, то есть событие, которое надо считать, и уничтожает телеметрию;
+  #   * шаг счётчика 10 Вт·ч = 36 с работы, один пуск исправного бака примерно
+  #     столько же, так что по шагам счётчика пуски не отделяются;
+  #   * проверенная гипотеза «считать обрывы связи как пуски» НЕ работает:
+  #     корреляция с минутами работы r = 0.31 (23.08 — 97 мин и 6 обрывов,
+  #     22.08 — 44 мин и 56 обрывов).
+  # Считать пуски можно будет только после локальной телеметрии (Zigbee-стик или
+  # DIN-счётчик в щите). До тех пор любой «счётчик пусков» считал бы обрывы связи.
+  #
+  # ВРЕМЯ работы при этом считается надёжно: счётчик НАКОПИТЕЛЬНЫЙ внутри устройства,
+  # за офлайн энергия не теряется, а сообщается позже.
+  - trigger:
+      - trigger: state
+        entity_id: sensor.zigbee_plug_2_total_energy
+      - trigger: homeassistant
+        event: start
+    condition:
+      # Шаблон ТРИГГЕРНЫЙ намеренно: обычный уходил бы в unavailable вместе с
+      # розеткой, то есть 78% времени. Обновляемся только по числовому показанию,
+      # между обновлениями держим последнее известное значение.
+      - condition: template
+        value_template: "{{ states('sensor.zigbee_plug_2_total_energy') | float(-1) >= 0 }}"
+    sensor:
+      - name: "Pump minutes today"
+        unique_id: pump_minutes_today
+        unit_of_measurement: min
+        state_class: measurement
+        icon: mdi:water-pump
+        state: >
+          {% set t = states('sensor.zigbee_plug_2_total_energy') | float(0) %}
+          {% set m = states('input_number.midnight_gidro_energy') | float(0) %}
+          {{ [ (t - m) / 0.992 * 60, 0 ] | max | round(0) }}
+        attributes:
+          kwh_today: >
+            {% set t = states('sensor.zigbee_plug_2_total_energy') | float(0) %}
+            {% set m = states('input_number.midnight_gidro_energy') | float(0) %}
+            {{ [ t - m, 0 ] | max | round(3) }}
+          pump_watts: 992
+          # Возраст базы отсчёта. Полуночный снимок (1778700001002) при недоступном
+          # счётчике СОХРАНЯЕТ прежнее значение — это правильно (ноль соврал бы), но
+          # значит: если розетка была офлайн через полночь, «за сутки» накопит за
+          # несколько суток. Так и вышло 16.08: 17.39 кВт·ч за один «день» — это
+          # backlog с 6 по 15 августа. Возраст базы делает это видимым, а не молча
+          # искажает тренд. Больше ~26 ч — число покрывает больше суток.
+          # Это именно «когда база получила текущее значение»: её меняет и гард
+          # сброса счётчика (1786000001001), пере-базирующий снимок при откате
+          # показаний, — так и должно быть, отсчёт идёт от новой базы.
+          baseline_age_h: >
+            {% set s = states.input_number.midnight_gidro_energy %}
+            {{ ((now() - s.last_changed).total_seconds() / 3600) | round(1) if s else -1 }}
+
+  - sensor:
+      # Работа насоса в глухие ночные часы 01:00-04:00 — САМЫЙ специфичный признак
+      # утечки или потери воздуха в расширительном баке: водоразбора в это время нет,
+      # поэтому любая работа насоса означает, что вода куда-то уходит либо бак не
+      # держит давление. Замеренная норма этого дома: 0.03 кВт·ч за 36 ч наблюдения
+      # (6 ночей) = около 0.1 минуты работы в час.
+      # Пишется автоматизациями 1791200001001 (снимок в 01:00) и 1791200001002
+      # (вердикт в 04:00). availability, а не ноль: «замера не было» и «насос стоял» —
+      # разные вещи, и второе нельзя показывать вместо первого.
+      - name: "Pump minutes night"
+        unique_id: pump_minutes_night
+        unit_of_measurement: min
+        icon: mdi:water-pump-off
+        availability: "{{ states('input_number.gidro_night_kwh') | float(-1) >= 0 }}"
+        state: "{{ (states('input_number.gidro_night_kwh') | float(0) / 0.992 * 60) | round(1) }}"
+        attributes:
+          # За сколько часов тишины набрано это число. Порог тоже считается на час,
+          # поэтому окно обязано быть видимым: 12 мин за 4 ч и за 2 ч — разные вещи.
+          window_h: "{{ states('input_number.gidro_night_hours') | float(0) }}"
+          kwh: "{{ states('input_number.gidro_night_kwh') | float(0) }}"
+
+
+panel_custom:
+  # Классическая панель — основная по решению владельца (2026-08-25). ?v= синхронизирован с
+  # PANEL_BUILD внутри файла: рассинхрон заставлял браузер отдавать кэшированный старый модуль.
+  - name: tablet-panel
+    url_path: tablet-panel
+    sidebar_title: "Умный дом"
+    sidebar_icon: mdi:tablet-dashboard
+    module_url: /local/tablet-panel.js?v=20260829-perf-1
+    require_admin: false
+    embed_iframe: false
+  # v2 остаётся доступной по прямому адресу, но из меню убрана.
+  - name: tablet-panel-v2
+    url_path: tablet-panel-v2
+    module_url: /local/tablet-panel-v2.js?v=20260825-v2-ux3
+    require_admin: false
+    embed_iframe: false
+    embed_iframe: false

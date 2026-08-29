@@ -1,0 +1,111 @@
+# PROPOSAL — NOT APPLIED.  DO NOT auto-apply / auto-deploy.
+#
+# Audit finding H1: life-safety Telegram alerts call `notify.send_message` with an
+# `inline_keyboard` in the service data.  The telegram_bot integration's notify
+# ENTITY (`notify.send_message`) schema only accepts `message` + `title`, so the
+# extra `inline_keyboard` key is rejected — the call returns HTTP 400 Bad Request
+# and NO message is delivered at all (proven live 2026-07-15: notify+inline_keyboard
+# => 400; telegram_bot.send_message+inline_keyboard => 200).
+#
+# Fix: convert each affected block from
+#     action: notify.send_message  (target: entity_id: notify.…; data:)
+# to  action: telegram_bot.send_message  (data: chat_id: 100000000)
+# keeping the same `message` and the same `inline_keyboard` list-of-lists shape
+# [[["Label","/cb"]]] — which telegram_bot.send_message DOES accept and render.
+# Every callback_data (/leak_confirm, /moisture_false_alarm, /siren_off,
+# /security_disarm) already has a handler in automation 1778700001005, so no
+# handler changes are required.
+#
+# Target file on HA: /config/automations.yaml
+# 8 blocks across 5 automations:
+#   1748000001001 "Утечка воды v4"           (2 blocks)  — ENABLED
+#   1775638334800 "Утечка воды v2"           (2 blocks)  — DISABLED (initial_state:false); convert for consistency
+#   1778700001005 "Telegram обработчик кнопок" (2 blocks) — ENABLED
+#   1779200002001 "Задымление — сирена"       (1 block)   — ENABLED
+#   1779200003001 "Охрана — тревога"          (1 block)   — ENABLED
+#
+# Line numbers below reflect the audited copy of /config/automations.yaml
+# (4106 lines, fetched 2026-07-15). Apply with context/fuzz, then validate YAML +
+# `automation.reload` in a maintenance window.  See TELEGRAM_SAFETY.md deploy plan.
+--- a/automations.yaml
++++ b/automations.yaml
+@@ -55,6 +55,5 @@
+       sequence:
+-      - action: notify.send_message
+-        target:
+-          entity_id: notify.telegram_owner
+-        data:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
+           message: '⚠️ ДАТЧИК ВЛАГИ {{ now_ts }}
+@@ -112,6 +111,5 @@
+             entity_id: siren.alarm
+-        - action: notify.send_message
+-          target:
+-            entity_id: notify.telegram_owner
+-          data:
++        - action: telegram_bot.send_message
++          data:
++            chat_id: 100000000
+             message: "\U0001F6A8 УТЕЧКА — КРАН ЗАКРЫТ {{ now_ts }}\n{{ sensor_name
+@@ -1140,6 +1138,5 @@
+       sequence:
+-      - action: notify.send_message
+-        target:
+-          entity_id: notify.telegram_owner
+-        data:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
+           message: '⚠️ ДАТЧИК ВЛАГИ {{ now_ts }}
+@@ -1180,6 +1177,5 @@
+               entity_id: siren.alarm
+-          - action: notify.send_message
+-            target:
+-              entity_id: notify.telegram_owner
+-            data:
++          - action: telegram_bot.send_message
++            data:
++              chat_id: 100000000
+               message: "\U0001F6A8 УТЕЧКА — КРАН ЗАКРЫТ {{ now_ts }}\n\n{{ sensor_name
+@@ -1484,6 +1480,5 @@
+           message: "\U0001F6B0 Кран закрыт! Гидрофор выключен."
+-      - action: notify.send_message
+-        target:
+-          entity_id: notify.telegram_owner
+-        data:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
+           message: "\U0001F6A8 КРАН ЗАКРЫТ по твоей команде. Гидрофор выключен. Сирена
+@@ -1569,6 +1564,5 @@
+           message: "\U0001F6A8 Режим тревоги! Сирена 5 мин."
+-      - action: notify.send_message
+-        target:
+-          entity_id: notify.telegram_owner
+-        data:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
+           message: "\U0001F6A8 ТРЕВОГА АКТИВИРОВАНА!\nСирена включена на 5 минут.\nВызови
+@@ -3162,6 +3156,5 @@
+           entity_id: siren.alarm
+-      - action: notify.send_message
+-        target:
+-          entity_id: notify.telegram_owner
+-        data:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
+           message: "\U0001F525 ЗАДЫМЛЕНИЕ!\n\n{{ now().strftime('%d.%m.%Y %H:%M')
+@@ -3229,6 +3222,5 @@
+         Обнаружено движение{% endif %}"
+-  - action: notify.send_message
+-    target:
+-      entity_id: notify.telegram_owner
+-    data:
++  - action: telegram_bot.send_message
++    data:
++      chat_id: 100000000
+       message: "\U0001F6A8 ТРЕВОГА!\n\n{{ now().strftime('%d.%m.%Y %H:%M:%S') }}\n{{

@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Схема котла — ecoMAX920P1-T</title>
+<meta name="description" content="Мнемосхема системы отопления: котёл, дымоход, MIX, радиатор, бак ГВС с электро-ТЭНом — живые данные ecoNET24 из Home Assistant.">
+<style>*{box-sizing:border-box}img{max-width:100%}
+
+  :root{
+    --bg:#eef1f5; --panel:#ffffff; --panel2:#f4f7fa; --line:#e4e8ee;
+    --ink:#2a2f3e; --muted:#8b93a3; --faint:#aab2c0;
+    --navy:#3f4460; --navy2:#565d7e;
+    --hot:#d1483f; --cold:#4c8fd6;
+    --cyan:#37bdd8; --good:#33bd7a; --alarm:#ff5d5d; --amber:#f2a63b;
+    --metal1:#fdfdfe; --metal2:#dfe4ea; --metal3:#bcc5cf;
+    --tankTop:#e0574c; --tankBot:#5a8ed0;
+    --radius:14px; --shadow:0 8px 26px rgba(20,30,60,.09);
+    --font:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  body.dark{
+    --bg:#0d1420; --panel:#131b28; --panel2:#0f1622; --line:#243141;
+    --ink:#e7edf5; --muted:#8595a8; --faint:#5f6d80;
+    --navy:#26324a; --navy2:#3a4a68;
+    --metal1:#3a4657; --metal2:#232d3c; --metal3:#151d29;
+    --shadow:0 14px 40px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;}
+  .wrap{height:100dvh;display:flex;flex-direction:column;gap:10px;padding:10px clamp(8px,2vw,18px);overflow:hidden}
+  .topbar{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+  .brand{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .brand .k{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brand h1{margin:0;font-size:clamp(14px,2vw,19px);font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .spacer{flex:1}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--muted);white-space:nowrap}
+  .pill .led{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+  .pill.live{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,var(--line))}
+  .pill.live .led{background:var(--good);box-shadow:0 0 0 4px color-mix(in srgb,var(--good) 20%,transparent);animation:pulse 2s infinite}
+  .pill.demo{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 40%,var(--line))}
+  .pill.demo .led{background:var(--amber)}
+  @keyframes pulse{50%{opacity:.4}}
+  .iconbtn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--muted);display:grid;place-items:center;cursor:pointer;font-size:15px;flex:0 0 auto}
+  .iconbtn:hover{color:var(--ink)} .iconbtn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+
+  .board{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:214px minmax(0,1fr);gap:10px}
+
+  .stats{display:flex;flex-direction:column;gap:8px;min-height:0;overflow:auto}
+  .mode{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:11px 13px}
+  .mode .k{font-size:11px;color:var(--muted);font-weight:700}
+  .mode .v{font-size:17px;font-weight:800;margin-top:2px;letter-spacing:-.01em;display:flex;align-items:center;gap:7px}
+  .mode .v .dot{width:8px;height:8px;border-radius:50%;background:var(--good);flex:0 0 auto}
+  .mode .v .dot.idle{background:var(--faint)}
+  .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .cell{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:11px 6px 12px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px}
+  .cell svg{width:22px;height:22px;color:var(--navy2)}
+  body.dark .cell svg{color:#9fb2d6}
+  .cell .val{font-size:18px;font-weight:800;letter-spacing:-.01em;line-height:1}
+  .cell .val.sm{font-size:13px}
+  .cell .val.bad{color:var(--alarm)} .cell .val.ok{color:var(--good)}
+  .cell .lbl{font-size:10.5px;color:var(--muted);font-weight:600;line-height:1.2}
+
+  .diagram{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:6px;min-height:0;min-width:0;display:flex}
+  .diagram svg{width:100%;height:100%;display:block}
+
+  @media(max-width:760px){
+    .board{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+    .stats{flex-direction:column;overflow:visible}
+    .sgrid{grid-template-columns:repeat(auto-fit,minmax(84px,1fr))}
+    .cell{padding:8px 4px 9px}.cell .val{font-size:16px}
+    .mode{padding:9px 12px}
+  }
+
+  .pipe{fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .pipe.hot{stroke:var(--hot)} .pipe.cold{stroke:var(--cold)}
+  .flowdash{fill:none;stroke-linecap:round;stroke-dasharray:1.5 15;opacity:0}
+  .flowdash.on{opacity:.95;animation:flow 1.1s linear infinite}
+  .flowdash.hot{stroke:#ff9a8f} .flowdash.cold{stroke:#a9d2ff}
+  @keyframes flow{to{stroke-dashoffset:-33}}
+  .pump{transform-box:fill-box;transform-origin:center}
+  .pump.on{animation:spin 1.5s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .pumpwrap .ring{fill:var(--panel);stroke:var(--navy2);stroke-width:2}
+  .pumpwrap.on .ring{stroke:var(--good)}
+  .pumpwrap .tri{fill:var(--navy2)} .pumpwrap.on .tri{fill:var(--good)}
+  .burner{fill:var(--amber);opacity:.22;transform-box:fill-box;transform-origin:center}
+  .burner.fire{opacity:1;animation:flick 1.3s ease-in-out infinite}
+  @keyframes flick{50%{opacity:.55;transform:scale(1.12)}}
+  .teng{fill:none;stroke:var(--faint);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+  .teng.heating{stroke:#ff5a3c;filter:drop-shadow(0 0 5px rgba(255,90,60,.85));animation:teng 1.4s ease-in-out infinite}
+  @keyframes teng{50%{filter:drop-shadow(0 0 10px rgba(255,120,60,1))}}
+  .anchor{fill:var(--navy)} .lead{stroke:var(--navy2);stroke-width:1.5;opacity:.5}
+  .bpill{fill:var(--navy)} .bpill.hot{fill:var(--hot)}
+  .btext{fill:#fff;font-weight:700;font-family:var(--font)}
+  .bsub{fill:color-mix(in srgb,var(--navy) 62%,#000 8%)} body.dark .bsub{fill:#1c2740}
+  .bsubtext{fill:#cfd6e6;font-weight:600;font-family:var(--font)}
+  .cap{fill:var(--muted);font-weight:800;font-family:var(--font);text-transform:uppercase;letter-spacing:.03em}
+  .lbl-s{fill:var(--muted);font-weight:700;font-family:var(--font)}
+  .metalStroke{stroke:var(--metal3)}
+  @media (prefers-reduced-motion: reduce){.pump.on,.flowdash.on,.burner.fire,.teng.heating,.pill.live .led{animation:none}.flowdash.on{opacity:.6}}
+  .foot{flex:0 0 auto;color:var(--muted);font-size:11px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:0 2px}
+  .dlg{position:fixed;inset:0;background:rgba(10,16,26,.55);backdrop-filter:blur(4px);display:none;place-items:center;z-index:50;padding:16px}
+  .dlg.show{display:grid}
+  .dlg .box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;max-width:440px;width:100%;box-shadow:var(--shadow)}
+  .dlg h3{margin:0 0 6px}.dlg p{margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.5}
+  .dlg input{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+  .dlg .row{display:flex;gap:9px;margin-top:14px;justify-content:flex-end;flex-wrap:wrap}
+  .dlg button{padding:10px 15px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-weight:700;cursor:pointer}
+  .dlg button.primary{background:var(--cyan);border-color:var(--cyan);color:#04222b}.dlg button.ghost{color:var(--muted)}
+</style>
+
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><span class="k">Home Assistant · ecoNET24</span><h1>Схема котла — ecoMAX920P1-T</h1></div>
+    <div class="spacer"></div>
+    <span class="pill demo" id="live"><span class="led"></span><span id="liveTxt">ДЕМО</span></span>
+    <button class="iconbtn" id="themeBtn" title="Тема" aria-label="Сменить тему">☀️</button>
+    <button class="iconbtn" id="refreshBtn" title="Обновить" aria-label="Обновить">⟳</button>
+    <button class="iconbtn" id="cfgBtn" title="Подключить к HA" aria-label="Подключить токен">⚙</button>
+  </div>
+
+  <div class="board">
+    <section class="stats" aria-label="Параметры котла">
+      <div class="mode"><div class="k">Режим работы</div><div class="v"><span class="dot" id="mode-dot"></span><span id="v-mode">—</span></div></div>
+      <div class="sgrid">
+        <div class="cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 12l5-3"/></svg><div class="val" id="v-power">—</div><div class="lbl">Мощность котла</div></div>
+        <div class="cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a8 8 0 0 0 8-8c0-5-8-11-8-11S4 8 4 13a8 8 0 0 0 8 8Z"/></svg><div class="val" id="v-fuel">—</div><div class="lbl">Уровень топлива</div></div>
+        <div class="cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16M4 12h16M4 16h16"/><path d="M7 6l1.6 12M12 6l1.6 12M17 6l1.6 12"/></svg><div class="val sm" id="v-feeder">—</div><div class="lbl">Поток топлива</div></div>
+        <div class="cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M12 10c1-4-1-7-3-7 0 3 1 5 3 7ZM14 12c4-1 7 1 7 3-3 0-5-1-7-3ZM12 14c-1 4 1 7 3 7 0-3-1-5-3-7ZM10 12c-4 1-7-1-7-3 3 0 5 1 7 3Z"/></svg><div class="val" id="v-fan">—</div><div class="lbl">Мощность наддува</div></div>
+        <div class="cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c4 0 7-3 7-7 0-4-4-6-3-10-3 1-5 4-5 7-1-1-2-3-2-5-2 2-4 5-4 8 0 4 3 7 7 7Z"/></svg><div class="val sm" id="v-flame">—</div><div class="lbl">Пламя</div></div>
+        <div class="cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg><div class="val sm" id="v-alarm">—</div><div class="lbl">Авария</div></div>
+      </div>
+    </section>
+
+    <section class="diagram" aria-label="Мнемосхема системы">
+      <svg viewBox="0 0 880 520" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Схема системы отопления">
+        <defs>
+          <linearGradient id="gMetal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--metal1)"/><stop offset=".5" stop-color="var(--metal2)"/><stop offset="1" stop-color="var(--metal3)"/></linearGradient>
+          <linearGradient id="gChim" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--metal2)"/><stop offset=".5" stop-color="var(--metal1)"/><stop offset="1" stop-color="var(--metal3)"/></linearGradient>
+          <linearGradient id="gTank" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--tankTop)"/><stop offset="1" stop-color="var(--tankBot)"/></linearGradient>
+        </defs>
+
+        <!-- PIPES -->
+        <path class="pipe hot" stroke-width="7" d="M230 300 H700"/>
+        <path id="fd-sup" class="flowdash hot" stroke-width="7" d="M230 300 H700"/>
+        <path class="pipe hot" stroke-width="7" d="M455 300 V126"/>
+        <path id="fd-rad" class="flowdash hot" stroke-width="7" d="M455 300 V126"/>
+        <path class="pipe cold" stroke-width="7" d="M515 126 V410"/>
+        <path class="pipe cold" stroke-width="7" d="M745 460 V410"/>
+        <path class="pipe cold" stroke-width="7" d="M745 410 H230 V410"/>
+        <path id="fd-ret" class="flowdash cold" stroke-width="7" d="M745 410 H230"/>
+
+        <!-- CHIMNEY -->
+        <polygon points="161,48 139,74 183,74" fill="url(#gChim)" class="metalStroke" stroke-width="1"/>
+        <rect x="146" y="72" width="30" height="180" fill="url(#gChim)" class="metalStroke" stroke-width="1"/>
+
+        <!-- BOILER -->
+        <rect x="110" y="250" width="122" height="212" rx="14" fill="url(#gMetal)" class="metalStroke" stroke-width="1.5"/>
+        <rect x="124" y="264" width="94" height="30" rx="6" fill="#2b3242"/>
+        <rect x="190" y="269" width="24" height="20" rx="3" fill="#39c6e6"/>
+        <circle class="burner" id="burner" cx="140" cy="279" r="6"/>
+        <rect x="128" y="316" width="86" height="130" rx="8" fill="none" stroke="var(--metal3)" stroke-width="1.5"/>
+        <text x="171" y="478" text-anchor="middle" class="cap" font-size="11">Котёл</text>
+
+        <!-- RADIATOR -->
+        <rect x="420" y="70" width="124" height="56" rx="6" fill="var(--panel)" stroke="var(--metal3)" stroke-width="1.5"/>
+        <path d="M438 74 V122 M456 74 V122 M474 74 V122 M492 74 V122 M510 74 V122 M528 74 V122" stroke="var(--metal3)" stroke-width="2"/>
+
+        <!-- MIX -->
+        <text x="455" y="286" text-anchor="middle" class="lbl-s" font-size="12">MIX 1</text>
+        <g transform="translate(455,300)"><polygon points="-13,-12 0,0 -13,12" fill="var(--hot)"/><polygon points="13,-12 0,0 13,12" fill="var(--cold)"/><rect x="-6" y="-19" width="12" height="8" rx="2" fill="var(--navy2)"/></g>
+
+        <!-- PUMPS -->
+        <g class="pumpwrap" id="pw-rad" transform="translate(455,210)"><circle class="ring" r="14"/><g class="pump" id="pump-rad"><polygon class="tri" points="-4,-6 7,0 -4,6"/></g></g>
+        <g class="pumpwrap" id="pw-dhw" transform="translate(635,300)"><circle class="ring" r="14"/><g class="pump" id="pump-dhw"><polygon class="tri" points="-4,-6 7,0 -4,6"/></g></g>
+
+        <!-- TANK -->
+        <rect x="690" y="250" width="140" height="210" rx="8" fill="url(#gTank)" opacity=".92"/>
+        <ellipse cx="760" cy="250" rx="70" ry="14" fill="var(--tankTop)"/>
+        <ellipse cx="760" cy="460" rx="70" ry="14" fill="var(--tankBot)"/>
+        <ellipse cx="760" cy="250" rx="70" ry="14" fill="none" stroke="rgba(0,0,0,.12)" stroke-width="1.5"/>
+        <path d="M712 296 q48 -20 96 0 q-48 20 0 40 q48 20 0 40" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="4"/>
+        <path d="M830 262 h22 v9 h-7 v9" fill="none" stroke="var(--metal3)" stroke-width="4" stroke-linecap="round"/>
+        <!-- electric heating element (ТЭН) -->
+        <path id="teng" class="teng" d="M714 438 h8 l6 -12 l10 24 l10 -24 l10 24 l10 -24 l10 24 l6 -12 h8"/>
+
+        <!-- ===== ANCHORS + LEADERS + BADGES (with captions) ===== -->
+        <!-- outdoor -->
+        <g transform="translate(250,18)">
+          <text class="cap" x="2" y="-4" font-size="10">Улица</text>
+          <rect x="0" y="0" width="92" height="28" rx="14" fill="var(--cyan)"/>
+          <text x="13" y="19" font-size="13" fill="#fff" font-weight="700">☁ <tspan id="t-out">18.8</tspan>°C</text>
+        </g>
+        <!-- room thermostat -->
+        <g transform="translate(470,18)">
+          <text class="cap" x="2" y="-4" font-size="10">Термостат</text>
+          <rect x="0" y="0" width="30" height="28" rx="7" fill="var(--panel)" stroke="var(--metal3)" stroke-width="1.5"/>
+          <rect x="7" y="7" width="16" height="10" rx="2" fill="#8fb7e8"/>
+          <rect class="bpill" x="36" y="0" width="86" height="28" rx="14"/>
+          <text class="btext" x="50" y="19" font-size="13" id="t-room">—</text>
+        </g>
+
+        <!-- flue gas -->
+        <circle class="anchor" cx="176" cy="150" r="4"/>
+        <line class="lead" x1="176" y1="150" x2="206" y2="150"/>
+        <g transform="translate(206,136)"><text class="cap" x="2" y="-4" font-size="10">Дымоход</text><rect class="bpill" x="0" y="0" width="70" height="28" rx="14"/><text class="btext" x="13" y="19" font-size="13"><tspan id="t-flue">37.5</tspan>°C</text></g>
+
+        <!-- CO supply -->
+        <circle class="anchor" cx="300" cy="300" r="4"/>
+        <line class="lead" x1="300" y1="300" x2="300" y2="292"/>
+        <g transform="translate(262,236)">
+          <text class="cap" x="2" y="-4" font-size="10">Подача · котёл</text>
+          <rect class="bpill" x="0" y="0" width="70" height="27" rx="13"/><text class="btext" x="13" y="18" font-size="13"><tspan id="t-co">42.9</tspan>°C</text>
+          <rect class="bsub" x="6" y="29" width="60" height="22" rx="11"/><text class="bsubtext" x="16" y="44" font-size="11">цель <tspan id="t-coset">67</tspan>°</text>
+        </g>
+
+        <!-- mixer circuit -->
+        <circle class="anchor" cx="455" cy="175" r="4"/>
+        <line class="lead" x1="455" y1="175" x2="400" y2="168"/>
+        <g transform="translate(322,148)">
+          <text class="cap" x="2" y="-4" font-size="10">MIX 1 · радиатор</text>
+          <rect class="bpill" x="0" y="0" width="66" height="27" rx="13"/><text class="btext" x="12" y="18" font-size="13"><tspan id="t-mix">25.1</tspan>°C</text>
+          <rect class="bsub" x="4" y="29" width="62" height="22" rx="11"/><text class="bsubtext" x="13" y="44" font-size="11">цель <tspan id="t-mixset">22</tspan>°</text>
+        </g>
+
+        <!-- CWU tank -->
+        <circle class="anchor" cx="720" cy="300" r="4"/>
+        <line class="lead" x1="720" y1="300" x2="742" y2="292"/>
+        <g transform="translate(700,236)">
+          <text class="cap" x="2" y="-4" font-size="10">Бак ГВС</text>
+          <rect class="bpill" x="0" y="0" width="70" height="27" rx="13"/><text class="btext" x="13" y="18" font-size="13"><tspan id="t-cwu">55.2</tspan>°C</text>
+          <rect class="bsub" x="6" y="29" width="60" height="22" rx="11"/><text class="bsubtext" x="16" y="44" font-size="11">цель <tspan id="t-cwuset">40</tspan>°</text>
+        </g>
+
+        <!-- return -->
+        <circle class="anchor" cx="360" cy="410" r="4"/>
+        <line class="lead" x1="360" y1="410" x2="360" y2="424"/>
+        <g transform="translate(322,424)"><text class="cap" x="2" y="-4" font-size="10">Обратка</text><rect class="bpill" x="0" y="0" width="76" height="28" rx="14"/><text class="btext" x="13" y="19" font-size="13"><tspan id="t-ret">35.3</tspan>°C</text></g>
+
+        <!-- electric element (ТЭН) badge -->
+        <circle class="anchor" cx="714" cy="438" r="4"/>
+        <line class="lead" x1="714" y1="438" x2="688" y2="452"/>
+        <g transform="translate(576,452)">
+          <text class="cap" x="2" y="-4" font-size="10">Электро-ТЭН (розетка)</text>
+          <rect class="bpill" id="teng-pill" x="0" y="0" width="112" height="28" rx="14"/>
+          <text class="btext" x="13" y="19" font-size="13">⚡ <tspan id="t-teng">Выкл</tspan></text>
+        </g>
+      </svg>
+    </section>
+  </div>
+
+  <div class="foot">
+    <span id="foot-l">снимок · демо-данные</span>
+    <span>токен хранится только в этом браузере · автообновление 15с</span>
+  </div>
+</div>
+
+<div class="dlg" id="dlg">
+  <div class="box">
+    <h3>Подключить к Home Assistant</h3>
+    <p>Вставьте долгоживущий токен HA. Он сохранится только в этом браузере (localStorage) и не попадёт в файл.</p>
+    <input id="tok" type="password" placeholder="Долгоживущий токен Home Assistant" autocomplete="off" spellcheck="false">
+    <div class="row"><button class="ghost" id="tokClr">Очистить</button><button id="tokCancel">Отмена</button><button class="primary" id="tokSave">Сохранить</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var BASE="", LS_TOKEN="livemap_token", LS_THEME="boiler_theme";
+  var $=function(id){return document.getElementById(id)};
+  var live=false;
+  var ENT={
+    mode:"sensor.boiler_mode", power:"sensor.boiler_power", fuel:"sensor.boiler_fuel_level",
+    fan:"sensor.boiler_fan_power", feeder:"binary_sensor.boiler_feeder",
+    flue:"sensor.boiler_flue_gas_temperature", out:"sensor.boiler_outside_temperature",
+    co:"sensor.boiler_co_temperature", coset:"sensor.boiler_co_setpoint",
+    ret:"sensor.boiler_return_temperature",
+    mix:"sensor.boiler_mixer_temperature", mixset:"sensor.boiler_mixer_setpoint",
+    cwu:"sensor.boiler_cwu_temperature", cwuset:"sensor.boiler_cwu_setpoint",
+    pco:"binary_sensor.boiler_co_pump", pcwu:"binary_sensor.boiler_cwu_pump",
+    pcirc:"binary_sensor.boiler_circulation_pump", thermo:"binary_sensor.boiler_thermostat",
+    // alarm: kept for reference/demo parity only. The "Авария" cell NO LONGER reads it —
+    // see the FIX note in render(). It is a summer false positive.
+    alarm:"binary_sensor.boiler_alarm", teng:"switch.smart_plug_2_socket_1"
+  };
+  var DEMO={
+    "sensor.boiler_mode":{state:"Догорание"},"sensor.boiler_power":{state:"0"},"sensor.boiler_fuel_level":{state:"0"},
+    "sensor.boiler_fan_power":{state:"0"},"binary_sensor.boiler_feeder":{state:"off"},
+    "sensor.boiler_flue_gas_temperature":{state:"37.5"},"sensor.boiler_outside_temperature":{state:"18.8"},
+    "sensor.boiler_co_temperature":{state:"42.9"},"sensor.boiler_co_setpoint":{state:"67"},
+    "sensor.boiler_return_temperature":{state:"35.3"},
+    "sensor.boiler_mixer_temperature":{state:"25.1"},"sensor.boiler_mixer_setpoint":{state:"22"},
+    "sensor.boiler_cwu_temperature":{state:"55.2"},"sensor.boiler_cwu_setpoint":{state:"40"},
+    "binary_sensor.boiler_co_pump":{state:"on"},"binary_sensor.boiler_cwu_pump":{state:"on"},
+    "binary_sensor.boiler_circulation_pump":{state:"on"},"binary_sensor.boiler_thermostat":{state:"on"},
+    "binary_sensor.boiler_alarm":{state:"off"},"switch.smart_plug_2_socket_1":{state:"on"}
+  };
+  var DATA=DEMO;
+  function g(e){return (DATA[e]||{state:"unavailable"}).state}
+  function num(e){var v=parseFloat(g(e));return isNaN(v)?null:v}
+  function on(e){return ["on","true","home","heat"].indexOf(String(g(e)).toLowerCase())>=0}
+  function t1(v){return v==null?"—":(Math.round(v*10)/10).toFixed(1)}
+  function ti(v){return v==null?"—":String(Math.round(v))}
+  function pct(e){var v=num(e);return v==null?"—":Math.round(v)+"%"}
+  function setTxt(id,v){var el=$(id);if(el)el.textContent=v}
+
+  function render(){
+    setTxt("v-mode", g(ENT.mode)==="unavailable"?"—":g(ENT.mode));
+    var firing=(num(ENT.power)!=null&&num(ENT.power)>0)||on(ENT.feeder);
+    $("mode-dot").classList.toggle("idle", !firing);
+    setTxt("v-power", pct(ENT.power)); setTxt("v-fuel", pct(ENT.fuel)); setTxt("v-fan", pct(ENT.fan));
+    setTxt("v-feeder", on(ENT.feeder)?"Работает":"Стоп"); setTxt("v-flame", firing?"Есть":"Нет");
+    // FIX 2026-08-16: the "Авария" cell used to read binary_sensor.boiler_alarm (ENT.alarm).
+    // That bit is a summer FALSE POSITIVE — it goes `on` whenever the electric ТЭН heats DHW
+    // while the wood boiler sits in "Догорание", and it has been on all summer with no fault.
+    // The authoritative fault signal is sensor.boiler_mode === "Авария" (the same source the
+    // watchdog automation 1789400001001 and the house summary use). unavailable / unknown /
+    // missing => "нет данных": never a fault, and never a fabricated "Нет" either.
+    var mRaw=String(g(ENT.mode)), mLow=mRaw.trim().toLowerCase();
+    var alarmNA=(mLow===""||mLow==="unavailable"||mLow==="unknown"||mLow==="none"||mLow==="null"||mLow==="—");
+    var alarm=(!alarmNA&&mLow==="авария");
+    var av=$("v-alarm"); if(av){av.textContent=alarmNA?"нет данных":(alarm?"ТРЕВОГА":"Нет");av.className="val sm "+(alarmNA?"":(alarm?"bad":"ok"));}
+    setTxt("t-flue", t1(num(ENT.flue))); setTxt("t-out", t1(num(ENT.out)));
+    setTxt("t-co", t1(num(ENT.co))); setTxt("t-coset", ti(num(ENT.coset)));
+    setTxt("t-ret", t1(num(ENT.ret)));
+    setTxt("t-mix", t1(num(ENT.mix))); setTxt("t-mixset", ti(num(ENT.mixset)));
+    setTxt("t-cwu", t1(num(ENT.cwu))); setTxt("t-cwuset", ti(num(ENT.cwuset)));
+    setTxt("t-room", on(ENT.thermo)?"Запрос":"Норма");
+    // electric element
+    var tState=g(ENT.teng), tengOn=on(ENT.teng), tengNA=(tState==="unavailable");
+    $("teng").classList.toggle("heating", tengOn);
+    $("teng-pill").classList.toggle("hot", tengOn);
+    setTxt("t-teng", tengNA?"н/д":(tengOn?"Вкл":"Выкл"));
+    // dynamics
+    $("burner").classList.toggle("fire", firing);
+    var rad=on(ENT.pco), dhw=on(ENT.pcwu), circ=rad||on(ENT.pcirc)||dhw;
+    $("pw-rad").classList.toggle("on", rad); $("pump-rad").classList.toggle("on", rad);
+    $("pw-dhw").classList.toggle("on", dhw); $("pump-dhw").classList.toggle("on", dhw);
+    $("fd-sup").classList.toggle("on", circ); $("fd-rad").classList.toggle("on", rad); $("fd-ret").classList.toggle("on", circ);
+    var b=$("live");b.className="pill "+(live?"live":"demo");$("liveTxt").textContent=live?"LIVE":"ДЕМО";
+    $("foot-l").textContent=live?"данные ecoNET24 · обновляются каждые 15 с":"снимок · демо (нажмите ⚙ и вставьте токен HA)";
+  }
+  function load(){
+    var token=localStorage.getItem(LS_TOKEN);
+    if(!token){DATA=DEMO;live=false;render();return;}
+    fetch(BASE+"/api/states",{headers:{Authorization:"Bearer "+token}}).then(function(r){if(!r.ok)throw 0;return r.json();})
+      .then(function(arr){var m={};arr.forEach(function(s){m[s.entity_id]=s});DATA=m;live=true;render();})
+      .catch(function(){DATA=DEMO;live=false;render();});
+  }
+  function applyTheme(t){document.body.classList.toggle("dark",t==="dark");$("themeBtn").textContent=t==="dark"?"🌙":"☀️"}
+  applyTheme(localStorage.getItem(LS_THEME)||"light");
+  $("themeBtn").onclick=function(){var d=!document.body.classList.contains("dark");applyTheme(d?"dark":"light");localStorage.setItem(LS_THEME,d?"dark":"light")};
+  $("refreshBtn").onclick=load;
+  $("cfgBtn").onclick=function(){$("tok").value=localStorage.getItem(LS_TOKEN)||"";$("dlg").classList.add("show")};
+  $("tokCancel").onclick=function(){$("dlg").classList.remove("show")};
+  $("tokSave").onclick=function(){var v=$("tok").value.trim();if(v)localStorage.setItem(LS_TOKEN,v);$("dlg").classList.remove("show");load()};
+  $("tokClr").onclick=function(){localStorage.removeItem(LS_TOKEN);$("dlg").classList.remove("show");load()};
+  $("dlg").addEventListener("click",function(e){if(e.target===$("dlg"))$("dlg").classList.remove("show")});
+  render(); load(); setInterval(load,15000);
+})();
+</script>
+
+</body>
+</html>

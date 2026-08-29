@@ -1,0 +1,196 @@
+# PROPOSAL — NOT APPLIED. DO NOT auto-apply / auto-deploy. Orchestrator deploys after owner review.
+#
+# WHAT: Add a startup-grace guard to the DOWN/alert branch of each of the 7 NOTIFICATION-ONLY
+# infrastructure watchdogs so they cannot FALSE-ALARM during the 15-min settling window right
+# after Home Assistant (re)starts, when entities are transiently unavailable/unknown while
+# integrations reload.
+#   siren    1789300001001  (siren.alarm unavailable)
+#   boiler   1789400001001  (binary_sensor.boiler_alarm on)
+#   proxmox  1789500001001  (node mylab offline)         <- restart-sensitive
+#   proxmox  1789500001002  (VM unexpectedly stopped)
+#   proxmox  1789500001003  (storage >= 90%)
+#   proxmox  1789500001004  (backup problem)
+#   proxmox  1789500001005  (node metric stalled/unavail) <- restart-sensitive
+#
+# GUARD (one condition added per automation, on the state-based DOWN/alert branch only):
+#     - condition: state
+#       entity_id: input_boolean.ha_startup_grace
+#       state: 'off'
+# It re-uses the EXISTING helper input_boolean.ha_startup_grace, which automation 1789200001001
+# sets ON at homeassistant.start and OFF after exactly 15 min (mode: restart). While the helper
+# is ON the DOWN branch is suppressed; once it clears, real outages alert normally.
+#
+# WHY action-time (choose-branch) and NOT a top-level automation condition:
+#   The guard is added INSIDE the choose branch's `conditions:` (AND'd with the existing
+#   `{{ trigger.id == 'down'/'problem' }}` template). A `choose` branch condition is evaluated
+#   when the action runs — i.e. AFTER the trigger's `for:` debounce has already elapsed — so a
+#   genuine outage that persists past the 15-min grace window still passes the guard and alerts.
+#   A top-level `condition:` was deliberately AVOIDED because it would also block the RECOVERY
+#   branch. Recovery branches (trigger.id up / problem_ok / fresh) are left UNTOUCHED.
+#
+# WHICH branch per watchdog: exactly the ONE state-based DOWN/alert branch
+#   (trigger.id == 'down', or 'problem' for the backup watchdog). The staleness branches that
+#   fire on time / time_pattern (backup `stale` at 09:00/21:00; stale-metric `stale_check`
+#   every /30) are NOT guarded and do NOT need it: they re-evaluate the REAL age
+#   (last_backup / last_updated) at fire time and already reject unavailable/unknown, so a
+#   restart cannot fabricate a stale reading. Leaving them unguarded keeps them re-alerting
+#   after grace clears and keeps the change to exactly one condition per automation.
+#
+# EXACT BEHAVIOR / EDGE CASES:
+#   * Normal restart, entity recovers within `for:`  -> DOWN never fires (unchanged).
+#   * Slow integration reload, entity unavailable past `for:` but recovers within 15 min
+#     -> DOWN branch fires but guard = suppressed (no false alarm). No genuine outage owed.
+#   * Genuine outage that persists BEYOND the 15-min grace:
+#       - `for:` >= 15 min (siren 15m; stale-metric down 30m): DOWN fires after grace already
+#         off -> alerts normally.
+#       - `for:` < 15 min (boiler 5m, node 5m, VM 2m, storage 10m, backup 10m): the single
+#         debounced firing that lands inside grace is suppressed; a subsequent state change
+#         (these entities flap) re-triggers and alerts after grace. This is the accepted
+#         trade-off — identical to the project's leak automation, which already gates on this
+#         same helper — chosen because the alternative (no guard) produces a GUARANTEED false
+#         alarm on every restart. Real alerting after grace clears is NOT weakened.
+#   * The two staleness checks (backup stale, stale-metric stale_check) re-alert automatically
+#     after grace via their periodic time/time_pattern triggers.
+#
+# SHARED HELPER: read-only. input_boolean.ha_startup_grace is also read (via
+# `is_state(...,'off')`) by the leak automations (ids around lines 33 / 1143 / 3497). This
+# patch only READS the same helper as an additional condition; it never writes it and does not
+# interfere with the leak logic or the grace manager (1789200001001).
+#
+# SAFETY: Still NOTIFICATION-ONLY. The only service call in every one of the 7 automations
+# remains telegram_bot.send_message (chat_id 100000000). No device / Proxmox / button / switch
+# / script / input_boolean *service* call is added — the helper is used only as a read condition.
+# No id changed, no id added, no automation added or removed; each of the 7 gains exactly one
+# condition. Verified by tests/test_watchdog_restart_guard.py.
+#
+# TARGET FILE ON HA: /config/automations.yaml (fetched read-only via `sudo cat`; 58 automations,
+# trailing newline present). MODIFIES 7 existing blocks in place; adds no block.
+#
+# APPLY (after review, from a dir containing the fetched automations.yaml):
+#   patch -p1 --dry-run < docs/audit/watchdog_restart_guard.patch   # verify
+#   patch -p1          < docs/audit/watchdog_restart_guard.patch    # apply to working copy
+#   # then, on HA: back up first, config-check, deploy, reload:
+#   #   sudo cp /config/automations.yaml /config/automations.yaml.bak_wdgrace_$(date +%s)
+#   #   (copy patched file to /config/automations.yaml)
+#   #   POST /api/config/core/check_config     # sanity BEFORE reload
+#   #   POST /api/services/automation/reload
+#
+# ROLLBACK:
+#   patch -p1 -R < docs/audit/watchdog_restart_guard.patch          # revert working copy
+#   # on HA: restore the .bak_wdgrace_* backup to /config/automations.yaml, then
+#   #   POST /api/services/automation/reload
+#
+--- a/automations.yaml
++++ b/automations.yaml
+@@ -4266,12 +4266,15 @@
+   conditions: []
+   actions:
+   - choose:
+     - conditions:
+       - condition: template
+         value_template: '{{ trigger.id == ''down'' }}'
++      - condition: state
++        entity_id: input_boolean.ha_startup_grace
++        state: 'off'
+       sequence:
+       - action: telegram_bot.send_message
+         data:
+           chat_id: 100000000
+           message: "⚠️ Сирена недоступна более 15 мин ({{ states('siren.alarm')\
+             \ }}).\nЗвуковое оповещение при пожаре/взломе может НЕ сработать — проверьте\
+@@ -4313,12 +4316,15 @@
+   conditions: []
+   actions:
+   - choose:
+     - conditions:
+       - condition: template
+         value_template: '{{ trigger.id == ''down'' }}'
++      - condition: state
++        entity_id: input_boolean.ha_startup_grace
++        state: 'off'
+       sequence:
+       - action: telegram_bot.send_message
+         data:
+           chat_id: 100000000
+           message: "\u26A0\uFE0F Котёл: сигнал тревоги (alarmOutput) активен >5 мин.\
+             \ Возможно погас огонь / нет тепла (режим {{ states('sensor.boiler_mode')\
+@@ -4398,12 +4404,15 @@
+   conditions: []
+   actions:
+   - choose:
+     - conditions:
+       - condition: template
+         value_template: '{{ trigger.id == ''down'' }}'
++      - condition: state
++        entity_id: input_boolean.ha_startup_grace
++        state: 'off'
+       sequence:
+       - action: telegram_bot.send_message
+         data:
+           chat_id: 100000000
+           message: "⚠️ Proxmox: узел mylab недоступен > 5 мин (состояние {{ states('binary_sensor.mylab_status') }}). ВМ и резервное копирование могут не работать. Проверьте хост."
+     - conditions:
+@@ -4450,12 +4459,15 @@
+   conditions: []
+   actions:
+   - choose:
+     - conditions:
+       - condition: template
+         value_template: '{{ trigger.id == ''down'' }}'
++      - condition: state
++        entity_id: input_boolean.ha_startup_grace
++        state: 'off'
+       sequence:
+       - action: telegram_bot.send_message
+         data:
+           chat_id: 100000000
+           message: "\U0001F6D1 Proxmox: ВМ остановлена — {{ trigger.to_state.attributes.friendly_name | default(trigger.entity_id) }} ({{ trigger.entity_id }}). Незапланированная остановка? Проверьте на хосте."
+     - conditions:
+@@ -4493,12 +4505,15 @@
+   conditions: []
+   actions:
+   - choose:
+     - conditions:
+       - condition: template
+         value_template: '{{ trigger.id == ''down'' }}'
++      - condition: state
++        entity_id: input_boolean.ha_startup_grace
++        state: 'off'
+       sequence:
+       - action: telegram_bot.send_message
+         data:
+           chat_id: 100000000
+           message: "\U0001F5C4️ Proxmox: хранилище заполнено — {{ trigger.to_state.attributes.friendly_name | default(trigger.entity_id) }} = {{ trigger.to_state.state }}% (>= 90%). Освободите место."
+     - conditions:
+@@ -4543,12 +4558,15 @@
+   conditions: []
+   actions:
+   - choose:
+     - conditions:
+       - condition: template
+         value_template: '{{ trigger.id == ''problem'' }}'
++      - condition: state
++        entity_id: input_boolean.ha_startup_grace
++        state: 'off'
+       sequence:
+       - action: telegram_bot.send_message
+         data:
+           chat_id: 100000000
+           message: "\U0001F6D1 Proxmox: статус резервного копирования = проблема. Последняя копия: {{ states('sensor.mylab_last_backup') }}. Проверьте задание бэкапа."
+     - conditions:
+@@ -4611,12 +4629,15 @@
+   conditions: []
+   actions:
+   - choose:
+     - conditions:
+       - condition: template
+         value_template: '{{ trigger.id == ''down'' }}'
++      - condition: state
++        entity_id: input_boolean.ha_startup_grace
++        state: 'off'
+       sequence:
+       - action: telegram_bot.send_message
+         data:
+           chat_id: 100000000
+           message: "\U0001F4E1 Proxmox: метрика узла (ЦП) недоступна > 30 мин ({{ states('sensor.mylab_cpu_usage') }}). Конвейер данных Proxmox мог зависнуть — проверьте интеграцию/узел."
+     - conditions:

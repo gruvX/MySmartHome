@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#06111f">
+<title>Умный дом</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --app-bg:#050a12;--app-bg-gradient:radial-gradient(900px 500px at 82% -8%,rgba(42,127,255,.24),transparent 58%),radial-gradient(560px 360px at -20% 8%,rgba(255,183,69,.13),transparent 62%),linear-gradient(145deg,#050a12,#071426 54%,#02070d);
+  --header-bg:linear-gradient(180deg,rgba(10,21,34,.84),rgba(5,11,20,.62));
+  --card-bg:linear-gradient(155deg,rgba(13,28,47,.82),rgba(7,17,30,.72));
+  --card-bg-hover:linear-gradient(155deg,rgba(20,42,68,.88),rgba(9,22,38,.82));
+  --card-border:rgba(162,192,231,.16);--card-border-active:rgba(255,190,86,.55);
+  --text-primary:#f4f7ff;--text-secondary:#aebbd0;--text-muted:#6f7f96;
+  --accent-gold:#ffbd55;--accent-blue:#36a3ff;--accent-cyan:#27e1ff;--accent-green:#5fe0a6;--accent-red:#ff5f6d;--accent-purple:#b88cff;
+  --warning:#ffbd55;--danger:#ff5f6d;--success:#5fe0a6;
+  --shadow-card:0 20px 55px rgba(0,0,0,.42),0 1px 0 rgba(255,255,255,.05) inset;
+  --shadow-glow-gold:0 0 0 1px rgba(255,189,85,.24),0 0 34px rgba(255,176,65,.22);
+  --shadow-glow-blue:0 0 0 1px rgba(54,163,255,.22),0 0 34px rgba(54,163,255,.20);
+  --radius-sm:12px;--radius-md:18px;--radius-lg:24px;--radius-xl:30px;
+  --transition-fast:140ms cubic-bezier(.23,1,.32,1);--transition-normal:220ms cubic-bezier(.23,1,.32,1);--bottom-nav-height:56px;
+  --bg:var(--app-bg);--bg2:#071426;--panel:var(--card-bg);--panel2:linear-gradient(150deg,rgba(15,31,52,.9),rgba(7,17,30,.82));
+  --line:var(--card-border);--line2:rgba(255,190,86,.22);--text:var(--text-primary);--muted:var(--text-secondary);--faint:var(--text-muted);
+  --blue:var(--accent-blue);--cyan:var(--accent-cyan);--green:var(--accent-green);--amber:var(--accent-gold);--red:var(--accent-red);--violet:var(--accent-purple);--water:#43d7dc;
+  --shadow:var(--shadow-card);--r:var(--radius-lg);--r2:var(--radius-md);--ease:cubic-bezier(.23,1,.32,1);
+  font-family:Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+[data-theme="luxury-dark-mobile"]{color-scheme:dark}
+[data-theme=light]{
+  --app-bg:#eef5ff;--app-bg-gradient:radial-gradient(800px 420px at 85% -8%,rgba(54,163,255,.18),transparent 58%),radial-gradient(520px 340px at -18% 6%,rgba(255,189,85,.18),transparent 62%),linear-gradient(145deg,#f7fbff,#e7f1ff 58%,#dcecff);
+  --header-bg:linear-gradient(180deg,rgba(255,255,255,.86),rgba(238,246,255,.68));
+  --card-bg:linear-gradient(155deg,rgba(255,255,255,.88),rgba(241,247,255,.80));
+  --card-bg-hover:linear-gradient(155deg,rgba(255,255,255,.95),rgba(235,245,255,.9));
+  --card-border:rgba(28,72,118,.12);--card-border-active:rgba(214,142,39,.38);
+  --text-primary:#101827;--text-secondary:#52647a;--text-muted:#8190a4;
+  --bg:#eef5ff;--bg2:#dcecff;--panel:rgba(255,255,255,.86);--panel2:rgba(247,251,255,.94);
+  --line:rgba(28,72,118,.12);--line2:rgba(28,72,118,.22);--text:#101827;--muted:#52647a;--faint:#8190a4;
+  --shadow:0 16px 45px rgba(43,79,118,.14);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body,#app{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-size:14px}
+button,input,select{font:inherit}
+.app{height:100dvh;position:relative;overflow:hidden;background:var(--app-bg-gradient);}
+.app:before{content:"";position:absolute;inset:-12%;pointer-events:none;background:
+  linear-gradient(115deg,transparent 0 34%,rgba(54,163,255,.08) 42%,transparent 54%),
+  repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 1px,transparent 1px 74px);
+  mask-image:linear-gradient(to bottom,black,transparent 82%);animation:drift 18s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate3d(-2%,0,0)}to{transform:translate3d(2%,1%,0)}}
+.shell{height:100%;display:flex;flex-direction:column;position:relative;z-index:1}
+.top{padding:calc(10px + env(safe-area-inset-top,0px)) 16px 8px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--header-bg)}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}.logo{width:38px;height:38px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#ffd37c,var(--accent-gold) 46%,#6a3d11);box-shadow:0 0 0 1px rgba(255,218,145,.24) inset,0 0 30px rgba(255,184,73,.35);color:#171006}
+.brand b{display:block;font-size:16px;line-height:1}.brand span{display:block;color:var(--muted);font-size:13px;font-weight:700;margin-top:3px;white-space:nowrap}
+.top-actions{display:flex;align-items:center;gap:8px}.icon-btn{width:44px;height:44px;border:1px solid rgba(255,190,86,.28);border-radius:14px;background:linear-gradient(155deg,rgba(15,26,42,.82),rgba(6,13,24,.72));color:var(--accent-gold);display:grid;place-items:center;box-shadow:0 1px 0 rgba(255,255,255,.06) inset;backdrop-filter:blur(16px);cursor:pointer;transition:transform var(--transition-fast),border-color var(--transition-normal),box-shadow var(--transition-normal)}
+@media(hover:hover) and (pointer:fine){.icon-btn:hover,.action:hover,.tile:hover{border-color:var(--card-border-active);box-shadow:var(--shadow-card),var(--shadow-glow-gold)}}
+.icon-btn:focus-visible,.action:focus-visible,.tile:focus-visible,.nav button:focus-visible,.switch:focus-visible,.seg button:focus-visible,.badge:focus-visible,select:focus-visible{outline:2px solid var(--accent-gold);outline-offset:2px}
+.icon-btn:active,.action:active,.tile:active,.nav button:active{transform:scale(.97)}
+.screen{flex:1;overflow:auto;padding:0 14px calc(var(--bottom-nav-height) + 18px);scrollbar-width:none}.screen::-webkit-scrollbar{display:none}
+.view{display:none;animation:rise .28s var(--ease)}.view.on{display:block}@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.hero{min-height:232px;border:1px solid rgba(255,190,86,.28);border-radius:30px;padding:22px;position:relative;overflow:hidden;background:
+  linear-gradient(105deg,rgba(5,11,20,.90),rgba(9,21,36,.62) 48%,rgba(7,18,34,.30)),
+  url("/local/assets/home-hero-orbital.png") center/cover;box-shadow:var(--shadow-card),0 0 50px rgba(255,184,73,.10)}
+[data-theme=light] .hero{background:linear-gradient(105deg,rgba(255,255,255,.94),rgba(238,246,255,.72) 52%,rgba(238,246,255,.35)),url("/local/assets/home-hero-orbital.png") center/cover}
+.hero h1{font-size:34px;letter-spacing:-1.5px;line-height:.96;margin:14px 0 9px;max-width:260px;text-shadow:0 10px 30px rgba(0,0,0,.5)}.eyebrow{font-size:10px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;color:#ffd37c}
+.meta{color:var(--muted);font-weight:700;font-size:13px}.hero-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}
+.mini{min-height:62px;border:1px solid rgba(255,190,86,.24);border-radius:16px;background:linear-gradient(160deg,rgba(12,24,39,.66),rgba(5,11,20,.58));padding:10px;backdrop-filter:blur(18px);box-shadow:0 1px 0 rgba(255,255,255,.05) inset}[data-theme=light] .mini{background:rgba(255,255,255,.65)}
+.mini b{font-size:18px;line-height:1}.mini span{display:block;color:var(--muted);font-size:13px;font-weight:700;margin-top:4px}
+.radar{position:absolute;right:14px;top:58px;width:128px;height:128px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle,rgba(39,225,255,.12),transparent 65%)}
+.radar svg{filter:drop-shadow(0 0 18px rgba(255,190,86,.26))}.radar-center{position:absolute;text-align:center;font-size:10px;color:var(--muted);font-weight:800}.radar-center b{display:block;color:var(--text);font-size:17px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.card,.panel{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(20px);overflow:hidden}
+.panel{padding:12px;margin-top:8px}.head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.title{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px}.title i{color:var(--accent,var(--blue));display:grid}
+.sub{color:var(--muted);font-size:13px;font-weight:700}.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.05);font-size:13px;font-weight:800;color:var(--muted)}
+.head button.badge{min-height:44px;cursor:pointer}
+.badge.ok{color:var(--green);background:rgba(95,224,166,.12);border-color:rgba(95,224,166,.25)}.badge.warn{color:var(--amber);background:rgba(255,196,77,.12);border-color:rgba(255,196,77,.25)}.badge.bad{color:var(--red);background:rgba(255,95,109,.12);border-color:rgba(255,95,109,.25)}
+.tile{min-height:96px;padding:12px;border:1px solid var(--line);border-radius:20px;background:var(--panel2);cursor:pointer;transition:transform var(--transition-fast),border-color var(--transition-normal),background var(--transition-normal),box-shadow var(--transition-normal);box-shadow:0 1px 0 rgba(255,255,255,.045) inset}
+.tile.wide{grid-column:span 2}.tile .k{color:var(--muted);font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}.tile .v{font-size:25px;font-weight:800;margin-top:8px;line-height:1}.tile .s{color:var(--muted);font-size:13px;font-weight:700;margin-top:4px}.tile.on{border-color:color-mix(in oklab,var(--c) 55%,var(--line));background:color-mix(in oklab,var(--c) 15%,var(--panel2))}
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}.action{min-height:58px;border:1px solid var(--line);border-radius:20px;background:var(--panel2);color:var(--text);font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;transition:transform var(--transition-fast),border-color var(--transition-normal),box-shadow var(--transition-normal),background var(--transition-normal)}
+.action i{color:var(--c,var(--accent-gold))}.action.primary{background:linear-gradient(135deg,rgba(255,190,86,.22),rgba(31,78,132,.16));border-color:rgba(255,190,86,.46);box-shadow:var(--shadow-glow-gold)}
+.chart{height:128px;display:flex;align-items:flex-end;gap:2px;padding-top:8px;position:relative}.chart:after{content:"";position:absolute;left:0;right:0;bottom:0;height:42%;background:linear-gradient(to top,rgba(255,184,73,.12),transparent);pointer-events:none}.bar{flex:1;min-width:2px;border-radius:4px 4px 1px 1px;background:var(--green);opacity:.72;position:relative;box-shadow:0 0 12px color-mix(in oklab,currentColor 35%,transparent)}.bar.now{opacity:1;outline:2px solid #f7ead2;outline-offset:1px;box-shadow:0 0 18px rgba(255,220,158,.44)}.bar.tomorrow{opacity:.62}.bar.night:after{content:"";position:absolute;left:1px;right:1px;bottom:-5px;height:2px;border-radius:3px;background:var(--blue)}.axis{display:flex;justify-content:space-between;color:var(--faint);font-size:13px;font-weight:800;margin-top:8px}.day-axis{display:grid;grid-template-columns:1fr 1fr;gap:8px;color:var(--faint);font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;margin-top:6px}.day-axis span{border-top:1px solid var(--line);padding-top:5px}
+.price-chart-frame{display:grid;grid-template-columns:56px minmax(0,1fr);gap:7px}.price-y-axis{height:128px;padding:8px 0 0;display:flex;flex-direction:column;justify-content:space-between;text-align:right;color:var(--faint);font-size:13px;font-weight:800}.price-y-unit{grid-column:1/-1;color:var(--faint);font-size:13px;margin-top:5px}
+.row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}.row:last-child{border-bottom:0}.row .grow{flex:1;min-width:0}.row b{font-size:14px}.row small{display:block;color:var(--muted);font-size:13px;font-weight:700;margin-top:2px}.row .right{text-align:right;font-weight:800}.dot{width:8px;height:8px;border-radius:50%;background:var(--faint);box-shadow:0 0 0 transparent}.dot.ok{background:var(--green);box-shadow:0 0 12px rgba(95,224,166,.5)}.dot.warn{background:var(--amber);box-shadow:0 0 12px rgba(255,196,77,.5)}.dot.bad{background:var(--red);box-shadow:0 0 12px rgba(255,95,109,.55)}
+.switch{appearance:none;width:50px;height:44px;border-radius:99px;background:rgba(255,255,255,.12);border:1px solid var(--line);position:relative;flex-shrink:0;cursor:pointer}.switch:after{content:"";position:absolute;top:10px;left:4px;width:22px;height:22px;border-radius:50%;background:var(--muted);transition:.2s var(--ease)}.switch.on{background:color-mix(in oklab,var(--c,var(--green)) 32%,transparent);border-color:color-mix(in oklab,var(--c,var(--green)) 55%,var(--line))}.switch.on:after{transform:translateX(18px);background:var(--c,var(--green))}
+.seg{display:grid;grid-template-columns:repeat(var(--n,3),1fr);gap:6px}.seg button{min-height:44px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.04);color:var(--muted);padding:10px 8px;font-weight:800;transition:transform var(--transition-fast),border-color var(--transition-normal),box-shadow var(--transition-normal)}.seg button:active{transform:scale(.97)}.seg button.on{background:color-mix(in oklab,var(--c,var(--accent-gold)) 24%,transparent);border-color:color-mix(in oklab,var(--c,var(--accent-gold)) 58%,var(--line));color:var(--text);box-shadow:0 0 22px color-mix(in oklab,var(--c,var(--accent-gold)) 24%,transparent)}
+.nav{position:absolute;left:8px;right:8px;bottom:6px;z-index:20;display:grid;grid-template-columns:repeat(5,1fr);padding:1px 8px calc(1px + env(safe-area-inset-bottom,0px));background:rgba(5,12,22,.72);border:1px solid var(--line);border-radius:24px;backdrop-filter:blur(22px);box-shadow:0 -10px 40px rgba(0,0,0,.34)}
+.nav button{min-height:44px;border:0;background:transparent;color:var(--faint);font-size:13px;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:2px;padding:3px 2px;border-radius:16px;transition:transform var(--transition-fast),color var(--transition-normal),background var(--transition-normal),box-shadow var(--transition-normal)}.nav button.on{color:var(--accent-gold);background:rgba(255,190,86,.12);box-shadow:var(--shadow-glow-gold)}
+.toast{position:absolute;left:50%;bottom:88px;z-index:50;max-width:88%;transform:translate(-50%,16px);opacity:0;pointer-events:none;background:var(--panel2);border:1px solid var(--line2);border-radius:16px;padding:11px 14px;font-weight:800;box-shadow:var(--shadow);transition:.22s var(--ease);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.toast.show{opacity:1;transform:translate(-50%,0)}
+.modal{position:absolute;inset:0;z-index:60;background:rgba(2,8,16,.58);backdrop-filter:blur(12px);display:none;align-items:flex-end}.modal.on{display:flex}.sheet{width:100%;max-height:84dvh;overflow:auto;border-radius:28px 28px 0 0;background:var(--bg2);border:1px solid var(--line2);padding:18px 16px calc(22px + env(safe-area-inset-bottom,0px));box-shadow:0 -20px 70px rgba(0,0,0,.42)}
+.empty{color:var(--muted);font-weight:700;text-align:center;padding:22px 8px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    /* --- Тёплые полы (электрические): own identity, never boiler-styled --- */
+    .fh-panel{border-color:color-mix(in oklab,var(--cyan) 30%,var(--line))}
+    .fh-lead{color:var(--muted);font-size:12.5px;font-weight:700;line-height:1.5;margin:0 0 10px}
+    .fh-card{border:1px solid color-mix(in oklab,var(--cyan) 22%,var(--line));border-radius:18px;background:var(--panel2);padding:12px;margin-top:10px}
+    .fh-top{display:flex;align-items:flex-start;gap:10px}
+    .fh-top .grow{flex:1;min-width:0}
+    .fh-top b{font-size:15px;font-weight:800}
+    .fh-top small{display:block;color:var(--muted);font-size:12px;font-weight:700;margin-top:2px}
+    .fh-cur{font-size:30px;font-weight:800;line-height:1;letter-spacing:-.02em;white-space:nowrap}
+    .fh-cur.nd{font-size:13px;font-weight:800;letter-spacing:0;color:var(--muted);align-self:center}
+    .fh-cur-lbl{color:var(--muted);font-size:11.5px;font-weight:700;margin:4px 0 10px}
+    .fh-lbl{margin:12px 0 6px;font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+    .fh-sp{display:grid;grid-template-columns:60px minmax(0,1fr) 60px;gap:8px}
+    .fh-step{min-width:60px;min-height:56px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.05);color:var(--text);font-size:28px;font-weight:800;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
+    .fh-step:active{transform:scale(.97)}
+    .fh-sp-val{min-height:56px;border:1px solid var(--line);border-radius:14px;background:var(--panel);display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;padding:4px 6px}
+    .fh-sp-val b{font-size:24px;font-weight:800;line-height:1}
+    .fh-sp-val.nd b{font-size:14px;color:var(--muted)}
+    .fh-sp-val small{margin-top:4px;color:var(--muted);font-size:11px;font-weight:700;text-align:center;line-height:1.25;overflow-wrap:anywhere}
+    .fh-apply{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:9px}
+    .fh-apply button{min-height:48px;border-radius:14px;border:1px solid var(--line);font-weight:800;font-size:13px;padding:8px 12px;cursor:pointer;overflow-wrap:anywhere}
+    .fh-ok{background:color-mix(in oklab,var(--cyan) 22%,transparent);color:var(--text);border-color:color-mix(in oklab,var(--cyan) 52%,var(--line))}
+    .fh-cancel{background:rgba(255,255,255,.04);color:var(--muted)}
+    .fh-warn{margin-top:6px;color:var(--amber);font-size:12px;font-weight:700;line-height:1.4}
+    .fh-note{margin-top:11px;padding:9px 10px;border-radius:14px;background:rgba(255,255,255,.035);border:1px solid var(--line)}
+    .fh-note-head{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:11.5px;font-weight:800;line-height:1.35;overflow-wrap:anywhere}
+    .fh-note-body{margin-top:5px;font-size:12px;font-weight:700;line-height:1.45;overflow-wrap:anywhere}
+.danger{--c:var(--red)!important;border-color:rgba(255,95,109,.34)!important}.mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-feature-settings:"tnum" 1}
+.strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.strip>div{padding:8px 10px;border-left:1px solid var(--line);min-width:0}.strip>div:first-child{border-left:0;padding-left:2px}.strip .k{color:var(--muted);font-size:13px;font-weight:800;display:flex;align-items:center;gap:5px}.strip .v{font-size:25px;font-weight:800;margin-top:6px;line-height:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.strip .s{color:var(--muted);font-size:13px;font-weight:700;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.energy-home{border-color:rgba(255,190,86,.24)}.energy-home .price-main{font-size:38px;font-weight:800;letter-spacing:-1px;color:var(--accent-gold);line-height:.95}.energy-home .unit{color:var(--text-secondary);font-size:13px;font-weight:800}.best-window{margin-top:8px;padding:10px;border:1px solid rgba(54,163,255,.22);border-radius:18px;background:linear-gradient(135deg,rgba(54,163,255,.12),rgba(255,190,86,.07))}
+.sensor-danger{color:var(--danger)!important}
+.home-compact{padding-top:2px}.home-summary{width:100%;color:var(--text);text-align:left;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px;cursor:pointer}.home-summary .price-main{font-size:34px}.home-best{text-align:right;max-width:155px}.home-best b{display:block;color:var(--cyan);font-size:14px}.home-best span{display:block;margin-top:3px;color:var(--muted);font-size:13px}.home-systems{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.home-system{min-height:50px;border:1px solid var(--line);border-radius:16px;background:var(--panel2);padding:8px 10px;display:flex;align-items:center;gap:8px}.home-system i{color:var(--c,var(--green));display:grid;flex-shrink:0}.home-system>div{min-width:0}.home-system b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.home-system span{display:block;margin-top:2px;color:var(--muted);font-size:12.5px;line-height:1.25;white-space:normal;overflow-wrap:normal}.home-actions{grid-template-columns:repeat(4,1fr)}.home-actions .action{min-height:52px;font-size:13px;border-radius:16px}.home-climate{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.home-climate div{min-width:0;padding:8px;border-radius:14px;background:var(--panel2);border:1px solid var(--line)}.home-climate b{display:block;font-size:15px}.home-climate span{display:block;color:var(--muted);font-size:12.5px;line-height:1.25;white-space:normal;overflow-wrap:normal}
+.home-rooms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.home-rooms>div{min-width:0;padding:8px 10px;border-radius:14px;background:var(--panel2);border:1px solid var(--line)}
+.home-rooms b{display:block;font-size:19px}
+.home-rooms span{display:block;color:var(--muted);font-size:12.5px;line-height:1.25}
+.fh-hold{margin:8px 0 2px;padding:8px 10px;border-radius:12px;border:1px solid rgba(255,189,85,.45);background:rgba(255,189,85,.12);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fh-hold b{font-size:13px;color:var(--amber)}
+.fh-hold small{display:block;color:var(--muted);font-size:11.5px;line-height:1.3}
+.fh-hold .grow{min-width:0;flex:1 1 120px}
+.fh-hold button{border:1px solid var(--line2);background:var(--panel);color:var(--text);border-radius:10px;min-height:34px;padding:0 10px;font:inherit;font-size:12px;font-weight:800}.freshness{font-size:13px;color:var(--muted)}.freshness.stale{color:var(--amber)}
+.loading{height:100%;display:grid;place-items:center;text-align:center;padding:30px}.loader{width:32px;height:32px;border-radius:50%;border:3px solid rgba(54,163,255,.18);border-top-color:var(--cyan);animation:spin .8s linear infinite;margin:auto}.icon-btn.spin svg{animation:spin .75s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.app:before,.view,.loader,.icon-btn.spin svg{animation:none!important}.icon-btn,.action,.tile,.nav button,.seg button{transition:none!important}}
+@media(max-width:360px){.hero h1{font-size:30px}.radar{width:110px;height:110px;right:8px}.cards{gap:8px}.tile{padding:12px}.actions{gap:7px}.action{font-size:12px}.home-actions{grid-template-columns:repeat(2,1fr)}.home-climate{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div id="app" class="app" data-theme="dark">
+  <div class="loading"><div><div class="loader"></div><div class="sub" style="margin-top:12px">Загрузка Mini App</div></div></div>
+</div>
+<script>
+(function(){
+  "use strict";
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const qs = new URLSearchParams(location.search);
+  // ---- Deploy-time config (NO secrets here). Edit per-deployment if the host/bot changes. ----
+  // previewHost is used ONLY for desktop/browser preview outside Telegram; inside Telegram the
+  // page is served same-origin so HA_URL stays "" and all calls are relative.
+  const CONFIG = {
+    previewHost: "",
+    botDeepLink: "https://t.me/your_home_bot/smarthome"
+  };
+  const PREVIEW = location.protocol === "file:" || location.hostname === "localhost" || qs.get("preview") === "1";
+  const DESKTOP_PREVIEW = PREVIEW;
+  const HA_URL = PREVIEW ? CONFIG.previewHost : "";
+  const root = document.getElementById("app");
+  const LS = "smarthouse_v8_settings";
+  const now = () => new Date();
+  const pad = n => String(n).padStart(2,"0");
+  const fmtTime = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const ico = {
+    home:'<path d="M3 10.5 12 3l9 7.5M5.5 9.5V20h13V9.5M9.5 20v-5h5v5"/>',
+    bolt:'<path d="M13 2 5 13h6l-1 9 8-12h-6l1-8Z"/>',
+    shield:'<path d="M12 3 5 5.5V11c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V5.5L12 3Z"/>',
+    sliders:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/>',
+    flame:'<path d="M12 3c.6 3-2 4-2 7a2.2 2.2 0 0 0 4.3.6c1.4 1 2.2 2.6 2.2 4.4a4.5 4.5 0 1 1-9 0c0-3.2 2.5-4.6 2.5-7.5C10 8 11 6 12 3Z"/>',
+    boiler:'<rect x="7" y="4" width="10" height="16" rx="3"/><path d="M7 9h10"/><path d="M12 12c1 1 1.6 2 1.6 3.1a1.6 1.6 0 0 1-3.2 0c0-.9.6-1.4 1.6-3.1Z"/>',
+    map:'<path d="M9 4 3 6.5v13.5L9 17.5 15 20l6-2.5V4L15 6.5 9 4Z"/><path d="M9 4v13.5M15 6.5V20"/>',
+    car:'<path d="M3 13.5 4.8 8a3 3 0 0 1 2.8-2h8.8a3 3 0 0 1 2.8 2l1.8 5.5"/><path d="M3 13.5h18V18a1 1 0 0 1-1 1h-1.5a1 1 0 0 1-1-1v-1H6.5v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4.5Z"/>',
+    water:'<path d="M12 3c3 4 6 6.8 6 10.5a6 6 0 0 1-12 0C6 9.8 9 7 12 3Z"/>',
+    valve:'<circle cx="12" cy="12" r="4"/><path d="M12 8V3M9 3h6M12 16v5M9 21h6M16 12h5M21 9v6M8 12H3M3 9v6"/>',
+    bulb:'<path d="M9 17h6M10 21h4M8.5 14a5.5 5.5 0 1 1 7 0c-.7.6-1 1.3-1 2.2H9.5c0-.9-.3-1.6-1-2.2Z"/>',
+    moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5Z"/>',
+    walk:'<circle cx="13" cy="4.5" r="1.6"/><path d="M11 9l3-1 2 3 2 1M11 9l-1.5 4 2 2 .5 5M9.5 13 7 16"/>',
+    leaf:'<path d="M5 19c0-8 6-13 14-13 0 8-5 14-13 14-1 0-2-.3-2-.3M9 15c2.5-3 5-4.5 8-5.5"/>',
+    refresh:'<path d="M20 11a8 8 0 1 0-.8 4.5M20 6v5h-5"/>',
+    gear:'<path d="M19.2 10.3 L21.9 10.4 L21.9 13.6 L19.2 13.7 L18.3 15.9 L20.1 17.9 L17.9 20.1 L15.9 18.3 L13.7 19.2 L13.6 21.9 L10.4 21.9 L10.3 19.2 L8.1 18.3 L6.1 20.1 L3.9 17.9 L5.7 15.9 L4.8 13.7 L2.1 13.6 L2.1 10.4 L4.8 10.3 L5.7 8.1 L3.9 6.1 L6.1 3.9 L8.1 5.7 L10.3 4.8 L10.4 2.1 L13.6 2.1 L13.7 4.8 L15.9 5.7 L17.9 3.9 L20.1 6.1 L18.3 8.1 Z"/><circle cx="12" cy="12" r="3.4"/>',   // настоящая шестерёнка: прежняя была неотличима от sun
+    timer:'<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M9 2.5h6"/>',
+    sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/>',
+    lock:'<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+    unlock:'<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 7.8-1.2"/>',
+    plug:'<path d="M9 2v5M15 2v5M6 7h12v3a6 6 0 0 1-12 0V7ZM12 16v6"/>',
+    fan:'<circle cx="12" cy="12" r="2"/><path d="M12 10c0-4 1-7 0-8-2 1-3 4-2 6M14 12c4 0 7 1 8 0-1-2-4-3-6-2M12 14c0 4-1 7 0 8 2-1 3-4 2-6M10 12c-4 0-7-1-8 0 1 2 4 3 6 2"/>',
+    temp:'<path d="M14 13.5V5a2 2 0 0 0-4 0v8.5a4 4 0 1 0 4 0Z"/>',
+    door:'<path d="M5 21V4a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v17M4 21h14"/><circle cx="13" cy="12" r="1" fill="currentColor" stroke="none"/>',
+    smoke:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.2"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2"/>',
+    calendar:'<rect x="3.5" y="5" width="17" height="15.5" rx="2.2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>',
+    check:'<path d="M5 12.5 10 17.5 19.5 6.5"/>',
+    play:'<path d="M7 4.5 19 12 7 19.5v-15Z"/>',
+    stop:'<rect x="6" y="6" width="12" height="12" rx="2"/>',
+    x:'<path d="M6 6l12 12M18 6 6 18"/>',
+    plus:'<path d="M12 5v14M5 12h14"/>',
+    battery:'<rect x="2.5" y="8" width="16" height="8" rx="2"/><path d="M21 11v2"/>',
+    wifi:'<path d="M5 12.5a10 10 0 0 1 14 0M8 15.5a6 6 0 0 1 8 0M12 18.5h.01"/>',
+    motion:'<circle cx="12" cy="4.5" r="1.6"/><path d="M10 8.5 14 7l2.5 3.2 2.5 1.1M10 8.5 8.5 13l2.8 2.2.7 5.3M8.5 13 5.5 16.5M14.2 13.5l2.3 2.5"/>',
+    graph:'<circle cx="6" cy="7" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="12" cy="17.5" r="2"/><path d="M7.7 8.3 10.5 15.6M16.4 9.4 13.4 16M8 6.6 16 7.6"/>'
+  };
+  const I = (name,size=21) => `<svg aria-hidden="true" focusable="false" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ico[name]||""}</svg>`;
+  const defaults = { theme:"dark", refresh:30, haptic:true, compact:false, big:false, safe:false, accent:"blue" };
+  const app = {
+    tab:"home", initData:"", auth:"init", spin:false, toast:null, modal:null, events:[], calendarIds:[], scroll:{},
+    states:[], pollTimer:null, fetchPromise:null, updatedAt:0, stale:false, dataError:"",
+    floorPending:{},   // entity_id -> {val,t} staged floor setpoint, never auto-sent
+    priceDay:"today",  // Nord Pool chart: 'today' | 'tomorrow'. Session-local on purpose —
+                       // reopening the app must land on NOW, never on yesterday's choice.
+    settings:{...defaults,...readLS()}, data:mockData()
+  };
+  function readLS(){try{return JSON.parse(localStorage.getItem(LS)||"{}")}catch{return {}}}
+  function saveLS(){localStorage.setItem(LS,JSON.stringify(app.settings))}
+  function haptic(kind="light"){if(!app.settings.haptic)return;try{tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred(kind)}catch{}}
+  function toast(msg){app.toast=msg;renderShell();clearTimeout(app.toastTimer);app.toastTimer=setTimeout(()=>{app.toast=null;renderShell()},2400)}
+  async function fetchWithTimeout(url,options={},timeoutMs=8000){
+    const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),timeoutMs);
+    try{return await fetch(url,{...options,signal:controller.signal})}finally{clearTimeout(timer)}
+  }
+  function state(S,eid){const e=S.find(x=>x.entity_id===eid);return e?e.state:""}
+  function attr(S,eid,k){const e=S.find(x=>x.entity_id===eid);return e&&e.attributes?e.attributes[k]:undefined}
+  function num(S,eid){const v=parseFloat(state(S,eid));return isNaN(v)?0:v}
+  function availOf(s){return s!==""&&s!=null&&s!=="unavailable"&&s!=="unknown"}
+  // Availability at click time, from the last real state snapshot (task 4: never toggle an unknown entity).
+  function isAvail(eid){const e=(app.states||[]).find(x=>x.entity_id===eid);return !!e&&availOf(e.state)}
+  function safeText(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+  function priceTier(v){return v<=4?["ok","дёшево", "var(--green)"]:v<=10?["warn","средне","var(--amber)"]:["bad","дорого","var(--red)"]}
+  function localKey(offset=0){
+    const d=new Date(); d.setDate(d.getDate()+offset);
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  }
+  // Did THIS payload actually carry usable prices? normalizePrices() falls back to
+  // app.data.price.arr, which on a cold start is the DEMO curve — so a non-empty array is
+  // not proof of real data. «Завтра» is gated on this: a forecast must never be a mock.
+  function pricesAreReal(payload){
+    if(Array.isArray(payload)) return payload.some(v=>Number.isFinite(Number(v)));
+    if(payload && typeof payload==="object"){
+      if(Array.isArray(payload.today) && payload.today.some(v=>Number.isFinite(Number(v)))) return true;
+      const pr=payload.prices;
+      if(pr && typeof pr==="object") return Object.values(pr).some(d=>d&&typeof d==="object"&&Object.keys(d).length>0);
+    }
+    return false;
+  }
+  function normalizePrices(payload,fallback){
+    if(Array.isArray(payload)){
+      const arr=payload.map(v=>Number(v)*100).filter(Number.isFinite);
+      return arr.length ? arr : fallback;
+    }
+    if(payload && typeof payload==="object"){
+      if(Array.isArray(payload.today)){
+        const arr=payload.today.map(v=>Number(v)*100).filter(Number.isFinite);
+        if(arr.length) return arr;
+      }
+      const prices=payload.prices || {};
+      const out=[];
+      [localKey(0),localKey(1)].forEach(day=>{
+        const byHour=prices[day] || {};
+        for(let h=0;h<24;h++){
+          const v=Number(byHour[String(h)]);
+          out.push(Number.isFinite(v) ? v*100 : null);
+        }
+      });
+      if(out.some(Number.isFinite)) return out;
+    }
+    return fallback;
+  }
+  function windowLabel(idx,hours=2){
+    const day=idx<24?"сегодня":"завтра";
+    const hour=idx%24;
+    const end=hour+hours;
+    return `${day} ${pad(hour)}:00-${end>=24?"24":pad(end)}:00`;
+  }
+  function cheapestWindow(arr,hours=2,nightOnly=false){
+    let best=null;
+    for(let i=0;i<=arr.length-hours;i++){
+      const slice=arr.slice(i,i+hours);
+      if(!slice.every(Number.isFinite)) continue;
+      if(nightOnly && !slice.every((_,j)=>{const h=(i+j)%24;return h>=22||h<6})) continue;
+      const avg=slice.reduce((a,b)=>a+b,0)/hours;
+      if(!best || avg<best.avg) best={idx:i,avg,label:windowLabel(i,hours)};
+    }
+    return best;
+  }
+  function cheapWindow(arr){
+    const best=cheapestWindow(arr,2,false);
+    return best ? best.label : "нет данных";
+  }
+  function mapEv(s){return ({charger_charging:"Заряжается",charger_insert:"Подключён",charger_pause:"Пауза",charger_free:"Свободен",charger_end:"Завершено",cloud_error:"Нет связи",quota_error:"Нет данных"})[s]||s||"нет данных"}
+  function boilerMode(s){s=String(s||"").toLowerCase();if(s.includes("work")||s.includes("работ"))return"Работа";if(s.includes("dogor")||s.includes("догор")||s.includes("watch"))return"Догорание";if(s.includes("alarm")||s.includes("авар"))return"Авария";if(s==="off"||s.includes("выкл"))return"Выключен";return s||"нет данных"}
+  function greeting(){const h=now().getHours();return h<6?"Доброй ночи":h<12?"Доброе утро":h<18?"Добрый день":"Добрый вечер"}
+  function mockData(){
+    const h=now().getHours(), today=[15.3,12.1,10.2,8.4,5.2,4.8,7.5,11.3,16.8,18.1,13.4,8.2,6.1,5.3,5.9,7.8,10.8,15.5,22.4,30.8,26.1,21.2,18.5,14.4], tomorrow=[11.2,8.6,7.4,6.9,5.1,4.6,6.2,9.8,12.7,14.2,10.1,7.7,6.4,6.1,7.2,9.1,13.6,18.4,24.5,29.2,25.4,19.6,14.1,10.8], arr=today.concat(tomorrow);
+    const items=[["ev","EV","car",0,0],["boil","Котёл","flame",3.5,.86],["akv","Аквариум","plug",.4,.08],["rec","Рециркуляция","water",.2,.04],["hyd","Гидрофор","water",.1,.02]];
+    const zones={entr:"Вход",fanar:"Вход",isl:"Кухня",tbl:"Кухня",hall:"2 этаж",sauna:"Баня",ver:"Улица",led1:"Кухня",led2:"Кухня",tv1:"Гостиная",tv2:"Гостиная",gir:"Улица",proj:"Улица",zan:"Гостиная",bed:"Спальня"};
+    return {outside:22,price:{now:arr[h],next:arr[h+1],arr,nowHour:h,avail:true,cheapWindow:cheapWindow(arr),nightWindow:cheapestWindow(arr,2,true)?.label||"нет данных",tomorrowPub:"on"},cost:{kwh:4.2,total:1.0,month:12.5,monthAvail:true,anyAvail:true,items:items.map(x=>({key:x[0],name:x[1],icon:x[2],system:x[0],kwh:x[3],cost:x[4],avail:true}))},
+      ev:{status:"нет данных",raw:"",kwh:0,sched:"—",manual:false},boiler:{mode:"Догорание",co:58,coSet:67,cwu:49,cwuSet:55,ret:51,fan:0,power:true,pumpCo:true,pumpCwu:false,pumpCirc:true,avail:{mode:true,cwu:true,co:true,ret:true,fan:true,power:true}},
+      floor:[{key:"bath",name:"Ванная",room:"ванная, 2 эт.",eid:"climate.floor_heating",holdOn:false,avail:true,hvac:"off",on:false,temp:24.7,sp:18,mode:"auto",valve:false,lock:false,frost:false,lockId:"switch.floor_heating_child_lock",frostId:"switch.floor_heating_frost_protection",autoName:"\u{1F525} Тёплый пол ванная по Nord Pool",autoState:"on"},{key:"shower",name:"Душевая 1 эт.",room:"душевая, 1 эт.",eid:"climate.floor_heating_2",avail:true,hvac:"off",on:false,temp:23.5,sp:25,mode:"auto",valve:false,lock:false,frost:false,lockId:"switch.floor_heating_child_lock_2",frostId:"switch.floor_heating_frost_protection_2",autoName:"\u{1F525} Тёплый пол душевая 1эт по Nord Pool",autoState:"on"}],water:{open:true,avail:true},security:{armed:false,avail:true},nightSaver:false,zhara:false,
+      sensors:{door:false,smoke:false,motion:false,avail:{door:true,smoke:true,motion:true},leak:{ok:true,status:"ok",per:{bath:"dry",shower:"dry",garage:"dry",kitchen:"dry"},leakNames:[],blindNames:[],cloudSrc:"cloud",cloudAge:12,checked:new Date().toISOString()}},batteries:[["Дверь",84],["Дым",92],["Ванная",61],["Душевая",28],["Кухня",73],["Гараж",12]].map(([name,pct])=>({name,pct,avail:true})),
+      rooms:[["Кухня",25.7,65],["Гостиная",22.2,56],["Спальня",27.8,62],["Улица",26.4,60]].map(x=>({name:x[0],temp:x[1],hum:x[2]})),air:{pm25:8,lux:321},
+      lights:[["entr","Прихожая"],["fanar","Фонарь"],["isl","Остров"],["tbl","Стол"],["hall","Коридор"],["sauna","Баня"],["ver","Веранда"],["led1","LED1"],["led2","LED2"],["tv1","ТВ 1"],["tv2","ТВ 2"],["gir","Гирлянда"],["proj","Прожектор"],["zan","Занавеска"],["bed","Кровать"]].map((x,i)=>({id:x[0],name:x[1],on:i===1,icon:"bulb",avail:true,zone:zones[x[0]]})),
+      plugs:[["boil","Бойлер","flame"],["akv","Аквариум","plug"],["rec","Рециркуляция","refresh"],["hyd","Гидрофор","water"],["cal","Полотенцесушитель","temp"]].map((x,i)=>({id:x[0],name:x[1],on:i>0&&i<3,icon:x[2],avail:true}))};
+  }
+  // Робот-пылесос: состояния HA как есть, без выдумывания «работает».
+  const VAC_LABEL={docked:"на базе",cleaning:"уборка",returning:"едет на базу",idle:"простой",paused:"пауза",error:"ошибка",unavailable:"нет данных"};
+  const LIGHT_IDS={entr:"light.prikhozhaia_i_fanar_light",fanar:"light.prikhozhaia_i_fanar_light_2",isl:"light.svet_pervyi_etazh_1_light",tbl:"light.svet_pervyi_etazh_1_light_2",hall:"light.vtoroi_etazh_light",sauna:"light.dream_color_rgb",ver:"light.veranda_light"};
+  const SWITCH_LIGHT_IDS={led1:"switch.kukhnia_poloski_switch_1",led2:"switch.kukhnia_poloski_switch_2",tv1:"switch.svet_tv_zona_switch_1",tv2:"switch.svet_tv_zona_switch_2",gir:"switch.smart_switch_2ch_switch_1",proj:"switch.smart_switch_2ch_switch_2",zan:"switch.gostinnaia_zanaveska_zona_switch_1",bed:"switch.zigbee_plug_socket_1"};
+  const PLUG_IDS={boil:"switch.smart_plug_2_socket_1",akv:"switch.akvarium_svet_socket_1",rec:"switch.retserkuliatsiia_goriachai_vody_socket_1",hyd:"switch.zigbee_plug_2_socket_1",cal:"switch.kalarifer_socket_1"};
+  // --- ТЁПЛЫЕ ПОЛЫ: ЭЛЕКТРИЧЕСКИЕ, НЕ ОТ КОТЛА -----------------------------
+  // Two INDEPENDENT Tuya floor thermostats (own device, own power, own automation).
+  // They are NOT part of the ecoNET24 boiler's water circuit — the owner was explicit,
+  // so this data and its UI panel stay strictly separate from every boiler readout.
+  // Each thermostat = 4 HA entities: climate + valve + child-lock + frost protection.
+  const FLOOR_ZONES=[
+    {key:"bath",name:"Ванная",room:"ванная, 2 эт.",
+     climate:"climate.floor_heating",valve:"binary_sensor.floor_heating_valve",
+     lock:"switch.floor_heating_child_lock",frost:"switch.floor_heating_frost_protection",
+     auto:"automation.teplyi_pol_po_nord_pool_0_04_heat_30c_0_04_auto",
+     // Ручная выдержка (2026-08-26): ЕДИНСТВЕННЫЙ источник правды о том, держим ли
+     // мы установку человека. Атрибуты: reason (forever|timer|none), until, mins_left,
+     // held_temp. Приложение НИЧЕГО не вычисляет само — только показывает.
+     hold:"binary_sensor.floor_hold_vannaia",
+     autoName:"\u{1F525} Тёплый пол ванная по Nord Pool"},
+    {key:"shower",name:"Душевая 1 эт.",room:"душевая, 1 эт.",
+     climate:"climate.floor_heating_2",valve:"binary_sensor.floor_heating_valve_2",
+     lock:"switch.floor_heating_child_lock_2",frost:"switch.floor_heating_frost_protection_2",
+     auto:"automation.teplyi_pol_dushevaia_1et_po_nord_pool_0_04_heat_30c_0_04_auto",
+     hold:"binary_sensor.floor_hold_dushevaia",
+     autoName:"\u{1F525} Тёплый пол душевая 1эт по Nord Pool"}
+  ];
+  // TUYA SCALING BUG — never trust the entity's own limits. These thermostats report
+  // `max_temp: 300.0` over the Tuya cloud; the device's real ceiling is the `upper_temp`
+  // DP = 500, i.e. 50.0 °C — the cloud forgets to divide by 10. 300 °C is nonsense for a
+  // screed floor, so the UI hard-clamps to a safe underfloor range and ignores max_temp.
+  const FLOOR_SP_MIN=5.0, FLOOR_SP_MAX=45.0, FLOOR_SP_STEP=0.5;
+  const FLOOR_CHEAP_EUR=0.04;   // the Nord Pool threshold both floor automations use
+  const FLOOR_PENDING_TTL=90000;
+  function floorClampSp(v){
+    if(!Number.isFinite(v))return null;
+    const snapped=Math.round(v/FLOOR_SP_STEP)*FLOOR_SP_STEP;
+    return Math.round(Math.min(FLOOR_SP_MAX,Math.max(FLOOR_SP_MIN,snapped))*10)/10;
+  }
+  // Staged setpoints: −/+ edits this only. NOTHING is sent to the thermostat until the
+  // «Применить» button is pressed, so a stray tap can never change the floor.
+  function floorPendingSp(eid){
+    const p=(app.floorPending||{})[eid];
+    if(!p)return null;
+    if(Date.now()-p.t>FLOOR_PENDING_TTL){delete app.floorPending[eid];return null}
+    return p.val;
+  }
+  const SCENE_IDS={akv:{on:"switch.vkliuchit_svet_nad_akvariumom",off:"switch.vykliuchit_svet_nad_akvariumom"},wall:{on:"switch.vkliuchit_svet_stena",off:"switch.vykliuchit_svet_stena"},cur:{on:"switch.vkliuchit_svet_zanaveski",off:"switch.vykliuchit_svet_zanaveski"},stair:{on:"switch.vkliuchit_svet_u_lestnitsy",off:"switch.vykliuchit_svet_u_lestnitsi"}};
+  // --- Safety model (tri-state) --------------------------------------------
+  // A safety input has THREE states, never two: "on" = alarm, "off" = normal,
+  // unavailable/unknown/absent-from-payload = «неизвестно». An input we cannot read must
+  // never render as normal/green, and must never render as an alarm/red either.
+  // NON-leak safety inputs only. Their tri-state stays local because they are mains-/cloud-backed
+  // and genuinely report `unavailable`. The 4 LEAK sensors are NOT here — see LEAK_* below.
+  const SAFETY_IDS={door:"binary_sensor.door_sensor_door",smoke:"binary_sensor.wifi_th_smoke_sensor_smoke",motion:"binary_sensor.lumi_cn_lumi_living_motion_v2_motion_state_p_2_1"};
+  const SAFETY_NAMES={door:"дверь",smoke:"дым",motion:"движение"};
+  // Keys whose blindness invalidates a «всё в норме» verdict (motion is informational only).
+  const SAFETY_CRITICAL=["smoke","door"];
+  function mapSensors(S){const o={avail:{}};for(const k in SAFETY_IDS){const v=state(S,SAFETY_IDS[k]);o[k]=v==="on";o.avail[k]=availOf(v)}return o}
+  // --- LEAK PROTECTION: ONE SOURCE OF TRUTH -------------------------------------
+  // sensor.leak_protection_status (a HA template, see configuration.yaml) is the ONLY place
+  // that decides whether a leak sensor is leaking / blind / dry. These are battery SLEEPERS:
+  // they report only on wet/dry events, so silence for hours is NORMAL and must never render
+  // as «недоступен». There is deliberately NO staleness rule here.
+  const LEAK_TRUTH="sensor.leak_protection_status";
+  const LEAK_KEYS={bath:"binary_sensor.vannaia_moisture",shower:"binary_sensor.water_sensor_4_moisture",garage:"binary_sensor.garazh_moisture",kitchen:"binary_sensor.kukhnia_moisture"};
+  const LEAK_KEY_NAMES={bath:"ванная",shower:"душевая",garage:"гараж",kitchen:"кухня"};
+  function mapLeak(S){
+    const e=(S||[]).find(x=>x.entity_id===LEAK_TRUTH), s=e?e.state:"";
+    const ok=(s==="leak"||s==="blind"||s==="ok"), a=(e&&e.attributes)||{};
+    const raw=(a.per_sensor&&typeof a.per_sensor==="object"&&!Array.isArray(a.per_sensor))?a.per_sensor:{};
+    const per={};
+    for(const k in LEAK_KEYS){const v=raw[LEAK_KEYS[k]];per[k]=(ok&&(v==="leak"||v==="blind"||v==="dry"))?v:"unknown"}
+    const list=n=>Array.isArray(a[n])?a[n].filter(x=>typeof x==="string"&&x):[];
+    return {ok,status:ok?s:"unknown",per,
+      leakNames:ok?list("leak_names"):[],
+      blindNames:ok?list("blind_names"):[],
+      cloudSrc:(typeof a.cloud_src==="string"&&a.cloud_src)?a.cloud_src:"unknown",
+      cloudAge:Number.isFinite(Number(a.cloud_age_sec))?Number(a.cloud_age_sec):null,
+      checked:typeof a.checked==="string"?a.checked:""};
+  }
+  // Defensive accessor: a missing/malformed block degrades to «неизвестно», NEVER to «сухо».
+  function leakInfo(){
+    const l=((app.data||{}).sensors||{}).leak;
+    if(l&&typeof l==="object"&&typeof l.status==="string")return l;
+    return {ok:false,status:"unknown",per:{bath:"unknown",shower:"unknown",garage:"unknown",kitchen:"unknown"},
+      leakNames:[],blindNames:[],cloudSrc:"unknown",cloudAge:null,checked:""};
+  }
+  // Human names of the safety inputs we currently cannot read.
+  function blindSensors(){
+    const d=app.data||{},s=d.sensors||{},av=s.avail||{},out=[],L=leakInfo();
+    if(L.status==="blind")L.blindNames.forEach(n=>out.push(n));
+    else if(!L.ok)out.push("датчики протечки (статус защиты не читается)");
+    SAFETY_CRITICAL.forEach(k=>{if(av[k]===false)out.push(SAFETY_NAMES[k])});
+    if(d.water&&d.water.avail===false)out.push("кран воды");
+    return out;
+  }
+  // [level,text] for one sensor key. level is ok | bad | warn (warn = «неизвестно»).
+  // Leak keys are answered ONLY by the truth entity; everything else keeps its local tri-state.
+  function sensorState(k,onText,offText){
+    if(Object.prototype.hasOwnProperty.call(LEAK_KEYS,k)){
+      const v=leakInfo().per[k];
+      return v==="leak"?["bad",onText]:v==="dry"?["ok",offText]:["warn","неизвестно"];
+    }
+    const s=(app.data||{}).sensors||{},av=s.avail||{};
+    if(av[k]===false)return["warn","неизвестно"];
+    return s[k]?["bad",onText]:["ok",offText];
+  }
+  // Provenance of the leak verdict — when HA evaluated it and from which source.
+  function leakCheckedText(){
+    const L=leakInfo();
+    if(!L.ok)return "статус защиты от протечки не читается";
+    let when="время проверки неизвестно";
+    if(L.checked){const d=new Date(L.checked);if(!isNaN(d.getTime()))when="проверено в "+d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})}
+    const src=L.cloudSrc==="cloud"?"по данным облака Tuya":L.cloudSrc==="cache"?"по кэшу облака Tuya":L.cloudSrc==="error"?"облако Tuya не ответило — по состояниям HA":"источник неизвестен";
+    return when+" · "+src+((L.cloudAge!=null&&L.cloudAge>=0)?" · опрос "+L.cloudAge+" с назад":"");
+  }
+  function waterText(d){const w=(d||{}).water||{};return w.avail===false?"неизвестно":(w.open?"открыта":"перекрыта")}
+  // Single source of truth for the top-level safety verdict shown on «Главная», «Ещё» and «Безопасность».
+  function verdict(){
+    const a=alerts(),b=blindSensors();
+    if(a.length)return{level:"bad",color:"var(--red)",title:"Требуется внимание",short:"Есть внимание",badge:String(a.length),sub:a.join(" · "),alerts:a,blind:b};
+    if(b.length)return{level:"warn",color:"var(--amber)",title:"Датчики недоступны",short:"Датчики недоступны",badge:"?",sub:"неизвестно: "+b.join(", "),alerts:a,blind:b};
+    return{level:"ok",color:"var(--green)",title:"Всё в норме",short:"Всё в норме",badge:"OK",sub:"",alerts:a,blind:b};
+  }
+  // 48 empty hours. This — never app.data.price.arr — is what an unreadable price file
+  // degrades to. mockData()'s curve is a DEMO; letting it stand in for the real file made
+  // the app present invented prices as genuine (the «Завтра» path was already gated on
+  // pricesAreReal(); 2026-08-16 closed the same hole for TODAY).
+  const NO_PRICES=()=>new Array(48).fill(null);
+  // Накопители € за месяц по устройствам (сброс 1-го числа автоматизацией 1785000001002).
+  const MONTH_COST={ev:"input_number.cost_month_ev",boil:"input_number.cost_month_boiler",
+    akv:"input_number.cost_month_akv",rec:"input_number.cost_month_chep",
+    hyd:"input_number.cost_month_gidro",cal:"input_number.cost_month_kalarifer"};
+  function mapStates(S,pricePayload=[]){
+    const h=now().getHours(), priceReal=pricesAreReal(pricePayload),
+      arr=priceReal?normalizePrices(pricePayload,NO_PRICES()):NO_PRICES(),
+      known=arr.filter(Number.isFinite), avg=known.length?(known.reduce((a,b)=>a+b,0)/known.length)/100:0;
+    const kwh=(eid,snap)=>Math.max(0,num(S,eid)-num(S,snap));
+    const status=state(S,"sensor.ev_charger_status");
+    const items=[
+      ["ev","EV","car","sensor.ev_charger_energy","input_number.midnight_ev_energy"],["boil","Котёл","flame","sensor.boiler_total_energy","input_number.midnight_boiler_energy"],
+      ["akv","Аквариум","plug","sensor.akvarium_svet_total_energy","input_number.midnight_akv_energy"],["rec","Рециркуляция","water","sensor.cherepakha_total_energy","input_number.midnight_chep_energy"],
+      ["hyd","Гидрофор","water","sensor.zigbee_plug_2_total_energy","input_number.midnight_gidro_energy"],
+      ["cal","Полотенцесушитель","flame","sensor.terarium_total_energy","input_number.midnight_kalarifer_energy"]
+    ].map(x=>{const k=kwh(x[3],x[4]);return {key:x[0],name:x[1],icon:x[2],system:x[0],kwh:k,cost:k*avg,avail:availOf(state(S,x[3])),
+      // накопитель € за месяц (начисляется автоматизацией 1785000001001 в 23:58)
+      mid:MONTH_COST[x[0]],mcost:num(S,MONTH_COST[x[0]]),mAvail:availOf(state(S,MONTH_COST[x[0]]))}});
+    const schedRaw=state(S,"input_datetime.ev_charge_start"), sched=schedRaw?schedRaw.replace("T"," ").split(" ").pop().slice(0,5):"—";
+    return {...app.data,outside:parseFloat(state(S,"sensor.smart_weather_station_temperature"))||parseFloat(attr(S,"weather.forecast_home","temperature"))||parseFloat(attr(S,"weather.home","temperature"))||NaN,
+      price:{now:num(S,"sensor.nord_pool_lv_current_price")*100,next:Number.isFinite(arr[h+1])?arr[h+1]:0,arr,nowHour:h,avail:availOf(state(S,"sensor.nord_pool_lv_current_price")),cheapWindow:cheapWindow(arr),nightWindow:cheapestWindow(arr,2,true)?.label||"нет данных",tomorrowPub:state(S,"binary_sensor.nord_pool_lv_tomorrow_price_available"),real:priceReal},cost:{kwh:items.filter(i=>i.avail).reduce((s,i)=>s+i.kwh,0),total:items.filter(i=>i.avail).reduce((s,i)=>s+i.cost,0),anyAvail:items.some(i=>i.avail),priceReal,items,month:num(S,"input_number.cost_month_total"),monthAvail:availOf(state(S,"input_number.cost_month_total"))},
+      ev:{status:mapEv(status),raw:status,kwh:parseFloat(attr(S,"sensor.ev_charger_energy","session_kwh"))||0,sched,manual:state(S,"input_boolean.ev_manual_mode")==="on"},
+      boiler:{mode:boilerMode(state(S,"sensor.boiler_mode")),co:Math.round(num(S,"sensor.boiler_co_temperature")),coSet:Math.round(num(S,"sensor.boiler_co_setpoint")),cwu:Math.round(num(S,"sensor.boiler_cwu_temperature")),cwuSet:Math.round(num(S,"sensor.boiler_cwu_setpoint")),ret:Math.round(num(S,"sensor.boiler_return_temperature")),fan:Math.round(num(S,"sensor.boiler_fan_power")),power:state(S,"switch.smart_plug_2_socket_1")==="on",pumpCo:state(S,"binary_sensor.boiler_co_pump")==="on",pumpCwu:state(S,"binary_sensor.boiler_cwu_pump")==="on",pumpCirc:state(S,"binary_sensor.boiler_circulation_pump")==="on",avail:{mode:availOf(state(S,"sensor.boiler_mode")),cwu:availOf(state(S,"sensor.boiler_cwu_temperature")),co:availOf(state(S,"sensor.boiler_co_temperature")),ret:availOf(state(S,"sensor.boiler_return_temperature")),fan:availOf(state(S,"sensor.boiler_fan_power")),power:availOf(state(S,"switch.smart_plug_2_socket_1"))}},
+      // Тёплые полы: per-zone, tri-state. `avail:false` => the UI must print «нет данных»,
+      // never a fabricated 0 °C and never a fake «выкл».
+      floor:FLOOR_ZONES.map(z=>{
+        const hv=state(S,z.climate), live=availOf(hv);
+        const tri=id=>{const s=state(S,id);return s==="on"?true:(s==="off"?false:null)};
+        return {key:z.key,name:z.name,room:z.room,eid:z.climate,
+          avail:live, hvac:live?hv:null, on:live?hv!=="off":null,
+          temp:live?parseFloat(attr(S,z.climate,"current_temperature")):NaN,
+          sp:live?parseFloat(attr(S,z.climate,"temperature")):NaN,
+          mode:live?(attr(S,z.climate,"preset_mode")||null):null,
+          valve:tri(z.valve), lock:tri(z.lock), frost:tri(z.frost),
+          lockId:z.lock, frostId:z.frost,
+          autoName:z.autoName, autoState:state(S,z.auto)||"",
+          holdOn:state(S,z.hold)==="on", holdAvail:availOf(state(S,z.hold)),
+          holdReason:attr(S,z.hold,"reason")||"", holdUntil:attr(S,z.hold,"until")||"",
+          holdMins:parseFloat(attr(S,z.hold,"mins_left")), holdTemp:parseFloat(attr(S,z.hold,"held_temp"))};
+      }),
+
+      water:{open:state(S,"switch.voda_kran_switch_1")==="on",avail:availOf(state(S,"switch.voda_kran_switch_1"))},security:{armed:state(S,"input_boolean.security_armed")==="on",avail:availOf(state(S,"input_boolean.security_armed"))},nightSaver:state(S,"input_boolean.night_saver")==="on",zhara:state(S,"input_boolean.rezhim_zhara")==="on",
+      sensors:Object.assign(mapSensors(S),{leak:mapLeak(S)}),
+      batteries:[["Дверь","sensor.door_sensor_battery"],["Дым","sensor.wifi_th_smoke_sensor_battery"],["Ванная","sensor.vannaia_battery"],["Душевая","sensor.water_sensor_4_battery"],["Кухня","sensor.kukhnia_battery"],["Гараж","sensor.garazh_battery"]].map(x=>({name:x[0],pct:Math.round(num(S,x[1])),avail:availOf(state(S,x[1]))})),
+      lights:[["entr","Прихожая","light.prikhozhaia_i_fanar_light","Вход"],["fanar","Фонарь","light.prikhozhaia_i_fanar_light_2","Вход"],["isl","Остров","light.svet_pervyi_etazh_1_light","Кухня"],["tbl","Стол","light.svet_pervyi_etazh_1_light_2","Кухня"],["hall","Коридор","light.vtoroi_etazh_light","2 этаж"],["sauna","Баня","light.dream_color_rgb","Баня"],["ver","Веранда","light.veranda_light","Улица"],["led1","LED1","switch.kukhnia_poloski_switch_1","Кухня"],["led2","LED2","switch.kukhnia_poloski_switch_2","Кухня"],["tv1","ТВ 1","switch.svet_tv_zona_switch_1","Гостиная"],["tv2","ТВ 2","switch.svet_tv_zona_switch_2","Гостиная"],["gir","Гирлянда","switch.smart_switch_2ch_switch_1","Улица"],["proj","Прожектор","switch.smart_switch_2ch_switch_2","Улица"],["zan","Занавеска","switch.gostinnaia_zanaveska_zona_switch_1","Гостиная"],["bed","Кровать","switch.zigbee_plug_socket_1","Спальня"]].map(x=>({id:x[0],name:x[1],icon:"bulb",on:state(S,x[2])==="on",avail:availOf(state(S,x[2])),zone:x[3]})),
+      plugs:[["boil","Бойлер","switch.smart_plug_2_socket_1","flame"],["akv","Аквариум","switch.akvarium_svet_socket_1","plug"],["rec","Рециркуляция","switch.retserkuliatsiia_goriachai_vody_socket_1","refresh"],["hyd","Гидрофор","switch.zigbee_plug_2_socket_1","water"],["cal","Полотенцесушитель","switch.kalarifer_socket_1","temp"]].map(x=>({id:x[0],name:x[1],on:state(S,x[2])==="on",icon:x[3],avail:availOf(state(S,x[2]))})),
+      rooms:[["Кухня","sensor.kukhnia_temperature","sensor.kukhnia_humidity"],["Гостиная","sensor.miaomiaoc_cn_blt_3_living_t1_temperature_p_2_1","sensor.miaomiaoc_cn_blt_3_living_t1_relative_humidity_p_2_2"],["Спальня","sensor.lumi_cn_lumi_bedroom_th_v1_temperature_p_2_1","sensor.lumi_cn_lumi_bedroom_th_v1_relative_humidity_p_2_2"],["Улица","sensor.smart_weather_station_temperature","sensor.smart_weather_station_humidity"]].map(x=>({name:x[0],temp:parseFloat(state(S,x[1])),hum:parseFloat(state(S,x[2]))})),
+      air:{pm25:parseFloat(state(S,"sensor.zhimi_cn_purifier_mb3_pm2_5_density_p_3_6")),lux:Math.round(parseFloat(state(S,"sensor.lumi_cn_gateway_v3_illumination_p_5_1")))},
+      vac:{raw:state(S,"vacuum.kiborg"),avail:availOf(state(S,"vacuum.kiborg")),fan:attr(S,"vacuum.kiborg","fan_speed")||""},
+      calendarIds:S.filter(e=>e.entity_id&&e.entity_id.startsWith("calendar.")).map(e=>e.entity_id)
+    };
+  }
+  async function fetchData(){
+    if(DESKTOP_PREVIEW && !app.initData){app.auth="ok";renderShell();return}
+    if(!app.initData)return;
+    if(app.fetchPromise)return app.fetchPromise;
+    app.fetchPromise=(async()=>{
+      app.spin=true; renderShell();
+      try{
+        const sr=await fetchWithTimeout(`${HA_URL}/api/miniapp-state`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:app.initData})}); if(!sr.ok)throw new Error("HA "+sr.status);
+        const payload=await sr.json(), S=payload.states||[], arr=payload.prices||[];
+        app.states=S; app.data=mapStates(S,arr); app.calendarIds=app.data.calendarIds||[]; app.auth="ok"; app.updatedAt=Date.now(); app.stale=false; app.dataError=""; fetchCalendar();
+      }catch(e){console.error(e);app.stale=app.states.length>0;app.dataError=e&&e.name==="AbortError"?"таймаут обновления":String((e&&e.message)||e);if(app.auth!=="ok")app.auth="error"}
+      finally{app.spin=false;renderShell()}
+    })();
+    try{return await app.fetchPromise}finally{app.fetchPromise=null}
+  }
+  async function fetchCalendar(){
+    if(DESKTOP_PREVIEW && !app.initData)return;
+    if(!app.initData || !app.calendarIds.length)return;
+    const start=new Date(), end=new Date(); end.setDate(end.getDate()+14);
+    let out=[];
+    try{const r=await fetchWithTimeout(`${HA_URL}/api/miniapp-calendar`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:app.initData,calendarIds:app.calendarIds,start:start.toISOString(),end:end.toISOString()})});
+      if(r.ok)out=(await r.json()).events||[];
+    }catch{}
+    app.events=out.sort((a,b)=>String(a.start?.dateTime||a.start?.date||"").localeCompare(String(b.start?.dateTime||b.start?.date||""))).slice(0,6);
+    renderShell();
+  }
+  async function auth(){
+    if(DESKTOP_PREVIEW){app.auth="ok";renderShell();return}
+    if(!tg || !tg.initData){app.auth="blocked";renderShell();return}
+    try{tg.ready();tg.expand();app.initData=tg.initData;const r=await fetchWithTimeout(`${HA_URL}/api/miniapp-auth`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:app.initData})});if(!r.ok)throw new Error(r.status);await fetchData();restartPoll()}
+    catch(e){console.error(e);app.auth="error";renderShell()}
+  }
+  function restartPoll(){
+    clearInterval(app.pollTimer);
+    if(DESKTOP_PREVIEW || !app.initData) return;
+    const sec=Math.max(10,Number(app.settings.refresh)||30);
+    app.pollTimer=setInterval(fetchData,sec*1000);
+  }
+  // Fire a single service call. Returns a promise that REJECTS on failure (no optimistic UI here).
+  function svc(domain,service,entity_id,extra={}){
+    if(app.settings.safe && ["turn_off","turn_on"].includes(service) && domain!=="light"){return Promise.reject(new Error("Безопасный режим"))}
+    if(DESKTOP_PREVIEW || !app.initData) return Promise.resolve();
+    return fetchWithTimeout(`${HA_URL}/api/miniapp-action`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:app.initData,domain,service,entity_id,extra})}).then(r=>{if(!r.ok)throw new Error("HA "+r.status)});
+  }
+  // Run command(s): show pending → wait for the real backend response → re-read HA state to
+  // confirm → only then show success (or an error). No UI state is flipped before the response.
+  function cmd(okMsg,...calls){
+    if(DESKTOP_PREVIEW){toast("Демо-режим: команды отключены");return Promise.resolve()}
+    toast("Отправляю…");
+    return Promise.all(calls).then(()=>fetchData()).then(()=>{if(okMsg)toast(okMsg)}).catch(e=>{toast("Ошибка: "+((e&&e.message)||e))});
+  }
+  // The Mini App only receives an allow-listed subset of HA states, so the entity a command
+  // verifies against can legitimately be absent from the payload. That is NOT a failure.
+  function inPayload(eid){return !!eid && (app.states||[]).some(x=>x.entity_id===eid)}
+  async function cmdVerified(okMsg,calls,check,verifyEntity){
+    if(DESKTOP_PREVIEW){toast("Демо-режим: команды отключены");return}
+    toast("Отправляю…");
+    try{
+      await Promise.all(calls);
+      for(let i=0;i<5;i++){
+        await fetchData();
+        if(check()){toast(okMsg+" · подтверждено");return}
+        // Unverifiable (entity not in the payload) — report honestly, never as an error.
+        if(verifyEntity&&!inPayload(verifyEntity)){toast(okMsg+" · отправлено, проверить нельзя");return}
+        await new Promise(resolve=>setTimeout(resolve,700));
+      }
+      if(verifyEntity&&!inPayload(verifyEntity)){toast(okMsg+" · отправлено, проверить нельзя");return}
+      toast("Команда отправлена, состояние не подтверждено");
+    }catch(e){toast("Ошибка: "+((e&&e.message)||e))}
+  }
+  // Resolve a UI light id to its underlying service call(s), returning a single promise.
+  function lightSvc(id,on){
+    if(LIGHT_IDS[id]){const p=[svc("light",on?"turn_on":"turn_off",LIGHT_IDS[id])];if(id==="sauna")p.push(svc("light",on?"turn_on":"turn_off","light.dream_color_rgb_2"));return Promise.all(p)}
+    if(SWITCH_LIGHT_IDS[id])return svc("switch",on?"turn_on":"turn_off",SWITCH_LIGHT_IDS[id]);
+    if(SCENE_IDS[id])return svc("switch","turn_on",on?SCENE_IDS[id].on:SCENE_IDS[id].off);
+    return Promise.resolve();
+  }
+  function act(name,arg){
+    haptic("medium");
+    const d=app.data;
+    if(name==="refresh"){fetchData();toast("Данные обновляются");return}
+    if(name==="theme"){app.settings.theme=app.settings.theme==="dark"?"light":"dark";saveLS();renderShell();return}
+    if(name==="night"){cmd("Ночной режим включён",...d.lights.map(l=>lightSvc(l.id,false)));return}
+
+
+
+    // Ручная выдержка тёплого пола. Скрипты пишут только хелперы (те же действия,
+    // что у кнопок /floor_hold_off и /floor_hold_plus в Telegram), устройствам не командуют.
+    if(name==="floorHoldOff"){cmd("Выдержка снята",svc("script","turn_on","script.floor_hold_off"));return}
+    if(name==="floorHoldPlus"){cmd("Выдержка продлена на 3 ч",svc("script","turn_on","script.floor_hold_plus"));return}
+    if(name==="sceneSw"){const k=arg&&arg[0],on=!!(arg&&arg[1]);const p=SCENE_IDS[k];if(!p)return;
+      cmd((on?"Включаю: ":"Выключаю: ")+((SCENE_SW.find(x=>x[0]===k)||[,k])[1]),svc("switch","turn_on",on?p.on:p.off));return}
+    if(name==="vacStart"){cmd("Пылесос: пуск",svc("vacuum","start","vacuum.kiborg"));return}
+    if(name==="vacPause"){cmd("Пылесос: пауза",svc("vacuum","pause","vacuum.kiborg"));return}
+    if(name==="vacHome"){cmd("Пылесос: на базу",svc("vacuum","return_to_base","vacuum.kiborg"));return}
+    if(name==="nightSaver"){const v=!d.nightSaver;cmd(v?"Ночная экономия ВКЛ (до 05:00)":"Ночная экономия ВЫКЛ",svc("input_boolean",v?"turn_on":"turn_off","input_boolean.night_saver"));return}
+    if(name==="zhara"){const v=!d.zhara;cmd(v?"Жара: нагрев выключен":"Жара выключена — нагрев вернулся",svc("script","turn_on",v?"script.rezhim_zhara_on":"script.rezhim_zhara_off"));return}
+    if(name==="sceneAway"){cmd("Режим «Ушёл»",svc("script","turn_on","script.scene_away"));return}
+    if(name==="sceneCinema"){cmd("Режим «Кино»",svc("script","turn_on","script.scene_cinema"));return}
+    if(name==="sceneGuests"){cmd("Режим «Гости»",svc("script","turn_on","script.scene_guests"));return}
+    if(name==="evStart"){
+      // Уже заряжает — не шлём команду вслепую (как у полов: «уже включён»).
+      // Судим по статусу зарядки, а НЕ по switch.ev_charger_switch: он читается
+      // off во время зарядки.
+      if(!DESKTOP_PREVIEW&&d.ev.raw==="charger_charging"){toast("EV уже заряжается");return}
+      app.modal="confirmEvStart";renderShell();return}
+    if(name==="doEvStart"){app.modal=null;renderShell();cmdVerified("EV зарядка запущена",[svc("switch","turn_on","switch.ev_charger_switch"),svc("input_boolean","turn_on","input_boolean.ev_manual_mode")],()=>state(app.states,"switch.ev_charger_switch")==="on","switch.ev_charger_switch");return}
+    if(name==="evStop"){cmdVerified("EV остановлена",[svc("switch","turn_off","switch.ev_charger_switch"),svc("input_boolean","turn_off","input_boolean.ev_manual_mode")],()=>state(app.states,"switch.ev_charger_switch")==="off","switch.ev_charger_switch");return}
+    // Три разовые заявки. Каждая живёт ОДИН раз и сильнее автоматического
+    // расписания (липкая заявка input_boolean.ev_night_requested + стабильная
+    // ссылка на окно). Подробное подтверждение с конкретным окном и ценой
+    // присылает сам скрипт в Telegram — тут только короткий тост.
+    if(name==="evScheduleNight"){cmd("EV: ищу лучшие 2 часа ночью (23:00-07:00)",svc("shell_command","ev_night2h",null));return}
+    if(name==="evScheduleDay"){cmd("EV: ищу лучшие 2 часа днём (08:00-22:00)",svc("shell_command","ev_day2h",null));return}
+    if(name==="evCancelNext"){cmd("EV: следующая зарядка отменена один раз",svc("script","turn_on","script.ev_cancel_next"));return}
+    if(name==="evManual"){const v=!d.ev.manual;cmd(v?"EV: ручной режим":"EV: авто режим",svc("input_boolean",v?"turn_on":"turn_off","input_boolean.ev_manual_mode"));return}
+    if(name==="boiler"){if(!DESKTOP_PREVIEW&&!isAvail("switch.smart_plug_2_socket_1")){toast("Котёл: нет данных, обновите");return}const on=!d.boiler.power;cmd("Котёл "+(on?"включён":"выключен"),svc("switch",on?"turn_on":"turn_off","switch.smart_plug_2_socket_1"));return}
+    if(name==="cwu"){cmd("ГВС "+arg+"°",svc("rest_command","set_boiler_cwu_temp",null,{temp:arg}));return}
+    if(name==="co"){cmd("CO "+arg+"°",svc("rest_command","set_boiler_co_temp",null,{temp:arg}));return}
+    // --- Тёплые полы (электрические). Every control refuses to act on an entity we
+    // --- cannot read, and the setpoint is hard-clamped 5–45 °C on BOTH the step and
+    // --- the send (see the Tuya max_temp=300 scaling-bug note by FLOOR_ZONES).
+    if(name==="floorSp"){                       // stage only, nothing is sent
+      const [i,delta]=arg, f=(app.data.floor||[])[i]; if(!f)return;
+      if(!f.avail){toast("Тёплый пол: нет данных");return}
+      const base=floorPendingSp(f.eid) ?? (Number.isFinite(f.sp)?f.sp:null);
+      if(base===null){toast("Тёплый пол: уставка неизвестна");return}
+      const next=floorClampSp(base+delta);
+      if(next===base)toast(delta>0?("Максимум "+FLOOR_SP_MAX.toFixed(1)+" °C"):("Минимум "+FLOOR_SP_MIN.toFixed(1)+" °C"));
+      app.floorPending[f.eid]={val:next,t:Date.now()};haptic();renderShell();return;
+    }
+    if(name==="floorSpCancel"){const f=(app.data.floor||[])[arg];if(!f)return;delete app.floorPending[f.eid];renderShell();return}
+    if(name==="floorSpApply"){
+      const f=(app.data.floor||[])[arg]; if(!f)return;
+      const want=floorPendingSp(f.eid);
+      if(want===null){toast("Уставка не изменена");return}
+      if(!f.avail){toast("Тёплый пол: нет данных");return}
+      const send=floorClampSp(want);            // clamp AGAIN on the way out
+      if(send===null){toast("Уставка вне диапазона");return}
+      delete app.floorPending[f.eid];
+      cmdVerified("Уставка "+send.toFixed(1)+"°",[svc("climate","set_temperature",f.eid,{temperature:send})],
+        ()=>Math.abs(parseFloat(attr(app.states,f.eid,"temperature"))-send)<0.05,f.eid);
+      return;
+    }
+    if(name==="floorPower"){
+      const [i,mode]=arg, f=(app.data.floor||[])[i]; if(!f)return;
+      if(!f.avail){toast("Тёплый пол: нет данных");return}
+      if(f.hvac===mode){toast(mode==="off"?"Пол уже выключен":"Пол уже включён");return}
+      cmdVerified(mode==="off"?"Пол выключен":"Пол включён",[svc("climate","set_hvac_mode",f.eid,{hvac_mode:mode})],
+        ()=>state(app.states,f.eid)===mode,f.eid);
+      return;
+    }
+    if(name==="floorMode"){                     // pure preset change, keeps the setpoint
+      const [i,preset]=arg, f=(app.data.floor||[])[i]; if(!f)return;
+      if(!f.avail){toast("Тёплый пол: нет данных");return}
+      if(f.mode===preset){toast(preset==="auto"?"Уже авто":"Уже ручной");return}
+      cmdVerified(preset==="auto"?"Пол: авто":"Пол: ручной",[svc("climate","set_preset_mode",f.eid,{preset_mode:preset})],
+        ()=>attr(app.states,f.eid,"preset_mode")===preset,f.eid);
+      return;
+    }
+    if(name==="floorSwitch"){
+      const [i,which]=arg, f=(app.data.floor||[])[i]; if(!f)return;
+      const eid=which==="lock"?f.lockId:f.frostId, cur=which==="lock"?f.lock:f.frost;
+      const label=which==="lock"?"Блокировка от детей":"Защита от замерзания";
+      if(cur===null){toast(label+": нет данных");return}
+      cmdVerified(label+(cur?": выкл":": вкл"),[svc("switch",cur?"turn_off":"turn_on",eid)],
+        ()=>state(app.states,eid)===(cur?"off":"on"),eid);
+      return;
+    }
+    if(name==="openWater"){app.modal="confirmOpenWater";renderShell();return}
+    if(name==="doOpenWater"){app.modal=null;renderShell();if(!DESKTOP_PREVIEW&&!isAvail("switch.voda_kran_switch_1")){toast("Кран: нет данных, обновите");return}cmdVerified("Вода открыта",[svc("switch","turn_on","switch.voda_kran_switch_1")],()=>state(app.states,"switch.voda_kran_switch_1")==="on","switch.voda_kran_switch_1");return}
+    if(name==="closeWater"){app.modal="confirmWater";renderShell();return}
+    if(name==="doCloseWater"){app.modal=null;renderShell();if(!DESKTOP_PREVIEW&&!isAvail("switch.voda_kran_switch_1")){toast("Кран: нет данных, обновите");return}cmdVerified("Вода перекрыта",[svc("switch","turn_off","switch.voda_kran_switch_1")],()=>state(app.states,"switch.voda_kran_switch_1")==="off","switch.voda_kran_switch_1");return}
+    if(name==="arm"){app.modal="confirmSecurity";renderShell();return}
+    if(name==="doArm"){app.modal=null;renderShell();if(!DESKTOP_PREVIEW&&!isAvail("input_boolean.security_armed")){toast("Охрана: нет данных, обновите");return}const v=!d.security.armed;cmdVerified(v?"Охрана включена":"Охрана снята",[svc("input_boolean",v?"turn_on":"turn_off","input_boolean.security_armed")],()=>state(app.states,"input_boolean.security_armed")===(v?"on":"off"),"input_boolean.security_armed");return}
+    if(name==="allLightsOff"){cmd("Свет выключен",...d.lights.map(l=>lightSvc(l.id,false)));return}
+    if(name==="settings"){app.tab="settings";renderShell();return}
+  }
+  function toggleLight(id){
+    const l=app.data.lights.find(x=>x.id===id); if(!l)return;
+    if(!DESKTOP_PREVIEW && l.avail===false){toast(l.name+": нет данных, обновите");return}
+    const on=!l.on;
+    cmd(`${l.name}: ${on?"вкл":"выкл"}`,lightSvc(id,on));
+  }
+  function togglePlug(id){
+    const p=app.data.plugs.find(x=>x.id===id); if(!p)return;
+    if(!DESKTOP_PREVIEW && p.avail===false){toast(p.name+": нет данных, обновите");return}
+    if(!PLUG_IDS[id])return;
+    const on=!p.on;
+    cmd(`${p.name}: ${on?"вкл":"выкл"}`,svc("switch",on?"turn_on":"turn_off",PLUG_IDS[id]));
+  }
+  function rememberScroll(){
+    const el=document.querySelector(".screen");
+    if(el)app.scroll[app.tab]=el.scrollTop;
+  }
+  window.v8act=act; window.v8nav=t=>{rememberScroll();app.tab=t;haptic();renderShell()}; window.v8toggleLight=toggleLight; window.v8togglePlug=togglePlug;
+  window.v8set=(k,v)=>{app.settings[k]=v;saveLS();if(k==="refresh")restartPoll();renderShell()}; window.v8modal=v=>{app.modal=v;renderShell()};
+  // «Сегодня / Завтра» for the Nord Pool chart. Pure view state: reads nothing, sends
+  // nothing, touches no device.
+  window.v8priceDay=d=>{const n=d==="tomorrow"?"tomorrow":"today";if(n===app.priceDay)return;rememberScroll();app.priceDay=n;haptic();renderShell()};
+  function alerts(){
+    const s=app.data.sensors,a=[]; if(s.smoke)a.push("Дым");
+    // Leak alarms come ONLY from sensor.leak_protection_status (fix 2026-07-27)
+    leakInfo().leakNames.forEach(n=>a.push("Протечка: "+n));
+    if(s.door&&app.data.security.armed)a.push("Дверь открыта"); const w=app.data.water||{}; if(w.avail!==false&&!w.open)a.push("Вода перекрыта"); return a;
+  }
+  function renderShell(){
+    rememberScroll();
+    root.dataset.theme=app.settings.theme==="dark"?"luxury-dark-mobile":app.settings.theme; root.className="app";
+    if(app.auth==="init"){root.innerHTML=`<div class="loading"><div><div class="loader"></div><div class="sub" style="margin-top:12px">Авторизация</div></div></div>`;return}
+    if(app.auth==="blocked"){root.innerHTML=`<div class="loading"><div>${I("lock",48)}<h2 style="margin:14px 0 8px">Доступ только через Telegram</h2><a class="action primary" style="text-decoration:none;color:var(--text);padding:16px 24px;min-height:auto" href="${CONFIG.botDeepLink}">Открыть Mini App</a></div></div>`;return}
+    if(app.auth==="error"){root.innerHTML=`<div class="loading"><div>${I("x",48)}<h2 style="margin:14px 0 8px">Ошибка авторизации</h2><div class="sub">Проверь соединение и повтори попытку</div><button class="action primary" style="margin:16px auto 0;padding:12px 22px" onclick="location.reload()">Повторить</button></div></div>`;return}
+    const tabs={home:renderHome,dom:renderDom,climate:renderHeat,energy:renderEnergy,more:renderMore,security:renderSecurity,graph:renderGraph,livemap:renderLivemap,settings:renderSettings};
+    root.innerHTML=`<div class="shell">
+      <header class="top"><div class="brand"><div class="logo">${I("home",21)}</div><div><b>Умный дом</b><span>${DESKTOP_PREVIEW?"desktop preview":"Telegram Mini App"}</span></div></div>
+      <div class="top-actions"><button class="icon-btn ${app.spin?"spin":""}" aria-label="Обновить данные" onclick="v8act('refresh')">${I("refresh",19)}</button><button class="icon-btn" aria-label="Сменить тему" onclick="v8act('theme')">${I(app.settings.theme==="dark"?"sun":"moon",19)}</button><button class="icon-btn" aria-label="Открыть настройки" onclick="v8nav('settings')">${I("gear",19)}</button></div></header>
+      <main class="screen">${DESKTOP_PREVIEW?`<div style="margin:10px 0 2px;padding:8px 12px;border:1px solid var(--line2);border-radius:12px;background:rgba(255,189,85,.14);color:var(--amber);font-weight:800;font-size:12px;text-align:center">ДЕМО-режим · показаны примерные данные, не реальное состояние дома</div>`:""}${(tabs[app.tab]||renderHome)()}</main>${renderNav()}${renderToast()}${renderModal()}</div>`;
+    const el=document.querySelector(".screen");
+    if(el)el.scrollTop=app.scroll[app.tab]||0;
+    if(app.modal)requestAnimationFrame(()=>document.querySelector('.modal.on [data-modal-primary],.modal.on button')?.focus());
+  }
+  function renderGraph(){
+    if(DESKTOP_PREVIEW) return `<section class="view on"><div class="panel"><div class="head"><div class="title" style="--accent:var(--violet)"><i>${I("graph")}</i>Граф связей</div></div><div class="sub" style="padding:8px 2px">Откроется в приложении Home Assistant (страница /local/graph.html).</div></div></section>`;
+    return `<section class="view on" style="padding:0;height:100%"><div style="display:flex;align-items:center;gap:10px;padding:8px 4px 4px"><button class="icon-btn" aria-label="Закрыть граф связей" onclick="v8nav('home')">${I("x",18)}</button><b style="font-weight:800">Граф связей</b></div><iframe src="/local/graph.html" title="Граф связей" style="display:block;width:100%;height:calc(100vh - 200px);min-height:400px;border:0;border-radius:14px;background:#0a0d12"></iframe></section>`;
+  }
+  function renderLivemap(){
+    if(DESKTOP_PREVIEW) return `<section class="view on"><div class="panel"><div class="head"><div class="title" style="--accent:var(--cyan)"><i>${I("map")}</i>Живая карта</div></div><div class="sub" style="padding:8px 2px">Откроется в приложении Home Assistant (/local/livemap.html).</div></div></section>`;
+    return `<section class="view on" style="padding:0;height:100%"><div style="display:flex;align-items:center;gap:10px;padding:8px 4px 4px"><button class="icon-btn" aria-label="Закрыть живую карту" onclick="v8nav('home')">${I("x",18)}</button><b style="font-weight:800">Живая карта</b></div><iframe src="/local/livemap.html" title="Живая карта" style="display:block;width:100%;height:calc(100vh - 200px);min-height:400px;border:0;border-radius:14px;background:#0e1420"></iframe></section>`;
+  }
+  function renderNav(){
+    const nav=[["home","Главная","home"],["dom","Дом","bulb"],["climate","Климат","flame"],["energy","Энергия","bolt"],["more","Ещё","sliders"]];
+    return `<nav class="nav" aria-label="Основное меню">${nav.map(n=>`<button class="${app.tab===n[0]?"on":""}" ${app.tab===n[0]?'aria-current="page"':''} onclick="v8nav('${n[0]}')">${I(n[2],22)}${n[1]}</button>`).join("")}</nav>`;
+  }
+  function renderToast(){return `<div class="toast ${app.toast?"show":""}" role="status" aria-live="polite" aria-atomic="true">${safeText(app.toast||"")}</div>`}
+  const SCENE_INFO={
+    sceneAway:{t:"Ушёл",d:"Выключит весь свет в доме (все комнаты, подсветки, ТВ-зона) и включит охрану."},
+    sceneCinema:{t:"Кино",d:"Выключит основной свет и включит подсветку ТВ-зоны."},
+    sceneGuests:{t:"Гости",d:"Включит основной свет по всему дому: прихожая, оба этажа, веранда."},
+    night:{t:"Ночь",d:"Выключит весь свет. Бойлер будет греться только при дешёвом электричестве (≤ 0.04 €/кВт·ч)."}
+  };
+  function renderModal(){
+    if(app.modal&&app.modal.indexOf("scene:")===0){const k=app.modal.slice(6),s=SCENE_INFO[k]||{t:"",d:""};return `<div class="modal on" role="dialog" aria-modal="true" aria-labelledby="modal-title" onclick="if(event.target.className.includes('modal'))v8modal(null)"><div class="sheet"><div class="head"><div class="title" id="modal-title" style="--accent:var(--accent-gold)"><i>${I("play")}</i>Сцена «${s.t}»</div><button class="icon-btn" aria-label="Закрыть диалог" onclick="v8modal(null)">${I("x",18)}</button></div><p class="sub" style="line-height:1.55;margin-bottom:14px">${s.d}</p><div class="grid2"><button class="action" onclick="v8modal(null)">Отмена</button><button class="action primary" data-modal-primary onclick="v8modal(null);v8act('${k}')">Запустить</button></div></div></div>`;}
+    if(app.modal==="confirmWater")return `<div class="modal on" role="dialog" aria-modal="true" aria-labelledby="modal-title" onclick="if(event.target.className.includes('modal'))v8modal(null)"><div class="sheet"><div class="head"><div class="title" id="modal-title" style="--accent:var(--red)"><i>${I("valve")}</i>Перекрыть воду?</div><button class="icon-btn" aria-label="Закрыть диалог" onclick="v8modal(null)">${I("x",18)}</button></div><p class="sub" style="line-height:1.55;margin-bottom:14px">Это закроет главный кран на весь дом. Используй при протечке или аварии.</p><div class="grid2"><button class="action" onclick="v8modal(null)">Отмена</button><button class="action danger" data-modal-primary onclick="v8act('doCloseWater')">${I("valve")} Закрыть</button></div></div></div>`;
+    if(app.modal==="confirmOpenWater")return `<div class="modal on" role="dialog" aria-modal="true" aria-labelledby="modal-title" onclick="if(event.target.className.includes('modal'))v8modal(null)"><div class="sheet"><div class="head"><div class="title" id="modal-title" style="--accent:var(--water)"><i>${I("valve")}</i>Открыть воду?</div><button class="icon-btn" aria-label="Закрыть диалог" onclick="v8modal(null)">${I("x",18)}</button></div><p class="sub" style="line-height:1.55;margin-bottom:14px">Главный кран откроется. Убедись, что причина перекрытия устранена и датчики протечки сухие.</p><div class="grid2"><button class="action" onclick="v8modal(null)">Отмена</button><button class="action primary" data-modal-primary onclick="v8act('doOpenWater')">${I("valve")} Открыть</button></div></div></div>`;
+    if(app.modal==="confirmEvStart")return `<div class="modal on" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="sheet"><div class="head"><div class="title" id="modal-title" style="--accent:var(--green)"><i>${I("car")}</i>Запустить EV?</div><button class="icon-btn" aria-label="Закрыть диалог" onclick="v8modal(null)">${I("x",18)}</button></div><p class="sub" style="line-height:1.55;margin-bottom:14px">Зарядка перейдёт в ручной режим и начнётся сейчас.</p><div class="grid2"><button class="action" onclick="v8modal(null)">Отмена</button><button class="action primary" data-modal-primary onclick="v8act('doEvStart')">${I("play")} Запустить</button></div></div></div>`;
+    if(app.modal==="confirmSecurity"){const armed=app.data.security.armed;return `<div class="modal on" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="sheet"><div class="head"><div class="title" id="modal-title"><i>${I("shield")}</i>${armed?'Снять охрану?':'Включить охрану?'}</div><button class="icon-btn" aria-label="Закрыть диалог" onclick="v8modal(null)">${I("x",18)}</button></div><p class="sub" style="line-height:1.55;margin-bottom:14px">${armed?'Дом перейдёт в обычный режим.':'Перед включением убедись, что в доме никого не осталось.'}</p><div class="grid2"><button class="action" onclick="v8modal(null)">Отмена</button><button class="action primary" data-modal-primary onclick="v8act('doArm')">Подтвердить</button></div></div></div>`}
+    return "";
+  }
+  function renderRadar(){
+    const v=verdict(), a=v.alerts.length, d=app.data, wAvail=(d.water||{}).avail!==false, parts=[
+      ["price",d.price.now<=10?1:.55,d.price.now<=10?"var(--green)":"var(--amber)"],["ev",d.ev.raw==="charger_charging"?1:.35,"var(--green)"],["boiler",d.boiler.power?1:.45,"var(--amber)"],["water",d.water.open?1:.2,!wAvail?"var(--amber)":(d.water.open?"var(--water)":"var(--red)")],["security",v.level==="ok"?.55:1,v.color]
+    ];
+    const rings=parts.map((p,i)=>`<circle cx="70" cy="70" r="${22+i*10}" fill="none" stroke="${p[2]}" stroke-width="5" stroke-dasharray="${Math.round(2*Math.PI*(22+i*10)*p[1])} 999" stroke-linecap="round" transform="rotate(${-90+i*28} 70 70)" opacity="${.55+i*.08}"/>`).join("");
+    return `<div class="radar"><svg width="140" height="140" viewBox="0 0 140 140">${rings}<circle cx="70" cy="70" r="5" fill="var(--cyan)"/></svg><div class="radar-center"><b>${a?a:(v.level==="warn"?"?":"OK")}</b>${a?"внимание":(v.level==="warn"?"неизвестно":"норма")}</div></div>`;
+  }
+  function renderRooms(){
+    const d=app.data,r=d.rooms||[],air=d.air||{};
+    const pmTier=v=>v<=12?"ok":v<=35?"warn":"bad";
+    const tc=t=>t>=26?"var(--red)":t<=18?"var(--blue)":"var(--green)";
+    return `<div class="panel"><div class="head"><div class="title" style="--accent:var(--water)"><i>${I("temp")}</i>Микроклимат</div><span class="badge">${r.length} комн.</span></div>
+      <div class="grid2">${r.map(x=>`<div class="tile" style="--c:var(--water);min-height:64px"><div class="k">${I("temp",15)} ${safeText(x.name)}</div><div class="v mono" style="font-size:22px;color:${Number.isFinite(x.temp)?tc(x.temp):"var(--muted)"}">${Number.isFinite(x.temp)?x.temp.toFixed(1)+"°":"—"}</div><div class="s">${Number.isFinite(x.hum)?"влажность "+Math.round(x.hum)+"%":"нет данных"}</div></div>`).join("")}</div>
+      <div class="row" style="margin-top:8px"><i style="color:var(--green)">${I("leaf",18)}</i><div class="grow"><b>Воздух PM2.5</b><small>мелкие частицы</small></div><div class="right"><span class="badge ${Number.isFinite(air.pm25)?pmTier(air.pm25):""}">${Number.isFinite(air.pm25)?air.pm25+" µg/m³":"—"}</span></div></div>
+      <div class="row"><i style="color:var(--amber)">${I("sun",18)}</i><div class="grow"><b>Освещённость</b><small>гостиная</small></div><div class="right mono">${Number.isFinite(air.lux)?air.lux+" лк":"—"}</div></div></div>`;
+  }
+  function renderHome(){
+    const d=app.data,p=d.price,pAvail=p.avail!==false,t=pAvail?priceTier(p.now):["","нет данных","var(--muted)"],v=verdict(),a=v.alerts,lights=d.lights.filter(x=>x.on).length;
+    const climate=(d.rooms||[]).slice(0,3);
+    const priceStr=pAvail?(p.now/100).toFixed(3):"нет данных";
+    const updated=app.updatedAt?new Date(app.updatedAt).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'нет данных';
+    const cwuStr=d.boiler.avail.cwu?d.boiler.cwu+"°":"нет данных";
+    const modeStr=d.boiler.avail.mode?d.boiler.mode:"нет данных";
+    return `<section class="view on home-compact">
+      ${a.length?`<div class="panel danger"><div class="head"><div class="title" style="--accent:var(--red)"><i>${I("shield")}</i>Требуется внимание</div><span class="badge bad">${a.length}</span></div>${a.slice(0,3).map(x=>`<div class="row"><span class="dot bad"></span><div class="grow"><b>${safeText(x)}</b></div></div>`).join("")}<button class="action danger" style="width:100%;margin-top:8px" onclick="v8nav('security')">${I("shield")}Открыть безопасность</button></div>`:""}
+      ${!a.length&&v.blind.length?`<div class="panel"><div class="head"><div class="title" style="--accent:var(--amber)"><i>${I("shield")}</i>Датчики недоступны</div><span class="badge warn">?</span></div><div class="row"><span class="dot warn"></span><div class="grow"><b>Состояние неизвестно</b><small>${safeText(v.sub)}</small></div></div><button type="button" class="action" style="width:100%;margin-top:8px" onclick="v8nav('security')">${I("shield")}Открыть безопасность</button></div>`:""}
+      <button type="button" class="panel energy-home home-summary" aria-label="Открыть экран энергии. Цена сейчас ${pAvail?priceStr+' евро за киловатт-час':'нет данных'}" onclick="v8nav('energy')"><div><div class="head" style="margin:0 0 5px"><div class="title" style="--accent:var(--accent-gold)"><i>${I("bolt")}</i>Nord Pool</div><span class="badge ${t[0]}">${t[1]}</span></div><span class="price-main mono" style="${pAvail?'':'font-size:22px;color:var(--muted)'}">${priceStr}</span> ${pAvail?'<span class="unit">EUR/кВт·ч</span>':''}<div class="freshness ${app.stale?'stale':''}">${app.stale?'данные устарели':'обновлено '+updated}</div></div><div class="home-best"><b>${safeText(p.nightWindow||p.cheapWindow||'нет данных')}</b><span>лучшее окно · график в «Энергии»</span></div></button>
+      <div class="panel"><div class="head"><div class="title"><i>${I("home")}</i>Сейчас активно</div></div><div class="home-systems">
+        <div class="home-system" style="--c:var(--amber)"><i>${I("flame",19)}</i><div><b>${safeText(modeStr)}</b><span>котёл · ГВС ${safeText(cwuStr)}</span></div></div>
+        <div class="home-system" style="--c:var(--green)"><i>${I("car",19)}</i><div><b>${safeText(d.ev.status)}</b><span>EV · ${safeText(d.ev.sched||'без плана')}</span></div></div>
+        <div class="home-system" style="--c:var(--amber)"><i>${I("bulb",19)}</i><div><b>${lights} из ${d.lights.length}</b><span>освещение включено</span></div></div>
+        <div class="home-system" style="--c:${v.color}"><i>${I("shield",19)}</i><div><b>${v.level==="warn"?'датчики: ?':(d.security.armed?'охрана включена':'режим дома')}</b><span>вода ${waterText(d)}</span></div></div>
+      </div></div>
+      <div class="actions home-actions"><button type="button" class="action" onclick="v8modal('scene:sceneAway')">${I("walk")}Ушёл</button><button type="button" class="action" onclick="v8modal('scene:sceneCinema')">${I("play")}Кино</button><button type="button" class="action" onclick="v8modal('scene:sceneGuests')">${I("bulb")}Гости</button><button type="button" class="action" onclick="v8modal('scene:night')">${I("moon")}Ночь</button></div>
+      <div class="panel"><div class="head"><div class="title" style="--accent:var(--water)"><i>${I("temp")}</i>Климат</div><button type="button" class="badge" onclick="v8nav('climate')">Подробнее</button></div><div class="home-rooms">${(d.rooms||[]).map(x=>`<div><b class="mono">${Number.isFinite(x.temp)?x.temp.toFixed(1)+'°':'нет данных'}</b><span>${safeText(x.name)}${Number.isFinite(x.hum)?' · влажность '+Math.round(x.hum)+'%':' · влажность неизвестна'}</span></div>`).join("")}</div>
+        <div class="row" style="margin-top:8px;border-bottom:0"><i style="color:var(--green)">${I("leaf",18)}</i><div class="grow"><b>Воздух PM2.5</b><small>мелкие частицы</small></div><div class="right"><span class="badge ${Number.isFinite((d.air||{}).pm25)?((d.air.pm25<=12)?"ok":(d.air.pm25<=35?"warn":"bad")):""}">${Number.isFinite((d.air||{}).pm25)?d.air.pm25+" µg/m³":"нет данных"}</span></div></div>
+        <div class="row" style="border-bottom:0;padding-top:0"><i style="color:var(--amber)">${I("sun",18)}</i><div class="grow"><b>Освещённость</b><small>гостиная</small></div><div class="right mono">${Number.isFinite((d.air||{}).lux)?d.air.lux+" лк":"нет данных"}</div></div></div>
+    </section>`;
+  }
+  // A FUTURE day is drawn only when COMPLETE. 23 covers the spring-forward day (local
+  // hour 3 does not exist); fewer hours means Elering's cross-midnight bleed, published
+  // long before the ~14:00 day-ahead auction. Drawing it would lay 23 stub bars along
+  // the axis and read as «завтра электричество бесплатное».
+  const PRICE_DAY_MIN_HOURS=23;
+  function priceDaySlice(arr,tomorrow){return (arr||[]).slice(tomorrow?24:0,tomorrow?48:24)}
+  function priceDayReady(slice){return slice.filter(Number.isFinite).length>=PRICE_DAY_MIN_HOURS}
+  // One day, 24 bars. `nowHour` is the index to ring, or -1 for "no now marker" —
+  // tomorrow has no current hour, so the marker is omitted, never misplaced.
+  function renderPriceChart(arr,nowHour,height=128,dayWord="сегодня"){
+    const vals=arr.filter(Number.isFinite), max=Math.max(...vals,1);
+    if(!vals.length) return `<div class="empty" style="height:${height}px;display:grid;place-items:center">Нет данных о ценах Nord Pool</div>`;
+    return `<div class="chart" style="height:${height}px" role="img" aria-label="График цен Nord Pool по часам, ${dayWord}">${arr.map((x,i)=>{const valid=Number.isFinite(x), h=i%24; return `<div class="bar ${i===nowHour?"now":""} ${h<6||h>=22?"night":""}" style="height:${valid?Math.max(5,x/max*100):3}%;background:${valid?priceTier(x)[2]:"var(--line)"};color:${valid?priceTier(x)[2]:"var(--line)"}" title="${dayWord} ${pad(h)}:00 · ${valid?(x/100).toFixed(3):"нет данных"} EUR/кВт·ч"></div>`}).join("")}</div>`;
+  }
+  function tile(cls,icon,k,v,s,c,click,wide=false){const tag=click?'button':'div',action=click?` onclick="${click}"`:'';return `<${tag} class="tile ${wide?"wide":""}" style="--c:${c}"${action}><div class="k">${I(icon,18)} ${k}</div><div class="v mono" style="color:${c}">${safeText(v)}</div><div class="s">${safeText(s)}</div></${tag}>`}
+  function renderCalendarMini(){
+    const nameday=(now().getMonth()===5&&now().getDate()===24)?"Jānis":(now().getMonth()===5&&now().getDate()===23)?"Līga":"";
+    const ev=app.events.length?app.events.map(e=>`<div class="row"><span class="dot ok"></span><div class="grow"><b>${safeText(e.summary||"Событие")}</b><small>${safeText(String(e.start?.dateTime||e.start?.date||"").slice(0,16).replace("T"," "))}</small></div></div>`).join(""):`<div class="empty">Событий на ближайшие дни нет</div>`;
+    return `<div class="panel"><div class="head"><div class="title" style="--accent:var(--violet)"><i>${I("calendar")}</i>Календарь</div><span class="badge">${now().toLocaleDateString("ru-RU",{day:"numeric",month:"short"})}</span></div>${nameday?`<div class="row"><span class="dot ok"></span><div class="grow"><b>Именины</b><small>${nameday}</small></div></div>`:""}${ev}</div>`;
+  }
+  // ── ТЁПЛЫЕ ПОЛЫ (ЭЛЕКТРИЧЕСКИЕ) ────────────────────────────────────────────
+  // Own panel, own colour, own wording. NOTHING here may suggest the ecoNET24 boiler
+  // heats these floors — separate hardware, separate circuit, separate automation.
+  // Every readout is tri-state: unreadable => «нет данных»/«неизвестно», never a fake 0°.
+  function floorAutoNote(f,d){
+    const blocks=[];
+    if(f.holdOn)blocks.push("ручная выдержка");
+    if(d.zhara)blocks.push("Режим «Жара»");
+    if(d.nightSaver)blocks.push("Ночная экономия");
+    const price=d.price&&d.price.avail?d.price.now/100:null;   // d.price.now is cents/kWh
+    let effect,cls="";
+    if(f.autoState==="off"){effect="автоматика выключена — пол меняется только вручную";cls="warn"}
+    else if(f.autoState!=="on"){effect="состояние автоматики неизвестно";cls="bad"}
+    else if(blocks.length){effect="⏸ заблокирована: "+blocks.join(" + ")+" — автоматика ничего не меняет";cls="warn"}
+    else if(price===null){effect="цена Nord Pool неизвестна — что сделает автоматика, предсказать нельзя";cls="warn"}
+    else if(price<=FLOOR_CHEAP_EUR)effect="дешёво ("+price.toFixed(4)+" €/кВт·ч ≤ "+FLOOR_CHEAP_EUR.toFixed(2)+") → автоматика САМА включит пол: ручной, 30 °C";
+    else effect="дорого ("+price.toFixed(4)+" €/кВт·ч > "+FLOOR_CHEAP_EUR.toFixed(2)+") → автоматика переводит пол в авто";
+    const lbl=f.autoState==="on"?(blocks.length?"ПАУЗА":"АВТО"):(f.autoState==="off"?"OFF":"?");
+    return `<div class="fh-note"><div class="fh-note-head"><span class="badge ${cls}" style="min-height:auto;padding:2px 8px;font-size:11px">${lbl}</span><span>${safeText(f.autoName)}</span></div><div class="fh-note-body">${safeText(effect)}</div></div>`;
+  }
+  function floorSwBtn(i,which,f){
+    const cur=which==="lock"?f.lock:f.frost;
+    const label=which==="lock"?"Блокировка от детей":"Защита от замерзания";
+    const hint=which==="lock"?"экран термостата":"держит +5 °C";
+    const un=cur===null;
+    return `<button type="button" class="tile ${un?"":(cur?"on":"")}" style="--c:var(--cyan);min-height:64px${un?";opacity:.65":""}" aria-pressed="${un?"false":!!cur}" aria-label="${safeText(label)}: ${un?"нет данных":(cur?"включена, выключить":"выключена, включить")}" onclick="v8act('floorSwitch',[${i},'${which}'])"><div class="k" style="font-size:12px">${safeText(label)}</div><div class="s">${un?"нет данных":(cur?"включена":"выключена")} · ${hint}</div></button>`;
+  }
+  // Полоса ручной выдержки. Показывается ТОЛЬКО когда выдержка реально стоит:
+  // источник — binary_sensor.floor_hold_*, ничего не додумываем. «Снять» и «+3 ч»
+  // действуют на ОБЕ зоны — ровно как одноимённые кнопки в Telegram, потому что
+  // флаг «навсегда» в доме один на оба пола.
+  function floorHoldStrip(f){
+    if(!f.holdOn)return "";
+    const forever=f.holdReason==="forever";
+    const until=forever?"до отмены":(f.holdUntil?"до "+safeText(f.holdUntil):"срок неизвестен");
+    const mins=Number.isFinite(f.holdMins)&&!forever?" · осталось "+Math.max(0,Math.round(f.holdMins))+" мин":"";
+    const t=Number.isFinite(f.holdTemp)?f.holdTemp.toFixed(1)+"°":"нет данных";
+    return `<div class="fh-hold"><i style="color:var(--amber)">${I("timer",18)}</i>
+      <div class="grow"><b>Держим ${t} — ${until}</b><small>автоматика по цене этот пол не тронет${mins}</small></div>
+      <button type="button" onclick="v8act('floorHoldPlus')">+3 ч</button>
+      <button type="button" onclick="v8act('floorHoldOff')">Снять</button></div>`;
+  }
+  function floorZoneCard(f,i,d){
+    const staged=floorPendingSp(f.eid);
+    const shown=staged!==null?staged:(Number.isFinite(f.sp)?f.sp:null);
+    const valveTxt=f.valve===null?"неизвестно":(f.valve?"открыт":"закрыт");
+    const valveCls=f.valve===null?"warn":(f.valve?"ok":"");
+    return `<div class="fh-card">
+      <div class="fh-top"><div class="grow"><b>${safeText(f.name)}</b><small>электрический подогрев · ${safeText(f.room)}</small></div>
+        <div class="fh-cur mono ${Number.isFinite(f.temp)?"":"nd"}">${Number.isFinite(f.temp)?f.temp.toFixed(1)+"°":"нет данных"}</div></div>
+      <div class="fh-cur-lbl">температура пола</div>
+      <div class="fh-sp"><button type="button" class="fh-step" aria-label="Уставка минус 0,5 градуса" onclick="v8act('floorSp',[${i},-${FLOOR_SP_STEP}])">−</button>
+        <div class="fh-sp-val ${shown===null?"nd":""}"><b class="mono">${shown===null?"нет данных":shown.toFixed(1)+"°"}</b><small>уставка${staged!==null?" · не отправлена":""} · ${FLOOR_SP_MIN.toFixed(0)}–${FLOOR_SP_MAX.toFixed(0)} °C</small></div>
+        <button type="button" class="fh-step" aria-label="Уставка плюс 0,5 градуса" onclick="v8act('floorSp',[${i},${FLOOR_SP_STEP}])">+</button></div>
+      ${staged!==null?`<div class="fh-apply"><button type="button" class="fh-ok" onclick="v8act('floorSpApply',${i})">Применить ${staged.toFixed(1)}°</button><button type="button" class="fh-cancel" onclick="v8act('floorSpCancel',${i})">Отмена</button></div>`:""}
+      ${floorHoldStrip(f)}
+      <div class="fh-lbl">Питание</div>
+      <div class="seg" style="--n:2;--c:var(--cyan)"><button class="${f.hvac==="off"?"on":""}" onclick="v8act('floorPower',[${i},'off'])">Выключен</button><button class="${f.hvac==="heat_cool"?"on":""}" onclick="v8act('floorPower',[${i},'heat_cool'])">Включён</button></div>
+      ${f.avail?"":`<div class="fh-warn">термостат недоступен — питание неизвестно</div>`}
+      <div class="fh-lbl">Режим термостата</div>
+      <div class="seg" style="--n:2;--c:var(--cyan)"><button class="${f.mode==="auto"?"on":""}" onclick="v8act('floorMode',[${i},'auto'])">Авто</button><button class="${f.mode==="manual"?"on":""}" onclick="v8act('floorMode',[${i},'manual'])">Ручной</button></div>
+      ${f.avail&&!f.mode?`<div class="fh-warn">режим неизвестен</div>`:""}
+      <div class="row" style="border-bottom:0;padding-bottom:2px"><div class="grow"><b>Клапан (нагрев)</b><small>только чтение</small></div><span class="badge ${valveCls}" style="min-height:auto;padding:4px 10px">${valveTxt}</span></div>
+      <div class="grid2" style="margin-top:8px">${floorSwBtn(i,"lock",f)}${floorSwBtn(i,"frost",f)}</div>
+      ${floorAutoNote(f,d)}
+    </div>`;
+  }
+  function renderFloorHeating(){
+    const d=app.data, zones=d.floor||[];
+    const anyLive=zones.some(f=>f.avail);
+    return `<div class="panel fh-panel"><div class="head"><div class="title" style="--accent:var(--cyan)"><i>${I("temp")}</i>Тёплые полы (электрические)</div><span class="sub">${anyLive?"2 зоны":"нет связи"}</span></div>
+      <div class="fh-lead">Отдельный электрический подогрев пола. Не связан с котлом ecoNET24 и его водяным контуром: своё питание, свои термостаты, своя автоматика по цене Nord Pool.</div>
+      ${zones.map((f,i)=>floorZoneCard(f,i,d)).join("")}</div>`;
+  }
+  function renderHeat(){
+    const d=app.data;
+    return `<section class="view on">
+      <div class="panel ${d.zhara?"danger":""}"><div class="head"><div class="title" style="--accent:${d.zhara?"var(--red)":"var(--amber)"}"><i>${I("sun")}</i>Режим «Жара»</div><button type="button" class="switch ${d.zhara?"on":""}" role="switch" aria-checked="${d.zhara}" aria-label="Режим Жара" style="--c:var(--red)" onclick="v8act('zhara')"></button></div><div class="sub" style="line-height:1.5">${d.zhara?"Нагрев отключён: полотенцесушитель и тёплые полы выключены, автоматика по цене заморожена. Бойлер (ГВС) работает как обычно.":"Одной кнопкой выключить весь нагрев (полы + полотенцесушитель), кроме бойлера. Для жары дома >25°."}</div></div>
+      <div class="panel"><div class="head"><div class="title" style="--accent:${d.nightSaver?"var(--blue)":"var(--muted)"}"><i>${I("moon")}</i>Ночная экономия</div><button type="button" class="switch ${d.nightSaver?"on":""}" role="switch" aria-checked="${d.nightSaver}" aria-label="Ночная экономия" style="--c:var(--blue)" onclick="v8act('nightSaver')"></button></div><div class="sub" style="line-height:1.5">${d.nightSaver?"Ночь: полотенцесушитель и аквариум выключены, тёплые полы отданы расписанию. Утром в 05:00 всё вернётся по цене. Бойлер и EV не затронуты.":"Расписание включает её в 22:00 и снимает в 05:00. Кнопка нужна, чтобы включить или снять раньше времени."}</div></div>
+      <div class="panel" style="padding:0;overflow:hidden"><div class="head" style="padding:14px 16px 0"><div class="title" style="--accent:var(--amber)"><i>${I("boiler")}</i>Схема котла</div></div>
+      <!-- ?v=MINIAPP_BUILD: /local/* is served with Cache-Control max-age=2678400 (31 days)
+           and this iframe URL is never re-stamped by the self-updater, so a boiler.html
+           deploy would otherwise stay invisible for a month. -->
+      <iframe src="/local/boiler.html?v=${encodeURIComponent(MINIAPP_BUILD)}" title="Схема котла" style="display:block;width:100%;height:240px;border:0;margin-top:8px;background:#eef1f5"></iframe></div>
+      <div class="panel"><div class="head"><div class="title" style="--accent:var(--amber)"><i>${I("flame")}</i>Котёл ecoNET24</div><button type="button" class="switch ${d.boiler.power?"on":""}" role="switch" aria-checked="${d.boiler.power}" aria-label="Электрический бойлер" style="--c:var(--amber)" onclick="v8act('boiler')"></button></div>
+      <div class="strip"><div><div class="k">${I("flame",15)}Котёл</div><div class="v" style="font-size:16px;color:${d.boiler.avail.mode?"var(--amber)":"var(--muted)"}">${safeText(d.boiler.avail.mode?d.boiler.mode:"нет данных")}</div><div class="s">${d.boiler.power?"нагрев вкл":"выкл"}</div></div><div><div class="k">${I("temp",15)}ГВС</div><div class="v mono" style="color:${d.boiler.avail.cwu?"var(--amber)":"var(--muted)"}${d.boiler.avail.cwu?"":";font-size:15px"}">${d.boiler.avail.cwu?d.boiler.cwu+"°":"нет данных"}</div><div class="s">${d.boiler.avail.cwu?"цель "+d.boiler.cwuSet+"°":""}</div></div><div><div class="k">${I("temp",15)}Обратка</div><div class="v mono" style="color:${d.boiler.avail.ret?"var(--amber)":"var(--muted)"}${d.boiler.avail.ret?"":";font-size:15px"}">${d.boiler.avail.ret?d.boiler.ret+"°":"нет данных"}</div><div class="s">контур котла</div></div></div></div>
+      <div class="panel"><div class="head" style="margin-bottom:6px"><span class="sub">ГВС, °C</span><span class="sub">CO ${d.boiler.avail.co?d.boiler.co+"°":"нет данных"}</span></div><div class="seg" style="--n:5;--c:var(--amber)">${[40,45,50,55,60].map(x=>`<button class="${d.boiler.cwuSet===x?"on":""}" onclick="v8act('cwu',${x})">${x}°</button>`).join("")}</div>
+      <div class="head" style="margin:10px 0 6px"><span class="sub">CO, °C</span></div><div class="seg" style="--n:4;--c:var(--amber)">${[50,60,68,75].map(x=>`<button class="${d.boiler.coSet===x?"on":""}" onclick="v8act('co',${x})">${x}°</button>`).join("")}</div></div>
+      ${renderFloorHeating()}
+      <div class="panel"><div class="head"><div class="title" style="--accent:var(--amber)"><i>${I("temp")}</i>Нагрев (розетки)</div></div><div class="grid2">${d.plugs.filter(p=>p.id==="boil"||p.id==="cal").map(p=>devBtn(p,"v8togglePlug","var(--amber)",p.icon)).join("")}</div></div>
+    </section>`;
+  }
+  // Standard toggle-tile control (real <button>, accessible name, aria-pressed).
+  function devBtn(item,fn,color,icon){
+    const un=item.avail===false;
+    return `<button type="button" class="tile ${un?"":(item.on?"on":"")}" style="--c:${color};min-height:60px${un?";opacity:.6":""}" aria-pressed="${un?"false":!!item.on}" aria-label="${safeText(item.name)}: ${un?"нет данных":(item.on?"включено, выключить":"выключено, включить")}" onclick="${fn}('${item.id}')"><div class="k">${I(icon,17)} ${safeText(item.name)}</div><div class="s">${un?"нет данных":(item.on?"включено":"выключено")}</div></button>`;
+  }
+  function renderDom(){
+    const d=app.data;
+    const zones=["Вход","Кухня","Гостиная","Спальня","2 этаж","Баня","Улица"];
+    const byZone={}; (d.lights||[]).forEach(l=>{const z=l.zone||"Прочее";(byZone[z]=byZone[z]||[]).push(l)});
+    const order=[...zones.filter(z=>byZone[z]),...Object.keys(byZone).filter(z=>!zones.includes(z))];
+    const lightGroups=order.map(z=>`<div class="head" style="margin:2px 0 4px"><span class="sub">${safeText(z)}</span></div><div class="grid2">${byZone[z].map(l=>devBtn(l,"v8toggleLight","var(--amber)","bulb")).join("")}</div>`).join("");
+    return `<section class="view on">
+      ${renderRooms()}
+      <div class="panel"><div class="head"><div class="title" style="--accent:var(--amber)"><i>${I("bulb")}</i>Свет по комнатам</div><button type="button" class="badge" onclick="v8act('allLightsOff')">выкл всё</button></div>${lightGroups}</div>
+      <div class="panel"><div class="head"><div class="title" style="--accent:var(--green)"><i>${I("plug")}</i>Розетки</div></div><div class="grid2">${d.plugs.filter(p=>p.id!=="boil"&&p.id!=="cal").map(p=>devBtn(p,"v8togglePlug","var(--green)",p.icon)).join("")}</div></div>
+      ${renderSceneSwitches()}
+      ${renderVacuum()}
+    </section>`;
+  }
+  // Сценарные выключатели: у каждого света ДВЕ отдельные сущности «включить» и
+  // «выключить» (Tuya-сцены, кнопки без состояния). Поэтому здесь НЕТ переключателя
+  // с состоянием — он бы врал: узнать, горит ли свет, по этим сущностям нельзя.
+  const SCENE_SW=[["akv","Над аквариумом"],["wall","Стена"],["cur","Занавески"],["stair","У лестницы"]];
+  function renderSceneSwitches(){
+    return `<div class="panel"><div class="head"><div class="title" style="--accent:var(--amber)"><i>${I("bulb")}</i>Сценарный свет</div><span class="badge">без статуса</span></div>
+      <div class="sub" style="margin:-2px 0 8px">Эти светильники управляются парой кнопок «включить/выключить». Текущее состояние устройство не сообщает, поэтому здесь его нет.</div>
+      ${SCENE_SW.map(x=>`<div class="row"><div class="grow"><b>${safeText(x[1])}</b></div><div class="right" style="display:flex;gap:6px"><button type="button" class="badge" style="min-height:34px;padding:0 12px" onclick="v8act('sceneSw',['${x[0]}',true])">Вкл</button><button type="button" class="badge" style="min-height:34px;padding:0 12px" onclick="v8act('sceneSw',['${x[0]}',false])">Выкл</button></div></div>`).join("")}</div>`;
+  }
+  function renderVacuum(){
+    const v=app.data.vac||{};
+    const live=v.avail!==false&&v.raw;
+    const lbl=live?(VAC_LABEL[v.raw]||safeText(v.raw)):"нет данных";
+    const fan=v.fan?safeText(v.fan):"неизвестна";
+    return `<div class="panel"><div class="head"><div class="title" style="--accent:var(--violet)"><i>${I("plug")}</i>Робот-пылесос</div><span class="badge ${live?"":"warn"}">${lbl}</span></div>
+      <div class="row"><div class="grow"><b>Киборг</b><small>мощность всасывания: ${fan}</small></div></div>
+      <div class="actions" style="grid-template-columns:repeat(3,1fr)"><button type="button" class="action primary" onclick="v8act('vacStart')">${I("play")}Пуск</button><button type="button" class="action" onclick="v8act('vacPause')">${I("stop")}Пауза</button><button type="button" class="action" onclick="v8act('vacHome')">${I("home")}На базу</button></div></div>`;
+  }
+  function renderEnergy(){
+    const d=app.data,p=d.price,pAvail=p.avail!==false;
+    // «Сегодня / Завтра»: one day at a time. Tomorrow stays tappable even with no data —
+    // it must EXPLAIN, not bounce back to today.
+    const showTom=app.priceDay==="tomorrow";
+    const tomSlice=priceDaySlice(p.arr,true), tomReady=p.real!==false&&priceDayReady(tomSlice);
+    // TODAY is gated exactly like «Завтра»: a chart is drawn only from prices that came
+    // out of the real file. With the file unreadable there is no curve to fall back on,
+    // so the tab says so instead of drawing the demo one.
+    const todaySlice=priceDaySlice(p.arr,false), todayReady=p.real!==false&&priceDayReady(todaySlice);
+    const daySlice=showTom?tomSlice:todaySlice, dayReady=showTom?tomReady:todayReady;
+    const dayWord=showTom?"завтра":"сегодня";
+    const finite=daySlice.filter(Number.isFinite), max=finite.length?Math.max(...finite,1):1;
+    const pub=p.tomorrowPub;
+    const tomWhy=p.real===false
+      ? "Файл цен Nord Pool недоступен, поэтому данных за завтра нет."
+      : pub==="on"
+      ? "Биржа уже опубликовала цены на завтра — график появится после ближайшего обновления файла цен."
+      : pub==="off"
+        ? "Цены на завтра публикуются около 14:00. Сейчас их ещё нет, поэтому график не строится."
+        : "Не удалось прочитать признак публикации цен на завтра, и данных за завтра нет.";
+    const todayWhy=p.real===false
+      ? "Файл цен Nord Pool недоступен — нет данных о ценах за сегодня. Показывать демо-график вместо них нельзя."
+      : "Цены за сегодня прочитать не удалось: в файле цен нет полных суток.";
+    const dayWhy=showTom?tomWhy:todayWhy;
+    const daySeg=`<div class="seg" style="--n:2;--c:var(--blue);margin-top:12px"><button type="button" class="${showTom?"":"on"}" aria-pressed="${!showTom}" onclick="v8priceDay('today')">Сегодня${todayReady?"":" · нет данных"}</button><button type="button" class="${showTom?"on":""}" aria-pressed="${showTom}" onclick="v8priceDay('tomorrow')">Завтра${tomReady?"":" · нет данных"}</button></div>`;
+    const chartFrame=(!dayReady)
+      ? `<div class="empty" style="margin-top:12px;padding:18px 14px;line-height:1.45">${safeText(dayWhy)}</div>`
+      : `<div class="price-chart-frame" style="margin-top:12px"><div class="price-y-axis"><span>${(max/100).toFixed(3)}</span><span>${(max/200).toFixed(3)}</span><span>0.000</span></div><div>${renderPriceChart(daySlice,showTom?-1:now().getHours(),128,dayWord)}<div class="axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div></div><div class="price-y-unit">Ось Y — EUR/кВт·ч · ось X — часы суток · ${safeText(dayWord)}</div></div>`;
+    const t=pAvail?priceTier(p.now):["","нет данных","var(--muted)"];
+    const priceStr=pAvail?(p.now/100).toFixed(3):"нет данных";
+    const nextStr=Number.isFinite(p.next)&&p.next>0?(p.next/100).toFixed(3):"нет данных";
+    // € comes from the price file's daily average. No real prices => no € at all,
+    // rather than a 0.00 € (or, before 2026-08-16, a demo-priced) figure. kWh is read
+    // straight off the meters and stays.
+    const costReal=d.cost.priceReal!==false;
+    const maxCost=Math.max(...d.cost.items.map(i=>i.avail?(costReal?i.cost:i.kwh):0),.01);
+    const totalStr=d.cost.anyAvail?(costReal?d.cost.total.toFixed(2)+" €":"нет данных о ценах"):"нет данных";
+    const monthStr=d.cost.monthAvail?(d.cost.month||0).toFixed(2)+" €":"нет данных";
+    return `<section class="view on"><div class="panel"><div class="head"><div class="title" style="--accent:var(--blue)"><i>${I("bolt")}</i>Nord Pool сейчас</div><span class="badge ${t[0]}">${t[1]}</span></div>
+      <div class="v mono" style="font-size:${pAvail?44:24}px;font-weight:800;color:${t[2]}">${priceStr}</div><div class="sub">EUR/кВт·ч · следующий час ${nextStr}</div>
+      ${daySeg}${chartFrame}
+      <div class="best-window"><b>Ночная EV 2ч</b><div class="sub">${safeText(p.nightWindow||"нет данных")} · самые дешёвые 2 часа ночи</div></div></div>
+      <div class="panel"><div class="head"><div class="title"><i>${I("plug")}</i>Расход сегодня</div><span class="badge mono">${totalStr}</span></div><div class="sub" style="margin:-4px 0 10px">Стоимость Nord Pool · предварительно</div>${d.cost.items.map(i=>{const av=i.avail!==false;return `<div class="row"><i style="color:var(--${i.system})">${I(i.icon,19)}</i><div class="grow"><b>${i.name}</b><small><span style="display:inline-block;width:${av?Math.max(4,(costReal?i.cost:i.kwh)/maxCost*100):0}%;height:4px;border-radius:8px;background:var(--${i.system})"></span></small></div><div class="right mono">${av?i.kwh.toFixed(1):"нет данных"}<small>${av?(costReal?i.cost.toFixed(2)+" €":"нет цены"):""}</small></div></div>`}).join("")}<div class="row" style="border-top:1px solid var(--line);margin-top:10px;padding-top:12px"><i style="color:var(--amber)">${I("bolt",19)}</i><div class="grow"><b>Итого за месяц</b><small>накоплено с 1-го числа</small></div><div class="right mono" style="color:var(--amber)">${monthStr}</div></div></div>
+      <div class="panel"><div class="head"><div class="title" style="--accent:var(--amber)"><i>${I("bolt")}</i>Расходы за месяц</div><span class="badge mono">${monthStr}</span></div><div class="sub" style="margin:-4px 0 10px">По устройствам, накопительно с 1-го числа. Начисляется раз в сутки в 23:58, поэтому сегодняшний день здесь ещё не учтён.</div>${d.cost.items.map(i=>`<div class="row"><i style="color:var(--${i.system})">${I(i.icon,19)}</i><div class="grow"><b>${i.name}</b></div><div class="right mono">${i.mAvail===false?"нет данных":i.mcost.toFixed(2)+" €"}</div></div>`).join("")}</div><div class="panel"><div class="head"><div class="title" style="--accent:var(--green)"><i>${I("car")}</i>EV зарядка</div><span class="badge ${d.ev.manual?"warn":"ok"}">${d.ev.manual?"ручной":"авто"}</span></div><div class="grid2">${tile("ev","car","Статус",d.ev.status,`${d.ev.kwh.toFixed(1)} кВт·ч · старт ${d.ev.sched}`,"var(--green)","")}${tile("price","bolt","Цена",priceStr,"EUR/кВт·ч сейчас","var(--blue)","")}</div><div class="actions" style="grid-template-columns:repeat(3,1fr)"><button type="button" class="action primary" onclick="v8act('evStart')">${I("play")}Зарядить</button><button type="button" class="action" onclick="v8act('evStop')">${I("stop")}Стоп</button><button type="button" class="action" onclick="v8act('evManual')">${I("sliders")}Ручной</button></div><div class="sub" style="margin:10px 0 6px">Разовые заявки — сильнее автоматического расписания, действуют один раз</div><div class="actions" style="grid-template-columns:repeat(3,1fr)"><button type="button" class="action" onclick="v8act('evScheduleNight')">${I("moon")}Ночь 2ч</button><button type="button" class="action" onclick="v8act('evScheduleDay')">${I("sun")}День 2ч</button><button type="button" class="action" onclick="v8act('evCancelNext')">${I("x")}Отменить</button></div></div></section>`;
+  }
+  function renderSecurity(){
+    const d=app.data,v=verdict(),a=v.alerts,wAvail=(d.water||{}).avail!==false;
+    const sensors=[["door","Входная дверь","door","Открыта","Закрыта"],["smoke","Дым","smoke","ДЫМ","Норма"],["water","Ванная","bath","ТЕЧЬ","Сухо"],["water","Душевая 1эт","shower","ТЕЧЬ","Сухо"],["water","Гараж","garage","ТЕЧЬ","Сухо"],["water","Кухня","kitchen","ТЕЧЬ","Сухо"],["motion","Движение (гостиная)","motion","Есть!","Нет"]]
+      .map(x=>{const st=sensorState(x[2],x[3],x[4]);return {icon:x[0],name:x[1],lvl:st[0],text:st[1]}});
+    const SLVL={ok:"var(--muted)",warn:"var(--amber)",bad:"var(--red)"};
+    return `<section class="view on"><div class="panel"><div class="head"><div class="title" style="--accent:${v.color}"><i>${I("shield")}</i>${v.short}</div><button type="button" class="badge" onclick="v8nav('more')">← Ещё</button></div><div class="grid2"><button type="button" class="action ${d.security.armed?"danger":"primary"}" onclick="v8act('arm')">${I(d.security.armed?"unlock":"lock")}${d.security.armed?"Снять":"Охрана"}</button><button type="button" class="action ${wAvail&&!d.water.open?"danger":""}" onclick="${!wAvail?"v8act('refresh')":(d.water.open?"v8act('closeWater')":"v8act('openWater')")}">${I("valve")}${!wAvail?"Кран: нет данных":(d.water.open?"Закрыть воду":"Открыть воду")}</button></div>${v.level==="warn"?`<div class="row"><span class="dot warn"></span><div class="grow"><b>Проверить состояние нельзя</b><small>${safeText(v.sub)}</small></div></div>`:""}</div>
+      <div class="panel"><div class="head"><div class="title"><i>${I("wifi")}</i>Датчики</div><span class="sub">Протечки · дверь · дым</span></div><div class="row"><span class="dot ${v.level==="bad"?"bad":(leakInfo().status==="ok"?"ok":"warn")}"></span><div class="grow"><b>Защита от протечки</b><small>${safeText(leakCheckedText())}</small></div><div class="right sub">${safeText(leakInfo().status==="leak"?"протечка":leakInfo().status==="blind"?"вслепую":leakInfo().status==="ok"?"сухо":"неизвестно")}</div></div>${sensors.map(s=>`<div class="row"><span class="dot ${s.lvl}"></span><i style="color:var(--muted)">${I(s.icon,18)}</i><div class="grow"><b>${s.name}</b></div><div class="right ${s.lvl==="bad"?"sensor-danger":""}" style="color:${SLVL[s.lvl]}">${s.text}</div></div>`).join("")}</div>
+      <div class="panel"><div class="head"><div class="title"><i>${I("battery")}</i>Батареи</div></div><div class="grid2">${d.batteries.map(b=>`<div class="tile" style="min-height:60px"><div class="k">${b.name}</div><div class="v mono" style="font-size:21px;color:${b.avail===false?"var(--muted)":(b.pct<=15?"var(--red)":b.pct<=30?"var(--amber)":"var(--green)")}">${b.avail===false?"нет данных":b.pct+"%"}</div></div>`).join("")}</div></div></section>`;
+  }
+  function renderMore(){
+    const d=app.data,v=verdict(),a=v.alerts;
+    const updated=app.updatedAt?new Date(app.updatedAt).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'нет данных';
+    const online=app.auth==="ok";
+    return `<section class="view on">
+      <div class="panel ${v.level==="bad"?"danger":""}"><div class="head"><div class="title" style="--accent:${v.color}"><i>${I("shield")}</i>Безопасность</div><span class="badge ${v.level}">${v.badge}</span></div>
+        <div class="row"><span class="dot ${v.level}"></span><div class="grow"><b>${v.title}</b><small>${v.sub?safeText(v.sub)+' · ':''}${d.security.armed?'охрана включена':'режим дома'} · вода ${waterText(d)}</small></div></div>
+        <button type="button" class="action ${v.level==="bad"?'danger':''}" style="width:100%;margin-top:8px" onclick="v8nav('security')">${I("shield")}Открыть безопасность</button></div>
+      <div class="panel"><div class="head"><div class="title" style="--accent:var(--cyan)"><i>${I("wifi")}</i>Диагностика</div><span class="badge ${online?'ok':'bad'}">${online?'онлайн':'ошибка'}</span></div>
+        <div class="row"><div class="grow"><b>Данные Home Assistant</b><small>последнее обновление</small></div><div class="right sub">${app.stale?'устарели':safeText(updated)}</div></div>
+        <div class="row"><div class="grow"><b>Соединение</b><small>${DESKTOP_PREVIEW?'демо-режим':'Telegram Mini App'}</small></div><div class="right sub">${online?'ок':'нет связи'}</div></div>
+        ${app.dataError?`<div class="row"><div class="grow"><b>Последняя ошибка</b><small>${safeText(app.dataError)}</small></div></div>`:""}
+        <div class="row"><div class="grow"><b>Интервал опроса</b><small>частота обновления HA</small></div><div class="right sub">${Math.max(10,Number(app.settings.refresh)||30)} сек</div></div>
+        <div class="row" data-upd-row><div class="grow"><b>Версия приложения</b><small>сборка ${safeText(MINIAPP_BUILD)}${upd.remote&&upd.remote!==MINIAPP_BUILD?" → "+safeText(upd.remote):""}</small></div><div class="right sub" data-upd-line>${safeText(updLine())}</div></div></div>
+      <div class="panel"><div class="head"><div class="title" style="--accent:var(--amber)"><i>${I("sliders")}</i>Настройки</div></div>
+        <button type="button" class="action" style="width:100%" onclick="v8nav('settings')">${I("gear")}Открыть настройки</button></div>
+    </section>`;
+  }
+  function renderSettings(){
+    const s=app.settings;
+    return `<section class="view on"><div class="panel"><div class="head"><div class="title" style="--accent:var(--cyan)"><i>${I("gear")}</i>Настройки</div><button type="button" class="badge" onclick="v8nav('more')">← Ещё</button></div>
+      ${settingRow("Тема","Авто/тёмная/светлая",`<div class="seg" style="width:190px;--n:2;--c:var(--blue)"><button class="${s.theme==="dark"?"on":""}" onclick="v8set('theme','dark')">Тёмная</button><button class="${s.theme==="light"?"on":""}" onclick="v8set('theme','light')">Светлая</button></div>`)}
+      ${settingRow("Виброотклик","Лёгкий haptic при нажатиях",sw("haptic",s.haptic))}
+      ${settingRow("Крупные кнопки","Для управления на ходу",sw("big",s.big))}
+      ${settingRow("Компактно","Больше данных на экране",sw("compact",s.compact))}
+      ${settingRow("Безопасный режим","Блокирует опасные команды",sw("safe",s.safe))}
+      ${settingRow("Обновление","Интервал опроса HA",`<select onchange="v8set('refresh',Number(this.value))" style="background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:12px;min-height:44px;padding:9px 14px"><option ${s.refresh===10?"selected":""} value="10">10 сек</option><option ${s.refresh===30?"selected":""} value="30">30 сек</option><option ${s.refresh===60?"selected":""} value="60">60 сек</option></select>`)}
+      <div class="actions"><button class="action primary" onclick="v8act('refresh')">${I("refresh")}Обновить</button><button class="action" onclick="localStorage.removeItem('${LS}');location.reload()">${I("x")}Сброс</button></div></div></section>`;
+  }
+  function settingRow(title,sub,control){return `<div class="row"><div class="grow"><b>${title}</b><small>${sub}</small></div>${control}</div>`}
+  const SW_LABEL={haptic:"Виброотклик",big:"Крупные кнопки",compact:"Компактный режим",safe:"Безопасный режим"};
+  function sw(k,v){return `<button type="button" class="switch ${v?"on":""}" role="switch" aria-checked="${v}" aria-label="${safeText(SW_LABEL[k]||k)}" style="--c:var(--cyan)" onclick="v8set('${k}',${!v})"></button>`}
+  // ===================================================================
+  // SELF-UPDATE (2026-07-28). HA serves /local/* with
+  // `Cache-Control: public, max-age=2678400` (31 days) and Telegram's webview honours
+  // it, so a deployed smarthouse.html could stay invisible to the owner for a MONTH.
+  // Fix (mirrors PANEL_BUILD in tablet-panel.js): this build stamps its own identity
+  // in MINIAPP_BUILD and polls the tiny sidecar /local/miniapp-version.json. When the
+  // sidecar advertises a DIFFERENT build we navigate ONCE to this same page with a
+  // cache-busting ?v=<build>, which forces the webview to fetch the new HTML.
+  //
+  // A plain location.reload() would NOT be enough — the webview would re-serve the
+  // cached copy for the same URL. And the URL we build MUST keep location.hash BYTE
+  // FOR BYTE: Telegram passes tgWebAppData (the initData that the whole /api/miniapp-*
+  // auth depends on) in the URL FRAGMENT. Dropping the hash would break authorization
+  // and show «Ошибка авторизации». Pre-existing query params are carried over too.
+  //
+  // MINIAPP_BUILD and the sidecar's "build" MUST be bumped together — a mismatch
+  // either disables auto-update or invites a navigation loop.
+  // tests/test_miniapp_build_marker.py fails the suite if they ever diverge.
+  //
+  // This app closes the water valve and arms security, so a navigation storm would be
+  // far worse than a stale build. Every navigation is guarded:
+  //   * at most ONE navigation per distinct advertised build value (so bumping the
+  //     JSON without shipping new HTML cannot loop),
+  //   * at most UPD_MAX_NAV navigations per session, no matter what,
+  //   * never before the first successful auth + state load (never interrupt startup),
+  //   * never while a modal/sheet is open, while the document is hidden, within
+  //     UPD_INTERACT_MS of a real touch/keypress (a phone user scrolling must not be
+  //     yanked), while the leak truth entity reads `leak`, or while smoke is in alarm.
+  // A blocked navigation stays PENDING and is retried on every poll and on
+  // visibilitychange → visible — it is never lost. Suppression shows up as ONE quiet
+  // line in «Ещё» → Диагностика: never an alert(), never a modal, never console spam.
+  // Everything here fails SILENT: the sidecar is optional, so 404 / HTML error page /
+  // invalid JSON / empty body / missing `build` / offline all mean "no information".
+  // ===================================================================
+  const MINIAPP_BUILD = "20260826-1";
+  const UPD_URL = "/local/miniapp-version.json";
+  const UPD_POLL_MS = 60000;      // poll cadence
+  const UPD_FIRST_MS = 3000;      // one early check so a stale open heals fast
+  const UPD_INTERACT_MS = 10000;  // quiet period after a user interaction
+  const UPD_MAX_NAV = 3;          // hard cap per session
+  const UPD_MAX_JSON = 4096;      // sanity cap: the sidecar is a few dozen bytes
+  const UPD_SMOKE_ID = "binary_sensor.wifi_th_smoke_sensor_smoke";
+  const upd = {timer:null,first:null,pending:null,remote:null,hint:"",line:"",lastInteract:0,listeners:false};
+  // Where the navigation bookkeeping lives. sessionStorage is the right scope ("per
+  // webview session") and survives the navigation we trigger; localStorage is only a
+  // fallback so the guards still hold if sessionStorage is unavailable. If NEITHER can
+  // be written we refuse to navigate at all — an unguarded navigation could loop.
+  function updStore(){
+    const probe="__miniapp_upd_probe";
+    for(const get of [()=>window.sessionStorage,()=>window.localStorage]){
+      try{const s=get();if(!s)continue;s.setItem(probe,"1");s.removeItem(probe);return s}catch(e){}
+    }
+    return null;
+  }
+  function updGet(k){try{const s=updStore();return s?s.getItem(k):null}catch(e){return null}}
+  function updSet(k,v){try{const s=updStore();if(s)s.setItem(k,String(v))}catch(e){}}
+  // Distinct build values we have ALREADY navigated for (cap: one navigation each).
+  function updNavigatedBuilds(){
+    try{const a=JSON.parse(updGet("miniapp_upd_builds")||"[]");return Array.isArray(a)?a.filter(x=>typeof x==="string"&&x):[]}catch(e){return []}
+  }
+  function updNavCount(){const n=parseInt(updGet("miniapp_upd_count")||"0",10);return (Number.isFinite(n)&&n>0)?n:0}
+  function updTouch(){upd.lastInteract=Date.now()}
+  // Cache-busting target for build `b`. location.hash is appended VERBATIM (tgWebAppData
+  // lives there); any other existing query params are rebuilt, only `v` is replaced.
+  function updTargetUrl(b){
+    let query="v="+encodeURIComponent(b);
+    try{
+      const p=new URLSearchParams(location.search);
+      p.delete("v");
+      const rest=p.toString();
+      if(rest)query=rest+"&"+query;
+    }catch(e){}
+    return location.pathname+"?"+query+location.hash;
+  }
+  // Navigation indirection: a named, window-exposed hook so the headless regression
+  // suite can observe a navigation without actually navigating in a loop.
+  function miniappNavigate(url){try{location.replace(url)}catch(e){}}
+  window.v8navigate=miniappNavigate;
+  // "" = safe to navigate now; otherwise a short human reason for the quiet hint.
+  function updBlockReason(){
+    if(app.auth!=="ok"||!app.updatedAt)return "идёт загрузка данных";
+    try{if(typeof document!=="undefined"&&document.visibilityState==="hidden")return "приложение не активно"}catch(e){}
+    if(app.modal)return "открыт диалог";
+    // Safety incidents: reuse exactly what the app already knows (one source of truth).
+    try{const L=leakInfo();if(L.status==="leak"||(Array.isArray(L.leakNames)&&L.leakNames.length))return "протечка воды"}catch(e){}
+    try{if(((app.data||{}).sensors||{}).smoke===true)return "задымление"}catch(e){}
+    try{if(state(app.states,UPD_SMOKE_ID)==="on")return "задымление"}catch(e){}
+    if(upd.lastInteract&&(Date.now()-upd.lastInteract)<UPD_INTERACT_MS)return "работа в приложении";
+    return "";
+  }
+  // Read the sidecar. Returns a non-empty build string or null. Never throws.
+  async function updFetchBuild(){
+    try{
+      const r=await fetchWithTimeout(UPD_URL+"?t="+Date.now(),{cache:"no-store"},6000);
+      if(!r||!r.ok)return null;
+      const txt=await r.text();
+      if(typeof txt!=="string")return null;
+      const body=txt.trim();
+      if(!body||body.length>UPD_MAX_JSON)return null;
+      const j=JSON.parse(body);                        // HTML error page / garbage -> throws -> null
+      if(!j||typeof j!=="object"||Array.isArray(j))return null;
+      const b=j.build;
+      return (typeof b==="string"&&b.trim())?b.trim():null;
+    }catch(e){return null}
+  }
+  async function updCheck(){
+    const remote=await updFetchBuild();
+    if(!remote){
+      // Сайдкар недоступен: строка не должна вечно висеть на «проверка…».
+      upd.fails=(upd.fails||0)+1;
+      if(upd.fails>=2&&!upd.remote)upd.hint="не удалось проверить обновление";
+    }
+    if(remote){
+      upd.fails=0;
+      upd.remote=remote;
+      if(remote!==MINIAPP_BUILD)upd.pending=remote;    // owe a navigation (guards decide when)
+      else{upd.pending=null;upd.hint=""}               // same build: nothing to do
+    }
+    updMaybeNavigate();                                // also retries a deferred navigation
+    updSyncHint();
+  }
+  // The ONLY place that navigates. Applies, in order: loop protection (per-build +
+  // session cap) and the startup/incident/interaction/visibility deferral.
+  function updMaybeNavigate(){
+    const b=upd.pending;
+    if(!b||b===MINIAPP_BUILD)return;
+    if(!updStore()){upd.hint=b+" — браузер не хранит счётчик, обнови вручную";return}
+    if(updNavigatedBuilds().indexOf(b)>=0){
+      // We already navigated for this exact build and the served HTML is STILL the old
+      // one -> the file did not actually change. Never navigate again.
+      upd.hint=b+" — файл не изменился, очисти кэш Telegram";return;
+    }
+    if(updNavCount()>=UPD_MAX_NAV){upd.hint="лимит обновлений "+UPD_MAX_NAV+" — обнови вручную";return}
+    const why=updBlockReason();
+    if(why){upd.hint=b+" ждёт: "+why;return}           // pending flag stays set, retried later
+    const builds=updNavigatedBuilds();builds.push(b);
+    updSet("miniapp_upd_builds",JSON.stringify(builds.slice(-10)));
+    updSet("miniapp_upd_for",b);
+    updSet("miniapp_upd_count",updNavCount()+1);
+    upd.pending=null;
+    upd.hint="обновление до "+b+"…";
+    const url=updTargetUrl(b);
+    try{(window.v8navigate||miniappNavigate)(url)}catch(e){}
+  }
+  // One quiet read-only line, shown in «Ещё» → Диагностика. No toast, no modal.
+  function updLine(){
+    if(upd.hint)return upd.hint;
+    if(!upd.remote)return "проверка…";
+    return upd.remote===MINIAPP_BUILD?"актуальная сборка":"обновление найдено";
+  }
+  function updSyncHint(){
+    const line=updLine();
+    if(line===upd.line)return;
+    upd.line=line;
+    if(app.tab==="more")renderShell();                 // only the tab that displays it
+  }
+  function updStart(intervalMs){
+    updStop();
+    const ms=Math.max(200,Number(intervalMs)||UPD_POLL_MS);
+    if(!upd.listeners){
+      upd.listeners=true;
+      ["pointerdown","touchstart","touchmove","keydown","wheel"].forEach(ev=>{
+        try{document.addEventListener(ev,updTouch,{capture:true,passive:true})}catch(e){document.addEventListener(ev,updTouch,true)}
+      });
+      // Never navigate a backgrounded webview; apply the pending navigation as soon as
+      // the Mini App is visible again.
+      document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")updMaybeNavigate()});
+    }
+    upd.timer=setInterval(updCheck,ms);
+    upd.first=setTimeout(updCheck,Math.min(UPD_FIRST_MS,ms)); // heal a stale open fast
+  }
+  function updStop(){clearInterval(upd.timer);upd.timer=null;clearTimeout(upd.first);upd.first=null}
+  // Diagnostics/test hook: read-only state plus the same guarded entry points the poller
+  // uses. Contains no secrets and cannot command anything.
+  window.v8upd={build:MINIAPP_BUILD,check:updCheck,maybe:updMaybeNavigate,start:updStart,stop:updStop,
+    reason:updBlockReason,target:updTargetUrl,line:updLine,fetchBuild:updFetchBuild,
+    snapshot:()=>({pending:upd.pending,remote:upd.remote,hint:upd.hint,line:upd.line,lastInteract:upd.lastInteract})};
+
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&app.modal){app.modal=null;renderShell()}});
+  renderShell(); auth(); updStart();
+})();
+</script>
+</body>
+</html>

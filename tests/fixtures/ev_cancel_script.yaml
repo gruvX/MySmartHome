@@ -1,0 +1,64 @@
+# Verbatim copy of script.ev_cancel_next from /config/scripts.yaml (2026-08-19).
+ev_cancel_next:
+  alias: 🚗 EV — отменить следующую зарядку (разово)
+  icon: mdi:calendar-remove
+  description: 'Кнопка «Отменить зарядку» (Telegram /ev_cancel + Mini App). Пропускает
+    РОВНО ОДНУ следующую плановую зарядку; автоматическое расписание после этого
+    работает как обычно.
+
+    КАК ЭТО ОДНОРАЗОВО: флаг input_boolean.ev_charge_cancelled гасит сама автозарядка
+    1778800001002 первым же шагом того окна, которое из-за него пропустила, и пишет
+    в input_datetime.ev_cancel_consumed КАКОЕ окно пропущено. Отмена не может зависнуть:
+    последняя ветвь 1790500001001 снимает её по сроку 24 ч, даже если ни одно окно так
+    и не наступило.
+
+    КАК ЕЁ ОТМЕНИТЬ: нажать «Зарядить ночью» или «Зарядить днём» — ev_night2h.py /
+    ev_day2h.py снимают флаг и ставят разовую заявку.
+
+    Разовая заявка, если она была, снимается здесь же (флаг + стабильная ссылка на
+    окно), иначе она продолжала бы блокировать планировщик до истечения срока.
+
+    НИКАКИХ команд устройствам: только input_boolean / input_datetime и Telegram.'
+  mode: single
+  max_exceeded: silent
+  sequence:
+  - action: input_datetime.set_datetime
+    target:
+      entity_id: input_datetime.ev_cancel_armed_at
+    data:
+      timestamp: '{{ now().timestamp() }}'
+  - alias: Сбросить метку пропущенного окна — она относится к прошлой отмене
+    action: input_datetime.set_datetime
+    target:
+      entity_id: input_datetime.ev_cancel_consumed
+    data:
+      datetime: '1970-01-01 00:00:00'
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.ev_charge_cancelled
+  - alias: Снять разовую заявку «Зарядить ночью/днём», если она была
+    action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.ev_night_requested
+  - alias: И её стабильную ссылку на окно, иначе сторож ждал бы отменённое окно
+    action: input_datetime.set_datetime
+    target:
+      entity_id: input_datetime.ev_night_window_start
+    data:
+      datetime: '1970-01-01 00:00:00'
+  - action: telegram_bot.send_message
+    data:
+      chat_id: 100000000
+      parse_mode: html
+      message: |-
+        {%- set dt = states('input_datetime.ev_charge_start') -%}
+        {%- set ts = state_attr('input_datetime.ev_charge_start', 'timestamp') | float(0) -%}
+        ⛔ EV: следующая зарядка отменена
+
+        {% if ts > 0 %}Пропущу окно {{ ts | timestamp_custom('%d.%m %H:%M', true) | e }} → {{ (ts + 7200) | timestamp_custom('%H:%M', true) | e }} (2 ч).{% else %}Плановое время сейчас не задано — пропущу первую же зарядку, которую поставит расписание.{% endif %}
+
+        Это отмена РОВНО ОДНОГО раза: следующая зарядка после неё пройдёт по автоматическому расписанию как обычно.
+
+        Передумал — нажми «Зарядить ночью» или «Зарядить днём», отмена снимется.
+
+        Плановое время <code>input_datetime.ev_charge_start</code>: {{ dt | e }}

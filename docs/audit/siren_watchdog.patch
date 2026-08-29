@@ -1,0 +1,116 @@
+# PROPOSAL — NOT APPLIED. DO NOT auto-apply / auto-deploy. Orchestrator deploys after owner review.
+#
+# WHAT: Add ONE new NOTIFICATION-ONLY automation (id 1789300001001) that watches the
+# alarm siren actuator `siren.alarm` and alerts on Telegram when it goes unavailable —
+# so a silently-dead siren (fire/intrusion actuator dropout) is surfaced instead of
+# being discovered only during a real emergency.
+#
+# WHY: 2026-07-16 09:55 `siren.alarm`, `select.alarm_volume`, `number.alarm_time` all
+# went `unavailable`. The smoke-siren automation (1779200002001) and the intrusion
+# automation (1779200003001) both drive `siren.alarm`; if the entity is unavailable
+# their `siren.turn_on` is a no-op and NO sound is produced. There was no availability
+# watchdog. This closes that gap without touching any device.
+#
+# SAFETY: This automation issues ZERO device commands. Its ONLY action is
+# `telegram_bot.send_message` (chat_id 100000000). It never calls siren/switch/lock/
+# climate/select/number/script/input_boolean — verified by tests/test_siren_watchdog.py.
+#
+# DESIGN:
+#   - Watches ONLY `siren.alarm` (the actuator) to keep it a single consolidated alert.
+#     `select.alarm_volume` / `number.alarm_time` are config entities of the SAME device
+#     and drop together; they are named in the message text rather than given their own
+#     triggers (avoids triple-firing on one dropout).
+#   - DOWN alert: state -> unavailable/unknown, `for: 00:15:00` (15-min debounce so a
+#     brief WiFi flap does not page). mode: single.
+#   - RECOVERY alert: state leaves unavailable/unknown (from: ...), `for: 00:02:00`,
+#     branch-gated on the current state being an available value so a
+#     unavailable->unknown flap cannot emit a false "recovered".
+#   - No inline buttons (nothing to action from Telegram).
+#
+# CHOSEN ID: 1789300001001 — verified UNIQUE against the read-only fetched
+# /config/automations.yaml (50 existing blocks, no collision).
+#
+# TARGET FILE ON HA: /config/automations.yaml (fetched read-only via `sudo cat`,
+#   185130 bytes, 50 automations; this file has NO trailing newline, hence the
+#   "\ No newline at end of file" marker on the last unchanged context line).
+# ADDS: 1 block appended at end of file. NO existing block is modified. The smoke
+#   (1779200002001) and intrusion (1779200003001) siren automations are untouched.
+#
+# APPLY (after review, from a dir containing the fetched automations.yaml):
+#   patch -p1 --dry-run < docs/audit/siren_watchdog.patch   # verify
+#   patch -p1          < docs/audit/siren_watchdog.patch     # apply to working copy
+#   # then, on HA: back up first, deploy, and reload:
+#   #   sudo cp /config/automations.yaml /config/automations.yaml.bak_siren_$(date +%s)
+#   #   (copy patched file to /config/automations.yaml)
+#   #   POST /api/services/automation/reload
+#   # SANITY: config check before reload — POST /api/config/core/check_config
+#
+# ROLLBACK:
+#   patch -p1 -R < docs/audit/siren_watchdog.patch           # revert working copy
+#   # on HA: restore the .bak_siren_* backup to /config/automations.yaml, then
+#   #   POST /api/services/automation/reload
+#   # OR simply delete automation id 1789300001001 (it is additive & device-inert).
+#
+--- a/automations.yaml
++++ b/automations.yaml
+@@ -4231,4 +4231,58 @@
+       chat_id: 100000000
+       message: "\U0001F6A8 input_boolean.ha_startup_grace застрял в ON > 20 мин.\n\
+         Защита от утечки воды сейчас ПОДАВЛЕНА (leak_check требует grace = off).\n\
+-        Проверь менеджер grace (авт. 1789200001001) и при необходимости выключи helper вручную."
+\ No newline at end of file
++        Проверь менеджер grace (авт. 1789200001001) и при необходимости выключи helper вручную."
++- id: '1789300001001'
++  alias: "\U0001F6A8 Сторож сирены — недоступна (только уведомление)"
++  description: >-
++    NOTIFICATION-ONLY watchdog. Следит за siren.alarm (актуатор звукового
++    оповещения пожар/взлом). 2026-07-16 09:55 siren.alarm + select.alarm_volume
++    + number.alarm_time ушли в unavailable — тихая сирена не сработала бы. Эта
++    автоматизация ТОЛЬКО шлёт Telegram-сообщение, НЕ управляет никакими
++    устройствами (нет siren/switch/lock/climate/script/input_boolean вызовов).
++  mode: single
++  triggers:
++  - trigger: state
++    entity_id: siren.alarm
++    to: unavailable
++    for: 00:15:00
++    id: down
++  - trigger: state
++    entity_id: siren.alarm
++    to: unknown
++    for: 00:15:00
++    id: down
++  - trigger: state
++    entity_id: siren.alarm
++    from: unavailable
++    for: 00:02:00
++    id: up
++  - trigger: state
++    entity_id: siren.alarm
++    from: unknown
++    for: 00:02:00
++    id: up
++  conditions: []
++  actions:
++  - choose:
++    - conditions:
++      - condition: template
++        value_template: '{{ trigger.id == ''down'' }}'
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: "⚠️ Сирена недоступна более 15 мин ({{ states('siren.alarm')\
++            \ }}).\nЗвуковое оповещение при пожаре/взломе может НЕ сработать — проверьте\
++            \ устройство (питание/переподключение/WiFi).\nЗатронуты: siren.alarm,\
++            \ select.alarm_volume, number.alarm_time."
++    - conditions:
++      - condition: template
++        value_template: '{{ trigger.id == ''up'' and states(''siren.alarm'') not in
++          [''unavailable'', ''unknown''] }}'
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: "✅ Сирена снова доступна ({{ states('siren.alarm') }}). Звуковое\
++            \ оповещение восстановлено."

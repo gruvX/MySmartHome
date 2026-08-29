@@ -1,0 +1,27 @@
+# Normalize line endings for all text files going forward.
+#
+# NOTE: this does NOT rewrite existing files. It only affects files as they are
+# newly added or modified from now on. To renormalize the whole tree later run
+# (as a deliberate, separate commit):  git add --renormalize .
+* text=auto eol=lf
+
+# Explicit binaries — never touch these.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.mp4 binary
+*.mov binary
+*.mp3 binary
+
+# Shell scripts must stay LF regardless of platform.
+*.sh text eol=lf

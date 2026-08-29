@@ -1,0 +1,159 @@
+# PROPOSAL — NOT APPLIED. DO NOT auto-apply / auto-deploy. Orchestrator deploys after owner review.
+#
+# WHAT: Re-point boiler watchdog (id 1789400001001) from the WRONG signal
+# binary_sensor.boiler_alarm (ecoNET curr.alarmOutput) to the ONLY true fault
+# indicator: sensor.boiler_mode == 'Авария' (ecoNET mode 9). Notification-only.
+#
+# WHY: R0 audit (docs/audit/ECONET_ALARMOUTPUT_SEMANTICS.md,
+# BOILER_WATCHDOG_RUNTIME_2026-07-17.md) proved curr.alarmOutput asserts routinely
+# during NORMAL summer operation (Догорание idle while the electric ТЭН heats DHW).
+# The old watchdog fired ~10 false alarms/day (re-armed on every unavailable→on
+# WiFi flap) and sent the misleading "погас огонь / нет тепла" text. mode==Авария
+# never occurred once in 6 days. This fix eliminates the false positives while
+# still catching a genuine controller fault.
+#
+# DESIGN (all notification-only — ZERO device commands):
+#   - alarm  : state sensor.boiler_mode -> 'Авария', for 00:05:00 (rides WiFi flaps).
+#   - recover: state sensor.boiler_mode  from 'Авария', for 00:02:00.
+#   - Dedup / cooldown: alarm branch gated on this.attributes.last_triggered — one
+#     alert, then at most one per 60 min while the fault persists/flaps (no helper
+#     write, so the zero-command contract holds).
+#   - Recovery: only when leaving Авария to a REAL mode (not unavailable/unknown/
+#     Авария) AND the automation has fired before (best-effort episode gate without
+#     a write-latch).
+#   - Sensor loss (unknown/unavailable) NEVER emits the fault alarm: the alarm
+#     trigger only reacts to `to: Авария`; the recover branch is blocked when the
+#     new state is unavailable/unknown.
+#   - Keeps the ha_startup_grace guard. 24/7 (a fault matters at night too).
+#   - ONLY action: telegram_bot.send_message (chat_id 100000000). Verified by
+#     tests/test_boiler_watchdog.py.
+#
+# OVERLAP WITH 1779000001002 («🔥 Котёл: уведомления о режиме и уставках»):
+#   1779000001002 also has an Авария sub-clause, BUT it (a) fires only 07:00–22:00,
+#   (b) is suppressed on unavailable→Авария (the common ecoNET flap entry),
+#   (c) has no persistence reminder and no recovery-from-Авария message. So it does
+#   NOT reliably cover Авария; in practice the flap-suppression means it rarely
+#   fires on a real fault. This watchdog is the authoritative, 24/7, flap-robust
+#   Авария path. To make it the SOLE path, the orchestrator MAY (optional, separate
+#   one-liner, NOT in this patch per the "touch only the watchdog" constraint)
+#   drop `or to_val == 'Авария'` from 1779000001002's mode branch. Left untouched
+#   here so this patch changes only automation 1789400001001.
+#
+# TARGET FILE ON HA: /config/automations.yaml (fetched read-only via `sudo cat`).
+# CHANGES: replaces the existing 1789400001001 block in place. NO other automation
+# (incl. 1779000001002) is modified. id 1789400001001 preserved & unique.
+#
+# APPLY (after review, from a dir whose automations.yaml == the fetched original):
+#   patch -p1 --dry-run < docs/audit/boiler_watchdog_fix.patch   # verify
+#   patch -p1          < docs/audit/boiler_watchdog_fix.patch     # apply to working copy
+#   # on HA: back up first, deploy the patched file, then:
+#   #   POST /api/config/core/check_config      # sanity BEFORE reload
+#   #   POST /api/services/automation/reload     # NO HA restart needed
+#
+# ROLLBACK:
+#   patch -p1 -R < docs/audit/boiler_watchdog_fix.patch          # revert working copy
+#   # on HA: restore the backup, then POST /api/services/automation/reload
+#
+--- a/automations.yaml
++++ b/automations.yaml
+@@ -4291,52 +4291,68 @@
+           message: "✅ Сирена снова доступна ({{ states('siren.alarm') }}). Звуковое\
+             \ оповещение восстановлено."
+ - id: '1789400001001'
+-  alias: "\U0001F525 Сторож котла — сигнал тревоги (только уведомление)"
++  alias: "\U0001F525 Сторож котла — режим АВАРИЯ (только уведомление)"
+   description: >-
+-    NOTIFICATION-ONLY watchdog. Следит за binary_sensor.boiler_alarm
+-    (ecoNET curr.alarmOutput). 2026-07-16 реальный простой отопления ~7.4 ч
+-    остался незамеченным, потому что этот сигнал никто не мониторил. Эта
+-    автоматизация ТОЛЬКО шлёт Telegram-сообщение и НЕ управляет никакими
+-    устройствами (нет boiler/switch/climate/select/number/script/input_boolean
+-    вызовов — только telegram_bot.send_message). Работает круглосуточно:
+-    отсутствие тепла опасно и ночью.
++    NOTIFICATION-ONLY сторож неисправности котла. Алерт ТОЛЬКО когда
++    sensor.boiler_mode == 'Авария' (ecoNET mode 9) — единственный
++    настоящий признак аварии. Специально НЕ следит за
++    binary_sensor.boiler_alarm (curr.alarmOutput): тот срабатывает штатно
++    летом в режиме Догорание, когда ГВС греет электро-ТЭН
++    (ложные тревоги). Работает круглосуточно; дедуп через
++    this.attributes.last_triggered (не чаще 1/час при флапах ecoNET WiFi);
++    одно сообщение о восстановлении при выходе из Аварии. Потеря
++    телеметрии (unknown/unavailable) НЕ вызывает алерт аварии.
++    НИКАКИХ команд устройствам — только telegram_bot.send_message.
+   mode: single
+   triggers:
+   - trigger: state
+-    entity_id: binary_sensor.boiler_alarm
+-    to: 'on'
++    entity_id: sensor.boiler_mode
++    to: Авария
+     for: 00:05:00
+-    id: down
+-  - trigger: state
+-    entity_id: binary_sensor.boiler_alarm
+-    from: 'on'
+-    to: 'off'
++    id: alarm
++  - trigger: state
++    entity_id: sensor.boiler_mode
++    from: Авария
+     for: 00:02:00
+-    id: up
++    id: recover
+   conditions: []
+   actions:
+   - choose:
+     - conditions:
+       - condition: template
+-        value_template: '{{ trigger.id == ''down'' }}'
++        value_template: "{{ trigger.id == 'alarm' }}"
++      - condition: state
++        entity_id: sensor.boiler_mode
++        state: Авария
+       - condition: state
+         entity_id: input_boolean.ha_startup_grace
+         state: 'off'
+-      sequence:
+-      - action: telegram_bot.send_message
+-        data:
+-          chat_id: 100000000
+-          message: "\u26A0\uFE0F Котёл: сигнал тревоги (alarmOutput) активен >5 мин.\
+-            \ Возможно погас огонь / нет тепла (режим {{ states('sensor.boiler_mode')\
+-            \ }}, CO {{ states('sensor.boiler_co_temperature') }}\u00B0). Проверьте котёл."
+-    - conditions:
+-      - condition: template
+-        value_template: '{{ trigger.id == ''up'' }}'
+-      sequence:
+-      - action: telegram_bot.send_message
+-        data:
+-          chat_id: 100000000
+-          message: "\u2705 Котёл: сигнал тревоги снят."
++      - condition: template
++        value_template: >-
++          {{ this.attributes.last_triggered is none
++             or (now() - this.attributes.last_triggered).total_seconds() > 3600 }}
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: >-
++            🔥 Котёл: режим АВАРИЯ (ecoNET mode 9). Проверьте
++            котёл. (ГВС {{ states('sensor.boiler_cwu_temperature') }}°, CO {{
++            states('sensor.boiler_co_temperature') }}°)
++    - conditions:
++      - condition: template
++        value_template: "{{ trigger.id == 'recover' }}"
++      - condition: template
++        value_template: "{{ trigger.to_state.state not in ['unavailable', 'unknown', 'Авария'] }}"
++      - condition: template
++        value_template: "{{ this.attributes.last_triggered is not none }}"
++      sequence:
++      - action: telegram_bot.send_message
++        data:
++          chat_id: 100000000
++          message: >-
++            ✅ Котёл: режим АВАРИЯ снят (теперь {{
++            states('sensor.boiler_mode') }}).
+ 
+ - id: proxmox_infra_alerts_v1
+   alias: "🖥 Proxmox infrastructure alerts"

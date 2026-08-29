@@ -1,0 +1,68 @@
+{
+  "_meta": {
+    "title": "MySmartHome tariff schema (Latvia / Riga)",
+    "author": "tariff-model-agent",
+    "date": "2026-07-16",
+    "status": "TEMPLATE — all live values are null until the owner fills them from the contract/invoice",
+    "rules": [
+      "Never invent a rate. Unknown => null, NEVER 0.",
+      "While any layer-2/3/4 value is null, the system must show ONLY the spot cost.",
+      "UI label while spot-only: «Стоимость Nord Pool». NEVER «Итоговый счёт».",
+      "Nord Pool spot price is read live from sensor.nord_pool_lv_current_price (EUR/kWh, 15-min). It is NOT stored here.",
+      "spot_only is true whenever any required add-on (supplier_markup, distribution, transmission, electricity_tax, vat) is null."
+    ],
+    "currency": "EUR",
+    "timezone": "Europe/Riga"
+  },
+
+  "currency": "EUR",
+  "effective_from": null,
+  "effective_to": null,
+  "spot_only": true,
+
+  "layers": {
+    "1_nord_pool_spot": {
+      "description": "Wholesale market price, priced per 15-min interval at the price in force. Read live, not stored.",
+      "source_entity": "sensor.nord_pool_lv_current_price",
+      "unit": "EUR/kWh",
+      "value": "LIVE — from Home Assistant, not a stored constant"
+    },
+
+    "2_variable_addons": {
+      "description": "Per-kWh charges added on top of the spot price. All EUR/kWh, VAT-exclusive.",
+      "supplier_markup_eur_per_kwh": { "value": null, "unit": "EUR/kWh" },
+      "distribution_eur_per_kwh":    { "value": null, "unit": "EUR/kWh" },
+      "transmission_eur_per_kwh":    { "value": null, "unit": "EUR/kWh" },
+      "electricity_tax_eur_per_kwh": { "value": null, "unit": "EUR/kWh" },
+
+      "day_night": {
+        "description": "OPTIONAL. Only fill if the owner is on a time-of-use (dienas/nakts) distribution plan. If used, these OVERRIDE distribution_eur_per_kwh for the given hours. Leave all null for a flat/single tariff.",
+        "enabled": null,
+        "distribution_day_eur_per_kwh":   { "value": null, "unit": "EUR/kWh" },
+        "distribution_night_eur_per_kwh": { "value": null, "unit": "EUR/kWh" },
+        "night_start_hour": { "value": null, "unit": "hour 0-23, Europe/Riga local" },
+        "night_end_hour":   { "value": null, "unit": "hour 0-23, Europe/Riga local" }
+      }
+    },
+
+    "3_vat": {
+      "description": "Value added tax (PVN), applied to (spot + all variable add-ons) and to fixed charges. LV standard is 21% but must be owner-confirmed — kept null until confirmed.",
+      "vat_percent": { "value": null, "unit": "percent" }
+    },
+
+    "4_fixed_charges": {
+      "description": "Standing charges independent of consumption (capacity/power maintenance, supplier service fee). VAT-exclusive.",
+      "fixed_monthly_eur": { "value": null, "unit": "EUR/month" }
+    }
+  },
+
+  "5_full_estimated_bill": {
+    "description": "How the full bill is composed once layers 2-4 are provided. Purely a formula spec; produces null while spot_only is true.",
+    "per_interval": "spot_cost = interval_kWh * nord_pool_price(interval)",
+    "variable_addon_per_interval": "addon = interval_kWh * (supplier_markup + distribution_or_day_night + transmission + electricity_tax)",
+    "energy_subtotal_period": "energy_subtotal = SUM_over_intervals(spot_cost + addon)",
+    "vat_amount_period": "vat_amount = (energy_subtotal + fixed_monthly_eur) * vat_percent/100",
+    "full_estimated_bill_period": "full_bill = energy_subtotal + fixed_monthly_eur + vat_amount",
+    "note": "If ANY input above is null, full_estimated_bill = null and the system reports/labels the visible figure as «Стоимость Nord Pool» (spot only)."
+  }
+}

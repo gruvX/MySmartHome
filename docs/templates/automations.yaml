@@ -1,0 +1,129 @@
+# =============================================================================
+# Automation templates  →  automations.yaml
+# De-identified patterns used by this project. Replace every <PLACEHOLDER>.
+# No real entity IDs, tokens, or chat IDs. Reload: POST /api/services/automation/reload
+#
+# id convention: Unix timestamp at creation, e.g. 1778700001001
+# Telegram (HA 2026): use `chat_id:` (NOT deprecated `target:`); inline_keyboard
+# is a list-of-lists [[["Label","/cb"]]]; always answer_callback_query on callbacks.
+# =============================================================================
+
+# --- Price-based heating: boiler on when cheap ------------------------------
+- id: "<TIMESTAMP_ID_1>"
+  alias: "Boiler by day-ahead price"
+  trigger:
+    - platform: state
+      entity_id: <SENSOR_CURRENT_PRICE>
+  action:
+    - choose:
+        - conditions:
+            - condition: numeric_state
+              entity_id: <SENSOR_CURRENT_PRICE>
+              below: <PRICE_THRESHOLD>          # e.g. 0.10 EUR/kWh
+          sequence:
+            - service: switch.turn_on
+              target: { entity_id: <SWITCH_BOILER> }
+      default:
+        - service: switch.turn_off
+          target: { entity_id: <SWITCH_BOILER> }
+
+# --- Floor heating: preset per price (only heat_cool mode exists) -----------
+- id: "<TIMESTAMP_ID_2>"
+  alias: "Floor heating by price"
+  trigger:
+    - platform: state
+      entity_id: <SENSOR_CURRENT_PRICE>
+  condition:
+    # night_saver / heat-mode flags guard this so it won't re-enable at night
+    - condition: state
+      entity_id: input_boolean.night_saver
+      state: "off"
+  action:
+    - service: climate.set_preset_mode
+      target: { entity_id: <CLIMATE_FLOOR> }
+      data:
+        preset_mode: >
+          {{ 'manual' if states('<SENSOR_CURRENT_PRICE>')|float(9) < <PRICE_THRESHOLD> else 'auto' }}
+
+# --- Safety: water leak with confirm delay + startup grace ------------------
+- id: "<TIMESTAMP_ID_3>"
+  alias: "Water leak — shutoff"
+  trigger:
+    - platform: state
+      entity_id: <BINARY_SENSOR_MOISTURE>
+      to: "on"
+      for: "00:03:00"                 # confirm window avoids false positives
+  condition:
+    - condition: state               # skip alarms right after HA restart
+      entity_id: input_boolean.ha_startup_grace
+      state: "off"
+  action:
+    - service: switch.turn_off
+      target: { entity_id: <SWITCH_WATER_VALVE> }
+    - service: telegram_bot.send_message
+      data:
+        chat_id: <CHAT_ID>
+        message: "Water leak detected — valve closed."
+        inline_keyboard:
+          - - ["Confirm", "/leak_confirm"]
+
+# --- Safety: smoke → siren --------------------------------------------------
+- id: "<TIMESTAMP_ID_4>"
+  alias: "Smoke — siren"
+  trigger:
+    - platform: state
+      entity_id: <BINARY_SENSOR_SMOKE>
+      to: "on"
+  action:
+    - service: siren.turn_on
+      target: { entity_id: <SIREN> }
+    - service: telegram_bot.send_message
+      data:
+        chat_id: <CHAT_ID>
+        message: "SMOKE detected!"
+
+# --- EV scheduler: pick cheapest window, then charge ------------------------
+- id: "<TIMESTAMP_ID_5>"
+  alias: "EV scheduler"
+  trigger:
+    - platform: time
+      at: "<SCHEDULE_TIME>"
+  condition:
+    - condition: state
+      entity_id: input_boolean.ev_manual_mode
+      state: "off"
+  action:
+    - service: shell_command.ev_compute_window   # writes input_datetime.ev_charge_start
+
+# --- Telegram menu (inline keyboard + Mini App link) ------------------------
+- id: "<TIMESTAMP_ID_6>"
+  alias: "Telegram menu"
+  trigger:
+    - platform: event
+      event_type: telegram_command
+      event_data: { command: "/menu" }
+  action:
+    - service: telegram_bot.send_message
+      data:
+        chat_id: <CHAT_ID>
+        message: "Menu"
+        inline_keyboard:
+          - - ["Away", "/scene_away"]
+            - ["Cinema", "/scene_cinema"]
+
+# --- Telegram callback handler (always answer the callback) -----------------
+- id: "<TIMESTAMP_ID_7>"
+  alias: "Telegram callbacks"
+  trigger:
+    - platform: event
+      event_type: telegram_callback
+  action:
+    - choose:
+        - conditions: "{{ trigger.event.data.data == '/scene_away' }}"
+          sequence:
+            - service: script.turn_on
+              target: { entity_id: script.scene_away }
+    - service: telegram_bot.answer_callback_query
+      data:
+        callback_query_id: "{{ trigger.event.data.id }}"
+        message: "Done"

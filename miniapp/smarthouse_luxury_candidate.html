@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#06111f">
+<title>Умный дом</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --app-bg:#050a12;--app-bg-gradient:radial-gradient(900px 500px at 82% -8%,rgba(42,127,255,.24),transparent 58%),radial-gradient(560px 360px at -20% 8%,rgba(255,183,69,.13),transparent 62%),linear-gradient(145deg,#050a12,#071426 54%,#02070d);
+  --header-bg:linear-gradient(180deg,rgba(10,21,34,.84),rgba(5,11,20,.62));
+  --card-bg:linear-gradient(155deg,rgba(13,28,47,.82),rgba(7,17,30,.72));
+  --card-bg-hover:linear-gradient(155deg,rgba(20,42,68,.88),rgba(9,22,38,.82));
+  --card-border:rgba(162,192,231,.16);--card-border-active:rgba(255,190,86,.55);
+  --text-primary:#f4f7ff;--text-secondary:#aebbd0;--text-muted:#6f7f96;
+  --accent-gold:#ffbd55;--accent-blue:#36a3ff;--accent-cyan:#27e1ff;--accent-green:#5fe0a6;--accent-red:#ff5f6d;--accent-purple:#b88cff;
+  --warning:#ffbd55;--danger:#ff5f6d;--success:#5fe0a6;
+  --shadow-card:0 20px 55px rgba(0,0,0,.42),0 1px 0 rgba(255,255,255,.05) inset;
+  --shadow-glow-gold:0 0 0 1px rgba(255,189,85,.24),0 0 34px rgba(255,176,65,.22);
+  --shadow-glow-blue:0 0 0 1px rgba(54,163,255,.22),0 0 34px rgba(54,163,255,.20);
+  --radius-sm:12px;--radius-md:18px;--radius-lg:24px;--radius-xl:30px;
+  --transition-fast:140ms cubic-bezier(.23,1,.32,1);--transition-normal:220ms cubic-bezier(.23,1,.32,1);--bottom-nav-height:82px;
+  --bg:var(--app-bg);--bg2:#071426;--panel:var(--card-bg);--panel2:linear-gradient(150deg,rgba(15,31,52,.9),rgba(7,17,30,.82));
+  --line:var(--card-border);--line2:rgba(255,190,86,.22);--text:var(--text-primary);--muted:var(--text-secondary);--faint:var(--text-muted);
+  --blue:var(--accent-blue);--cyan:var(--accent-cyan);--green:var(--accent-green);--amber:var(--accent-gold);--red:var(--accent-red);--violet:var(--accent-purple);--water:#43d7dc;
+  --shadow:var(--shadow-card);--r:var(--radius-lg);--r2:var(--radius-md);--ease:cubic-bezier(.23,1,.32,1);
+  font-family:Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+[data-theme="luxury-dark-mobile"]{color-scheme:dark;--app-bg:#070706;--app-bg-gradient:radial-gradient(720px 420px at 88% -6%,rgba(197,142,69,.14),transparent 55%),radial-gradient(480px 320px at -18% 55%,rgba(101,68,34,.10),transparent 62%),linear-gradient(145deg,#070706,#0d0b09 58%,#050505);--header-bg:linear-gradient(180deg,rgba(12,11,9,.92),rgba(7,7,6,.74));--card-bg:linear-gradient(150deg,rgba(30,27,23,.88),rgba(11,10,9,.84));--card-bg-hover:linear-gradient(150deg,rgba(38,33,27,.92),rgba(14,12,10,.88));--card-border:rgba(220,177,106,.20);--card-border-active:rgba(231,192,125,.48);--text-primary:#f7efe0;--text-secondary:#b0a38f;--text-muted:#817767;--accent-gold:#d9ae67;--accent-blue:#cba66c;--accent-cyan:#b89259;--accent-green:#6fd89b;--accent-red:#d46d63;--accent-purple:#aa8b64;--bg:#070706;--bg2:#100e0b;--panel:var(--card-bg);--panel2:linear-gradient(145deg,rgba(33,29,24,.82),rgba(13,11,9,.84));--line:var(--card-border);--line2:rgba(220,177,106,.30);--text:var(--text-primary);--muted:var(--text-secondary);--faint:var(--text-muted);--blue:var(--accent-blue);--cyan:var(--accent-cyan);--green:var(--accent-green);--amber:var(--accent-gold);--red:var(--accent-red);--violet:var(--accent-purple);--water:#a6c7c2;--shadow-card:0 20px 55px rgba(0,0,0,.42),0 1px 0 rgba(255,255,255,.04) inset;--shadow-glow-gold:0 0 0 1px rgba(217,174,103,.20),0 0 30px rgba(217,174,103,.11)}
+[data-theme=light]{
+  --app-bg:#eef5ff;--app-bg-gradient:radial-gradient(800px 420px at 85% -8%,rgba(54,163,255,.18),transparent 58%),radial-gradient(520px 340px at -18% 6%,rgba(255,189,85,.18),transparent 62%),linear-gradient(145deg,#f7fbff,#e7f1ff 58%,#dcecff);
+  --header-bg:linear-gradient(180deg,rgba(255,255,255,.86),rgba(238,246,255,.68));
+  --card-bg:linear-gradient(155deg,rgba(255,255,255,.88),rgba(241,247,255,.80));
+  --card-bg-hover:linear-gradient(155deg,rgba(255,255,255,.95),rgba(235,245,255,.9));
+  --card-border:rgba(28,72,118,.12);--card-border-active:rgba(214,142,39,.38);
+  --text-primary:#101827;--text-secondary:#52647a;--text-muted:#8190a4;
+  --bg:#eef5ff;--bg2:#dcecff;--panel:rgba(255,255,255,.86);--panel2:rgba(247,251,255,.94);
+  --line:rgba(28,72,118,.12);--line2:rgba(28,72,118,.22);--text:#101827;--muted:#52647a;--faint:#8190a4;
+  --shadow:0 16px 45px rgba(43,79,118,.14);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body,#app{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-size:14px}
+button,input,select{font:inherit}
+.app{height:100dvh;position:relative;overflow:hidden;background:var(--app-bg-gradient);}
+.app:before{content:"";position:absolute;inset:-12%;pointer-events:none;background:
+  linear-gradient(115deg,transparent 0 34%,rgba(54,163,255,.08) 42%,transparent 54%),
+  repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 1px,transparent 1px 74px);
+  mask-image:linear-gradient(to bottom,black,transparent 82%);animation:drift 18s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate3d(-2%,0,0)}to{transform:translate3d(2%,1%,0)}}
+.shell{height:100%;display:flex;flex-direction:column;position:relative;z-index:1}
+.top{padding:calc(10px + env(safe-area-inset-top,0px)) 16px 8px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--header-bg)}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}.logo{width:38px;height:38px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#ffd37c,var(--accent-gold) 46%,#6a3d11);box-shadow:0 0 0 1px rgba(255,218,145,.24) inset,0 0 30px rgba(255,184,73,.35);color:#171006}
+.brand b{display:block;font-size:16px;line-height:1}.brand span{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-top:3px;white-space:nowrap}
+.top-actions{display:flex;align-items:center;gap:8px}.icon-btn{width:38px;height:38px;border:1px solid rgba(255,190,86,.28);border-radius:14px;background:linear-gradient(155deg,rgba(15,26,42,.82),rgba(6,13,24,.72));color:var(--accent-gold);display:grid;place-items:center;box-shadow:0 1px 0 rgba(255,255,255,.06) inset;backdrop-filter:blur(16px);cursor:pointer;transition:transform var(--transition-fast),border-color var(--transition-normal),box-shadow var(--transition-normal)}
+@media(hover:hover) and (pointer:fine){.icon-btn:hover,.action:hover,.tile:hover{border-color:var(--card-border-active);box-shadow:var(--shadow-card),var(--shadow-glow-gold)}}
+.icon-btn:focus-visible,.action:focus-visible,.tile:focus-visible,.nav button:focus-visible{outline:2px solid var(--accent-gold);outline-offset:2px}
+.icon-btn:active,.action:active,.tile:active,.nav button:active{transform:scale(.97)}
+.screen{flex:1;overflow:auto;padding:0 14px calc(var(--bottom-nav-height) + 18px);scrollbar-width:none}.screen::-webkit-scrollbar{display:none}
+.view{display:none;animation:rise .28s var(--ease)}.view.on{display:block}@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.hero{min-height:232px;border:1px solid rgba(255,190,86,.28);border-radius:30px;padding:22px;position:relative;overflow:hidden;background:
+  linear-gradient(105deg,rgba(5,11,20,.90),rgba(9,21,36,.62) 48%,rgba(7,18,34,.30)),
+  url("/local/assets/home-hero-orbital.png") center/cover;box-shadow:var(--shadow-card),0 0 50px rgba(255,184,73,.10)}
+[data-theme=light] .hero{background:linear-gradient(105deg,rgba(255,255,255,.94),rgba(238,246,255,.72) 52%,rgba(238,246,255,.35)),url("/local/assets/home-hero-orbital.png") center/cover}
+.hero h1{font-size:34px;letter-spacing:-1.5px;line-height:.96;margin:14px 0 9px;max-width:260px;text-shadow:0 10px 30px rgba(0,0,0,.5)}.eyebrow{font-size:10px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;color:#ffd37c}
+.meta{color:var(--muted);font-weight:700;font-size:12px}.hero-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}
+.mini{min-height:62px;border:1px solid rgba(255,190,86,.24);border-radius:16px;background:linear-gradient(160deg,rgba(12,24,39,.66),rgba(5,11,20,.58));padding:10px;backdrop-filter:blur(18px);box-shadow:0 1px 0 rgba(255,255,255,.05) inset}[data-theme=light] .mini{background:rgba(255,255,255,.65)}
+.mini b{font-size:18px;line-height:1}.mini span{display:block;color:var(--muted);font-size:10.5px;font-weight:700;margin-top:4px}
+.radar{position:absolute;right:14px;top:58px;width:128px;height:128px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle,rgba(39,225,255,.12),transparent 65%)}
+.radar svg{filter:drop-shadow(0 0 18px rgba(255,190,86,.26))}.radar-center{position:absolute;text-align:center;font-size:10px;color:var(--muted);font-weight:800}.radar-center b{display:block;color:var(--text);font-size:17px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.card,.panel{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(20px);overflow:hidden}
+.panel{padding:16px;margin-top:12px}.head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.title{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px}.title i{color:var(--accent,var(--blue));display:grid}
+.sub{color:var(--muted);font-size:12px;font-weight:700}.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.05);font-size:11px;font-weight:800;color:var(--muted)}
+.badge.ok{color:var(--green);background:rgba(95,224,166,.12);border-color:rgba(95,224,166,.25)}.badge.warn{color:var(--amber);background:rgba(255,196,77,.12);border-color:rgba(255,196,77,.25)}.badge.bad{color:var(--red);background:rgba(255,95,109,.12);border-color:rgba(255,95,109,.25)}
+.tile{min-height:112px;padding:14px;border:1px solid var(--line);border-radius:20px;background:var(--panel2);cursor:pointer;transition:transform var(--transition-fast),border-color var(--transition-normal),background var(--transition-normal),box-shadow var(--transition-normal);box-shadow:0 1px 0 rgba(255,255,255,.045) inset}
+.tile.wide{grid-column:span 2}.tile .k{color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px}.tile .v{font-size:25px;font-weight:800;margin-top:12px;line-height:1}.tile .s{color:var(--muted);font-size:12px;font-weight:700;margin-top:6px}.tile.on{border-color:color-mix(in oklab,var(--c) 55%,var(--line));background:color-mix(in oklab,var(--c) 15%,var(--panel2))}
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:12px}.action{min-height:70px;border:1px solid var(--line);border-radius:20px;background:var(--panel2);color:var(--text);font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;cursor:pointer;transition:transform var(--transition-fast),border-color var(--transition-normal),box-shadow var(--transition-normal),background var(--transition-normal)}
+.action i{color:var(--c,var(--accent-gold))}.action.primary{background:linear-gradient(135deg,rgba(255,190,86,.22),rgba(31,78,132,.16));border-color:rgba(255,190,86,.46);box-shadow:var(--shadow-glow-gold)}
+.chart{height:128px;display:flex;align-items:flex-end;gap:2px;padding-top:8px;position:relative}.chart:after{content:"";position:absolute;left:0;right:0;bottom:0;height:42%;background:linear-gradient(to top,rgba(255,184,73,.12),transparent);pointer-events:none}.bar{flex:1;min-width:2px;border-radius:4px 4px 1px 1px;background:var(--green);opacity:.72;position:relative;box-shadow:0 0 12px color-mix(in oklab,currentColor 35%,transparent)}.bar.now{opacity:1;outline:2px solid #f7ead2;outline-offset:1px;box-shadow:0 0 18px rgba(255,220,158,.44)}.bar.tomorrow{opacity:.62}.bar.night:after{content:"";position:absolute;left:1px;right:1px;bottom:-5px;height:2px;border-radius:3px;background:var(--blue)}.axis{display:flex;justify-content:space-between;color:var(--faint);font-size:10px;font-weight:800;margin-top:8px}.day-axis{display:grid;grid-template-columns:1fr 1fr;gap:8px;color:var(--faint);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;margin-top:6px}.day-axis span{border-top:1px solid var(--line);padding-top:5px}
+.price-axis-chart{display:block;padding:0}.price-axis-chart:after{display:none}.price-axis-chart svg{display:block;width:100%;height:100%;overflow:visible}
+.row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}.row:last-child{border-bottom:0}.row .grow{flex:1;min-width:0}.row b{font-size:14px}.row small{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-top:2px}.row .right{text-align:right;font-weight:800}.dot{width:8px;height:8px;border-radius:50%;background:var(--faint);box-shadow:0 0 0 transparent}.dot.ok{background:var(--green);box-shadow:0 0 12px rgba(95,224,166,.5)}.dot.warn{background:var(--amber);box-shadow:0 0 12px rgba(255,196,77,.5)}.dot.bad{background:var(--red);box-shadow:0 0 12px rgba(255,95,109,.55)}
+.switch{width:46px;height:28px;border-radius:99px;background:rgba(255,255,255,.12);border:1px solid var(--line);position:relative;flex-shrink:0}.switch:after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:.2s var(--ease)}.switch.on{background:color-mix(in oklab,var(--c,var(--green)) 32%,transparent);border-color:color-mix(in oklab,var(--c,var(--green)) 55%,var(--line))}.switch.on:after{transform:translateX(18px);background:var(--c,var(--green))}
+.seg{display:grid;grid-template-columns:repeat(var(--n,3),1fr);gap:6px}.seg button{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.04);color:var(--muted);padding:10px 8px;font-weight:800;transition:transform var(--transition-fast),border-color var(--transition-normal),box-shadow var(--transition-normal)}.seg button:active{transform:scale(.97)}.seg button.on{background:color-mix(in oklab,var(--c,var(--accent-gold)) 24%,transparent);border-color:color-mix(in oklab,var(--c,var(--accent-gold)) 58%,var(--line));color:var(--text);box-shadow:0 0 22px color-mix(in oklab,var(--c,var(--accent-gold)) 24%,transparent)}
+.nav{position:absolute;left:8px;right:8px;bottom:8px;z-index:20;display:grid;grid-template-columns:repeat(4,1fr);padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));background:rgba(5,12,22,.72);border:1px solid var(--line);border-radius:24px;backdrop-filter:blur(22px);box-shadow:0 -10px 40px rgba(0,0,0,.34)}
+.nav button{border:0;background:transparent;color:var(--faint);font-size:10px;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 2px;border-radius:16px;transition:transform var(--transition-fast),color var(--transition-normal),background var(--transition-normal),box-shadow var(--transition-normal)}.nav button.on{color:var(--accent-gold);background:rgba(255,190,86,.12);box-shadow:var(--shadow-glow-gold)}
+.toast{position:absolute;left:50%;bottom:88px;z-index:50;max-width:88%;transform:translate(-50%,16px);opacity:0;pointer-events:none;background:var(--panel2);border:1px solid var(--line2);border-radius:16px;padding:11px 14px;font-weight:800;box-shadow:var(--shadow);transition:.22s var(--ease);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.toast.show{opacity:1;transform:translate(-50%,0)}
+.modal{position:absolute;inset:0;z-index:60;background:rgba(2,8,16,.58);backdrop-filter:blur(12px);display:none;align-items:flex-end}.modal.on{display:flex}.sheet{width:100%;max-height:84dvh;overflow:auto;border-radius:28px 28px 0 0;background:var(--bg2);border:1px solid var(--line2);padding:18px 16px calc(22px + env(safe-area-inset-bottom,0px));box-shadow:0 -20px 70px rgba(0,0,0,.42)}
+.empty{color:var(--muted);font-weight:700;text-align:center;padding:22px 8px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.danger{--c:var(--red)!important;border-color:rgba(255,95,109,.34)!important}.mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-feature-settings:"tnum" 1}
+.energy-home{border-color:rgba(255,190,86,.24)}.energy-home .price-main{font-size:38px;font-weight:800;letter-spacing:-1px;color:var(--accent-gold);line-height:.95}.energy-home .unit{color:var(--text-secondary);font-size:12px;font-weight:800}.best-window{margin-top:12px;padding:12px;border:1px solid rgba(54,163,255,.22);border-radius:18px;background:linear-gradient(135deg,rgba(54,163,255,.12),rgba(255,190,86,.07))}
+.sensor-danger{color:var(--danger)!important}
+.loading{height:100%;display:grid;place-items:center;text-align:center;padding:30px}.loader{width:32px;height:32px;border-radius:50%;border:3px solid rgba(54,163,255,.18);border-top-color:var(--cyan);animation:spin .8s linear infinite;margin:auto}.icon-btn.spin svg{animation:spin .75s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.app:before,.app:after,.sheen:after,.dot.ok,.badge.ok .dot,.view,.loader,.icon-btn.spin svg{animation:none!important}.icon-btn,.action,.tile,.nav button,.seg button,.fab,.fab svg,.fab-item,.fab-scrim{transition:none!important}}
+@media(max-width:360px){.hero h1{font-size:30px}.radar{width:110px;height:110px;right:8px}.cards{gap:8px}.tile{padding:12px}.actions{gap:7px}.action{font-size:12px}}
+/* Luxury concept parity: presentation only; V8 auth/actions remain unchanged. */
+[data-theme="luxury-dark-mobile"] .app:before{display:none}.app{max-width:480px;margin:auto;background:var(--app-bg-gradient)}
+.top{height:54px;padding:calc(10px + env(safe-area-inset-top,0px)) 17px 4px;background:transparent;border:0}.brand .logo,.brand span{display:none}.brand b{font:400 18px Georgia,serif}.top-actions{margin-left:auto}.icon-btn{width:34px;height:34px;border-radius:12px;background:rgba(255,255,255,.025)}
+.screen{padding:0 15px calc(var(--bottom-nav-height) + 18px)}.hero{min-height:0;margin-top:8px;padding:22px 19px;border-radius:24px;background:linear-gradient(145deg,rgba(33,29,23,.88),rgba(10,10,9,.91));box-shadow:0 20px 50px rgba(0,0,0,.34)}
+.hero h1{font:400 36px/1 Georgia,serif;letter-spacing:0;margin:8px 0}.hero .meta{font-size:12px}.hero-grid,.radar{display:none}.concept-calm{margin-top:16px;color:var(--green);font-size:12px}.concept-calm .dot{display:inline-block;margin-right:6px}
+.page-head{margin:14px 2px 16px}.page-head h1{font:400 32px Georgia,serif;margin:0}.page-head p{color:var(--muted);font-size:11px;margin:5px 0}.section-label{display:flex;align-items:center;margin:20px 2px 10px}.section-label h2{font:400 20px Georgia,serif;margin:0}.section-label span{margin-left:auto;color:var(--muted);font-size:10px}
+.panel{border-radius:18px;padding:15px;margin-top:10px;background:linear-gradient(145deg,rgba(29,26,22,.84),rgba(10,10,9,.89));box-shadow:inset 0 1px rgba(255,255,255,.035)}.panel .title{font-family:Georgia,serif;font-weight:400;font-size:20px}
+.concept-price{display:grid;grid-template-columns:1fr auto;align-items:end}.concept-price strong{font:400 42px Georgia,serif}.concept-price small{color:var(--muted)}.concept-price .tier{color:var(--green);font-size:11px;margin-top:3px}.concept-meta{display:flex;gap:7px;margin-top:13px}.concept-meta .mini{flex:1;min-height:0;padding:10px;border-radius:12px;background:rgba(255,255,255,.025);color:var(--muted);font-size:10px}.concept-meta .mini b{display:block;color:var(--text);font-size:12px;margin-top:3px}
+.room-card{display:flex;align-items:center;min-height:72px}.room-card .room-copy{margin-left:10px}.room-card .room-copy p{margin:3px 0 0;color:var(--muted);font-size:10px}.room-card .room-temp{font:400 26px Georgia,serif;margin-left:auto}.quick-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.quick-grid .action{min-height:82px;align-items:flex-start;text-align:left;padding:13px;border-radius:16px}.quick-grid .action svg{color:var(--accent-gold)}
+.nav{left:11px;right:11px;bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:5px;height:68px;border-radius:24px;background:rgba(16,14,12,.94)}.nav button{border-radius:18px;font-size:9px}.nav button.on{color:var(--text);background:rgba(217,174,103,.1);box-shadow:none}
+.price-axis-chart{height:185px!important;margin-top:12px}.price-axis-chart svg{height:185px}.settings-link{opacity:.82}
+/* ===== v2 luxury effects (all gated by prefers-reduced-motion below) ===== */
+@keyframes ambient{0%,100%{opacity:.42;transform:translate3d(-3%,0,0)}50%{opacity:.9;transform:translate3d(3%,2%,0)}}
+@keyframes sheenMove{0%{transform:translateX(-130%) skewX(-12deg)}55%,100%{transform:translateX(320%) skewX(-12deg)}}
+@keyframes pulseOk{0%,100%{box-shadow:0 0 0 0 rgba(95,224,166,0)}50%{box-shadow:0 0 11px 2px rgba(95,224,166,.5)}}
+@keyframes fabPop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+/* animated background gradient + ambient glow (below the shell, never moves content) */
+.app:after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;mix-blend-mode:screen;background:radial-gradient(460px 300px at 78% 4%,color-mix(in oklab,var(--accent-gold) 24%,transparent),transparent 60%),radial-gradient(430px 320px at 8% 94%,color-mix(in oklab,var(--accent-blue) 20%,transparent),transparent 62%);animation:ambient 15s ease-in-out infinite}
+[data-theme=light] .app:after{mix-blend-mode:multiply;opacity:.6}
+/* glass sheen on key surfaces */
+.sheen{position:relative}
+.sheen>*{position:relative;z-index:3}
+.sheen:after{content:"";position:absolute;top:0;bottom:0;left:0;width:38%;pointer-events:none;z-index:2;background:linear-gradient(100deg,transparent,rgba(255,255,255,.13) 50%,transparent);animation:sheenMove 8s ease-in-out infinite}
+[data-theme=light] .sheen:after{background:linear-gradient(100deg,transparent,rgba(255,255,255,.55) 50%,transparent)}
+/* active/press glow + lift */
+.icon-btn:active,.nav button:active,.seg button:active{box-shadow:var(--shadow-glow-gold)}
+.action:active,.tile:active{transform:translateY(-2px) scale(.99);box-shadow:var(--shadow-card),var(--shadow-glow-gold)}
+/* soft status pulse */
+.dot.ok{animation:pulseOk 2.6s ease-in-out infinite}
+/* ===== radial quick-action menu ===== */
+.fab-scrim{position:absolute;inset:0;z-index:30;background:rgba(2,6,12,.30);opacity:0;pointer-events:none;transition:opacity var(--transition-normal)}
+.fab-scrim.on{opacity:1;pointer-events:auto;backdrop-filter:blur(2px)}
+.fab-wrap{position:absolute;right:18px;bottom:calc(var(--bottom-nav-height) + 14px + env(safe-area-inset-bottom,0px));z-index:40;width:60px;height:60px}
+.fab{position:absolute;right:0;bottom:0;width:60px;height:60px;border-radius:50%;border:1px solid rgba(255,190,86,.5);background:linear-gradient(150deg,#ffd37c,var(--accent-gold) 52%,#a5691f);color:#1a1206;display:grid;place-items:center;cursor:pointer;z-index:3;box-shadow:0 12px 30px rgba(0,0,0,.42),var(--shadow-glow-gold);transition:transform var(--transition-normal),box-shadow var(--transition-normal)}
+.fab svg{transition:transform var(--transition-normal)}
+.fab-wrap.on .fab{transform:rotate(135deg)}
+.fab-item{position:absolute;right:7px;bottom:7px;width:52px;height:56px;border:1px solid var(--line);border-radius:16px;background:var(--panel2);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:8.5px;font-weight:800;line-height:1.05;text-align:center;cursor:pointer;opacity:0;transform:translate(0,0) scale(.4);pointer-events:none;backdrop-filter:blur(16px);box-shadow:var(--shadow-card);transition:transform .3s var(--ease),opacity .24s var(--ease),box-shadow var(--transition-normal)}
+.fab-item i{color:var(--accent-gold);display:grid}
+.fab-item.crit i{color:var(--red)}
+.fab-wrap.on .fab-item{opacity:1;pointer-events:auto;transform:translate(var(--dx),var(--dy)) scale(1);transition-delay:calc(var(--i)*26ms)}
+.fab-wrap.on .fab-item:active{transform:translate(var(--dx),var(--dy)) scale(.93)}
+@media(hover:hover) and (pointer:fine){.fab-item:hover{border-color:var(--card-border-active);box-shadow:var(--shadow-card),var(--shadow-glow-gold)}}
+</style>
+</head>
+<body>
+<div id="app" class="app" data-theme="dark">
+  <div class="loading"><div><div class="loader"></div><div class="sub" style="margin-top:12px">Загрузка Mini App</div></div></div>
+</div>
+<script>
+(function(){
+  "use strict";
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const qs = new URLSearchParams(location.search);
+  // ---- Deploy-time config (NO secrets, NO infrastructure hostnames shipped). ----
+  // Inside Telegram the page is served same-origin, so HA_URL stays "" and every call is
+  // relative. Desktop/browser preview (file://, localhost, or ?preview=1) derives the host
+  // from window.location at runtime — no private/infra address is embedded in this file.
+  const CONFIG = {
+    botDeepLink: "https://t.me/your_home_bot/smarthome"
+  };
+  const PREVIEW = location.protocol === "file:" || location.hostname === "localhost" || qs.get("preview") === "1";
+  const DESKTOP_PREVIEW = PREVIEW;
+  const HA_URL = (PREVIEW && location.origin && location.origin !== "null") ? location.origin : "";
+  const root = document.getElementById("app");
+  const LS = "smarthouse_v8_settings";
+  const now = () => new Date();
+  const pad = n => String(n).padStart(2,"0");
+  const fmtTime = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const ico = {
+    home:'<path d="M3 10.5 12 3l9 7.5M5.5 9.5V20h13V9.5M9.5 20v-5h5v5"/>',
+    bolt:'<path d="M13 2 5 13h6l-1 9 8-12h-6l1-8Z"/>',
+    shield:'<path d="M12 3 5 5.5V11c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V5.5L12 3Z"/>',
+    sliders:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/>',
+    flame:'<path d="M12 3c.6 3-2 4-2 7a2.2 2.2 0 0 0 4.3.6c1.4 1 2.2 2.6 2.2 4.4a4.5 4.5 0 1 1-9 0c0-3.2 2.5-4.6 2.5-7.5C10 8 11 6 12 3Z"/>',
+    boiler:'<rect x="7" y="4" width="10" height="16" rx="3"/><path d="M7 9h10"/><path d="M12 12c1 1 1.6 2 1.6 3.1a1.6 1.6 0 0 1-3.2 0c0-.9.6-1.4 1.6-3.1Z"/>',
+    map:'<path d="M9 4 3 6.5v13.5L9 17.5 15 20l6-2.5V4L15 6.5 9 4Z"/><path d="M9 4v13.5M15 6.5V20"/>',
+    car:'<path d="M3 13.5 4.8 8a3 3 0 0 1 2.8-2h8.8a3 3 0 0 1 2.8 2l1.8 5.5"/><path d="M3 13.5h18V18a1 1 0 0 1-1 1h-1.5a1 1 0 0 1-1-1v-1H6.5v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4.5Z"/>',
+    water:'<path d="M12 3c3 4 6 6.8 6 10.5a6 6 0 0 1-12 0C6 9.8 9 7 12 3Z"/>',
+    valve:'<circle cx="12" cy="12" r="4"/><path d="M12 8V3M9 3h6M12 16v5M9 21h6M16 12h5M21 9v6M8 12H3M3 9v6"/>',
+    bulb:'<path d="M9 17h6M10 21h4M8.5 14a5.5 5.5 0 1 1 7 0c-.7.6-1 1.3-1 2.2H9.5c0-.9-.3-1.6-1-2.2Z"/>',
+    moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5Z"/>',
+    walk:'<circle cx="13" cy="4.5" r="1.6"/><path d="M11 9l3-1 2 3 2 1M11 9l-1.5 4 2 2 .5 5M9.5 13 7 16"/>',
+    leaf:'<path d="M5 19c0-8 6-13 14-13 0 8-5 14-13 14-1 0-2-.3-2-.3M9 15c2.5-3 5-4.5 8-5.5"/>',
+    refresh:'<path d="M20 11a8 8 0 1 0-.8 4.5M20 6v5h-5"/>',
+    gear:'<path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"/><path d="M12 2.8v2.1M12 19.1v2.1M4.1 6.2l1.5 1.5M18.4 16.3l1.5 1.5M2.8 12h2.1M19.1 12h2.1M4.1 17.8l1.5-1.5M18.4 7.7l1.5-1.5"/>',
+    sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/>',
+    lock:'<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+    unlock:'<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 7.8-1.2"/>',
+    plug:'<path d="M9 2v5M15 2v5M6 7h12v3a6 6 0 0 1-12 0V7ZM12 16v6"/>',
+    fan:'<circle cx="12" cy="12" r="2"/><path d="M12 10c0-4 1-7 0-8-2 1-3 4-2 6M14 12c4 0 7 1 8 0-1-2-4-3-6-2M12 14c0 4-1 7 0 8 2-1 3-4 2-6M10 12c-4 0-7-1-8 0 1 2 4 3 6 2"/>',
+    temp:'<path d="M14 13.5V5a2 2 0 0 0-4 0v8.5a4 4 0 1 0 4 0Z"/>',
+    door:'<path d="M5 21V4a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v17M4 21h14"/><circle cx="13" cy="12" r="1" fill="currentColor" stroke="none"/>',
+    smoke:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.2"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2"/>',
+    calendar:'<rect x="3.5" y="5" width="17" height="15.5" rx="2.2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>',
+    check:'<path d="M5 12.5 10 17.5 19.5 6.5"/>',
+    play:'<path d="M7 4.5 19 12 7 19.5v-15Z"/>',
+    stop:'<rect x="6" y="6" width="12" height="12" rx="2"/>',
+    x:'<path d="M6 6l12 12M18 6 6 18"/>',
+    plus:'<path d="M12 5v14M5 12h14"/>',
+    battery:'<rect x="2.5" y="8" width="16" height="8" rx="2"/><path d="M21 11v2"/>',
+    wifi:'<path d="M5 12.5a10 10 0 0 1 14 0M8 15.5a6 6 0 0 1 8 0M12 18.5h.01"/>',
+    motion:'<circle cx="12" cy="4.5" r="1.6"/><path d="M10 8.5 14 7l2.5 3.2 2.5 1.1M10 8.5 8.5 13l2.8 2.2.7 5.3M8.5 13 5.5 16.5M14.2 13.5l2.3 2.5"/>',
+    graph:'<circle cx="6" cy="7" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="12" cy="17.5" r="2"/><path d="M7.7 8.3 10.5 15.6M16.4 9.4 13.4 16M8 6.6 16 7.6"/>'
+  };
+  const I = (name,size=21) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ico[name]||""}</svg>`;
+  const defaults = { theme:"dark", refresh:30, haptic:true, compact:false, big:false, safe:false, accent:"blue" };
+  const app = {
+    tab:"home", initData:"", auth:"init", spin:false, toast:null, modal:null, events:[], calendarIds:[], scroll:{},
+    states:[], pollTimer:null, fabOpen:false, _countTab:null,
+    settings:{...defaults,...readLS()}, data:mockData()
+  };
+  function readLS(){try{return JSON.parse(localStorage.getItem(LS)||"{}")}catch{return {}}}
+  function saveLS(){localStorage.setItem(LS,JSON.stringify(app.settings))}
+  function haptic(kind="light"){if(!app.settings.haptic)return;try{tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred(kind)}catch{}}
+  function toast(msg){app.toast=msg;renderShell();clearTimeout(app.toastTimer);app.toastTimer=setTimeout(()=>{app.toast=null;renderShell()},2400)}
+  function state(S,eid){const e=S.find(x=>x.entity_id===eid);return e?e.state:""}
+  function attr(S,eid,k){const e=S.find(x=>x.entity_id===eid);return e&&e.attributes?e.attributes[k]:undefined}
+  function num(S,eid){const v=parseFloat(state(S,eid));return isNaN(v)?0:v}
+  function availOf(s){return s!==""&&s!=null&&s!=="unavailable"&&s!=="unknown"}
+  // Availability at click time, from the last real state snapshot (task 4: never toggle an unknown entity).
+  function isAvail(eid){const e=(app.states||[]).find(x=>x.entity_id===eid);return !!e&&availOf(e.state)}
+  function safeText(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+  // Canonical frontend unit: EUR/kWh everywhere. Both the HA sensors and
+  // today_prices.json already use EUR/kWh; never convert to/from cents here.
+  function priceTier(v){return v<=0.04?["ok","дёшево", "var(--green)"]:v<=0.10?["warn","средне","var(--amber)"]:["bad","дорого","var(--red)"]}
+  function localKey(offset=0){
+    const d=new Date(); d.setDate(d.getDate()+offset);
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  }
+  function normalizePrices(payload,fallback){
+    if(Array.isArray(payload)){
+      const arr=payload.map(v=>Number(v)).filter(Number.isFinite);
+      return arr.length ? arr : fallback;
+    }
+    if(payload && typeof payload==="object"){
+      if(Array.isArray(payload.today)){
+        const arr=payload.today.map(v=>Number(v)).filter(Number.isFinite);
+        if(arr.length) return arr;
+      }
+      const prices=payload.prices || {};
+      const out=[];
+      [localKey(0),localKey(1)].forEach(day=>{
+        const byHour=prices[day] || {};
+        for(let h=0;h<24;h++){
+          const v=Number(byHour[String(h)]);
+          out.push(Number.isFinite(v) ? v : null);
+        }
+      });
+      if(out.some(Number.isFinite)) return out;
+    }
+    return fallback;
+  }
+  function windowLabel(idx,hours=2){
+    const day=idx<24?"сегодня":"завтра";
+    const hour=idx%24;
+    const end=hour+hours;
+    return `${day} ${pad(hour)}:00-${end>=24?"24":pad(end)}:00`;
+  }
+  function cheapestWindow(arr,hours=2,nightOnly=false){
+    let best=null;
+    for(let i=0;i<=arr.length-hours;i++){
+      const slice=arr.slice(i,i+hours);
+      if(!slice.every(Number.isFinite)) continue;
+      if(nightOnly && !slice.every((_,j)=>{const h=(i+j)%24;return h>=22||h<6})) continue;
+      const avg=slice.reduce((a,b)=>a+b,0)/hours;
+      if(!best || avg<best.avg) best={idx:i,avg,label:windowLabel(i,hours)};
+    }
+    return best;
+  }
+  function cheapWindow(arr){
+    const best=cheapestWindow(arr,2,false);
+    return best ? best.label : "нет данных";
+  }
+  function mapEv(s){return ({charger_charging:"Заряжается",charger_insert:"Подключён",charger_pause:"Пауза",charger_free:"Свободен",charger_end:"Завершено",cloud_error:"Нет связи",quota_error:"Нет данных"})[s]||s||"нет данных"}
+  function boilerMode(s){s=String(s||"").toLowerCase();if(s.includes("work")||s.includes("работ"))return"Работа";if(s.includes("dogor")||s.includes("догор")||s.includes("watch"))return"Догорание";if(s.includes("alarm")||s.includes("авар"))return"Авария";if(s==="off"||s.includes("выкл"))return"Выключен";return s||"нет данных"}
+  function greeting(){const h=now().getHours();return h<6?"Доброй ночи":h<12?"Доброе утро":h<18?"Добрый день":"Добрый вечер"}
+  function mockData(){
+    const h=now().getHours(), today=[15.3,12.1,10.2,8.4,5.2,4.8,7.5,11.3,16.8,18.1,13.4,8.2,6.1,5.3,5.9,7.8,10.8,15.5,22.4,30.8,26.1,21.2,18.5,14.4], tomorrow=[11.2,8.6,7.4,6.9,5.1,4.6,6.2,9.8,12.7,14.2,10.1,7.7,6.4,6.1,7.2,9.1,13.6,18.4,24.5,29.2,25.4,19.6,14.1,10.8], arr=today.concat(tomorrow).map(v=>v/100);
+    const items=[["ev","EV","car",0,0],["boil","Котёл","flame",3.5,.86],["akv","Аквариум","plug",.4,.08],["rec","Рециркуляция","water",.2,.04],["hyd","Гидрофор","water",.1,.02]];
+    return {outside:22,price:{now:arr[h],avail:true,next:arr[h+1],arr,nowHour:h,cheapWindow:cheapWindow(arr),nightWindow:cheapestWindow(arr,2,true)?.label||"нет данных"},cost:{kwh:4.2,total:1.0,month:12.5,priceKnown:true,items:items.map(x=>({key:x[0],name:x[1],icon:x[2],system:x[0],kwh:x[3],cost:x[4],avail:true}))},
+      ev:{status:"нет данных",raw:"",kwh:0,sched:"—",manual:false},boiler:{mode:"Догорание",co:58,coSet:67,cwu:49,cwuSet:55,ret:51,fan:0,power:true,pumpCo:true,pumpCwu:false,pumpCirc:true},
+      floor:[{name:"Ванная",temp:24,mode:"auto"},{name:"Душевая",temp:23,mode:"auto"}],water:{open:true},security:{armed:false},nightSaver:false,zhara:false,
+      sensors:{door:false,smoke:false,bath:false,shower:false,garage:false,kitchen:false,motion:false},batteries:[["Дверь",84],["Дым",92],["Ванная",61],["Душевая",28],["Кухня",73],["Гараж",12]].map(([name,pct])=>({name,pct})),
+      rooms:[["Кухня",25.7,65],["Гостиная",22.2,56],["Спальня",27.8,62],["Улица",26.4,60]].map(x=>({name:x[0],temp:x[1],hum:x[2]})),air:{pm25:8,lux:321},
+      lights:[["entr","Прихожая"],["fanar","Фонарь"],["isl","Остров"],["tbl","Стол"],["hall","Коридор"],["sauna","Баня"],["ver","Веранда"],["led1","LED1"],["led2","LED2"],["tv1","ТВ 1"],["tv2","ТВ 2"],["gir","Гирлянда"],["proj","Прожектор"]].map((x,i)=>({id:x[0],name:x[1],on:i===1,icon:"bulb"})),
+      plugs:[["boil","Бойлер","flame"],["akv","Аквариум","plug"],["rec","Рециркуляция","refresh"],["hyd","Гидрофор","water"],["cal","Полотенцесушитель","temp"]].map((x,i)=>({id:x[0],name:x[1],on:i>0&&i<3,icon:x[2]}))};
+  }
+  const LIGHT_IDS={entr:"light.prikhozhaia_i_fanar_light",fanar:"light.prikhozhaia_i_fanar_light_2",isl:"light.svet_pervyi_etazh_1_light",tbl:"light.svet_pervyi_etazh_1_light_2",hall:"light.vtoroi_etazh_light",sauna:"light.dream_color_rgb",ver:"light.veranda_light"};
+  const SWITCH_LIGHT_IDS={led1:"switch.kukhnia_poloski_switch_1",led2:"switch.kukhnia_poloski_switch_2",tv1:"switch.svet_tv_zona_switch_1",tv2:"switch.svet_tv_zona_switch_2",gir:"switch.smart_switch_2ch_switch_1",proj:"switch.smart_switch_2ch_switch_2"};
+  const PLUG_IDS={boil:"switch.smart_plug_2_socket_1",akv:"switch.akvarium_svet_socket_1",rec:"switch.retserkuliatsiia_goriachai_vody_socket_1",hyd:"switch.zigbee_plug_2_socket_1",cal:"switch.kalarifer_socket_1"};
+  const SCENE_IDS={akv:{on:"switch.vkliuchit_svet_nad_akvariumom",off:"switch.vykliuchit_svet_nad_akvariumom"},wall:{on:"switch.vkliuchit_svet_stena",off:"switch.vykliuchit_svet_stena"},cur:{on:"switch.vkliuchit_svet_zanaveski",off:"switch.vykliuchit_svet_zanaveski"},stair:{on:"switch.vkliuchit_svet_u_lestnitsy",off:"switch.vykliuchit_svet_u_lestnitsi"}};
+  function mapStates(S,pricePayload=[]){
+    const h=now().getHours(), liveArr=normalizePrices(pricePayload,null), arr=(Array.isArray(liveArr)&&liveArr.some(Number.isFinite))?liveArr:[], known=arr.filter(Number.isFinite), avg=known.reduce((a,b)=>a+b,0)/(known.length||1);
+    const kwh=(eid,snap)=>Math.max(0,num(S,eid)-num(S,snap));
+    const status=state(S,"sensor.ev_charger_status");
+    const priceKnown=known.length>0, priceAvail=availOf(state(S,"sensor.nord_pool_lv_current_price"));
+    const items=[
+      ["ev","EV","car","sensor.ev_charger_energy","input_number.midnight_ev_energy"],["boil","Котёл","flame","sensor.boiler_total_energy","input_number.midnight_boiler_energy"],
+      ["akv","Аквариум","plug","sensor.akvarium_svet_total_energy","input_number.midnight_akv_energy"],["rec","Рециркуляция","water","sensor.cherepakha_total_energy","input_number.midnight_chep_energy"],
+      ["hyd","Гидрофор","water","sensor.zigbee_plug_2_total_energy","input_number.midnight_gidro_energy"],
+      ["cal","Полотенцесушитель","flame","sensor.terarium_total_energy","input_number.midnight_kalarifer_energy"]
+    ].map(x=>{const kv=kwh(x[3],x[4]);return {key:x[0],name:x[1],icon:x[2],system:x[0],kwh:kv,cost:kv*avg,avail:availOf(state(S,x[3]))};});
+    const schedRaw=state(S,"input_datetime.ev_charge_start"), sched=schedRaw?schedRaw.replace("T"," ").split(" ").pop().slice(0,5):"—";
+    return {...app.data,outside:parseFloat(state(S,"sensor.smart_weather_station_temperature"))||parseFloat(attr(S,"weather.forecast_home","temperature"))||parseFloat(attr(S,"weather.home","temperature"))||0,
+      price:{now:num(S,"sensor.nord_pool_lv_current_price"),avail:priceAvail,next:Number.isFinite(arr[h+1])?arr[h+1]:null,arr,nowHour:h,cheapWindow:cheapWindow(arr),nightWindow:cheapestWindow(arr,2,true)?.label||"нет данных"},cost:{kwh:items.reduce((s,i)=>s+i.kwh,0),total:items.reduce((s,i)=>s+i.cost,0),items,month:num(S,"input_number.cost_month_total"),priceKnown},
+      ev:{status:mapEv(status),raw:status,kwh:parseFloat(attr(S,"sensor.ev_charger_energy","session_kwh"))||0,sched,manual:state(S,"input_boolean.ev_manual_mode")==="on"},
+      boiler:{mode:boilerMode(state(S,"sensor.boiler_mode")),co:Math.round(num(S,"sensor.boiler_co_temperature")),coSet:Math.round(num(S,"sensor.boiler_co_setpoint")),cwu:Math.round(num(S,"sensor.boiler_cwu_temperature")),cwuSet:Math.round(num(S,"sensor.boiler_cwu_setpoint")),ret:Math.round(num(S,"sensor.boiler_return_temperature")),fan:Math.round(num(S,"sensor.boiler_fan_power")),power:state(S,"switch.smart_plug_2_socket_1")==="on",pumpCo:state(S,"binary_sensor.boiler_co_pump")==="on",pumpCwu:state(S,"binary_sensor.boiler_cwu_pump")==="on",pumpCirc:state(S,"binary_sensor.boiler_circulation_pump")==="on"},
+      floor:[{name:"Ванная",temp:parseFloat(attr(S,"climate.floor_heating","current_temperature"))||0,mode:attr(S,"climate.floor_heating","preset_mode")||"auto"},{name:"Душевая 1эт",temp:parseFloat(attr(S,"climate.floor_heating_2","current_temperature"))||0,mode:attr(S,"climate.floor_heating_2","preset_mode")||"auto"}],
+      water:{open:state(S,"switch.voda_kran_switch_1")==="on"},security:{armed:state(S,"input_boolean.security_armed")==="on"},nightSaver:state(S,"input_boolean.night_saver")==="on",zhara:state(S,"input_boolean.rezhim_zhara")==="on",
+      sensors:{door:state(S,"binary_sensor.door_sensor_door")==="on",smoke:state(S,"binary_sensor.wifi_th_smoke_sensor_smoke")==="on",bath:state(S,"binary_sensor.vannaia_moisture")==="on",shower:state(S,"binary_sensor.water_sensor_4_moisture")==="on",garage:state(S,"binary_sensor.garazh_moisture")==="on",kitchen:state(S,"binary_sensor.kukhnia_moisture")==="on",motion:state(S,"binary_sensor.lumi_cn_lumi_living_motion_v2_motion_state_p_2_1")==="on"},
+      batteries:[["Дверь","sensor.door_sensor_battery"],["Дым","sensor.wifi_th_smoke_sensor_battery"],["Ванная","sensor.vannaia_battery"],["Душевая","sensor.water_sensor_4_battery"],["Кухня","sensor.kukhnia_battery"],["Гараж","sensor.garazh_battery"]].map(x=>({name:x[0],pct:Math.round(num(S,x[1]))})),
+      lights:[["entr","Прихожая","light.prikhozhaia_i_fanar_light"],["fanar","Фонарь","light.prikhozhaia_i_fanar_light_2"],["isl","Остров","light.svet_pervyi_etazh_1_light"],["tbl","Стол","light.svet_pervyi_etazh_1_light_2"],["hall","Коридор","light.vtoroi_etazh_light"],["sauna","Баня","light.dream_color_rgb"],["ver","Веранда","light.veranda_light"],["led1","LED1","switch.kukhnia_poloski_switch_1"],["led2","LED2","switch.kukhnia_poloski_switch_2"],["tv1","ТВ 1","switch.svet_tv_zona_switch_1"],["tv2","ТВ 2","switch.svet_tv_zona_switch_2"],["gir","Гирлянда","switch.smart_switch_2ch_switch_1"],["proj","Прожектор","switch.smart_switch_2ch_switch_2"]].map(x=>({id:x[0],name:x[1],icon:"bulb",on:state(S,x[2])==="on",avail:availOf(state(S,x[2]))})),
+      plugs:[["boil","Бойлер","switch.smart_plug_2_socket_1","flame"],["akv","Аквариум","switch.akvarium_svet_socket_1","plug"],["rec","Рециркуляция","switch.retserkuliatsiia_goriachai_vody_socket_1","refresh"],["hyd","Гидрофор","switch.zigbee_plug_2_socket_1","water"],["cal","Полотенцесушитель","switch.kalarifer_socket_1","temp"]].map(x=>({id:x[0],name:x[1],on:state(S,x[2])==="on",icon:x[3],avail:availOf(state(S,x[2]))})),
+      rooms:[["Кухня","sensor.kukhnia_temperature","sensor.kukhnia_humidity"],["Гостиная","sensor.miaomiaoc_cn_blt_3_living_t1_temperature_p_2_1","sensor.miaomiaoc_cn_blt_3_living_t1_relative_humidity_p_2_2"],["Спальня","sensor.lumi_cn_lumi_bedroom_th_v1_temperature_p_2_1","sensor.lumi_cn_lumi_bedroom_th_v1_relative_humidity_p_2_2"],["Улица","sensor.smart_weather_station_temperature","sensor.smart_weather_station_humidity"]].map(x=>({name:x[0],temp:parseFloat(state(S,x[1])),hum:parseFloat(state(S,x[2]))})),
+      air:{pm25:parseFloat(state(S,"sensor.zhimi_cn_purifier_mb3_pm2_5_density_p_3_6")),lux:Math.round(parseFloat(state(S,"sensor.lumi_cn_gateway_v3_illumination_p_5_1")))},
+      calendarIds:S.filter(e=>e.entity_id&&e.entity_id.startsWith("calendar.")).map(e=>e.entity_id)
+    };
+  }
+  async function fetchData(){
+    if(DESKTOP_PREVIEW && !app.initData){app.auth="ok";renderShell();return}
+    if(!app.initData)return;
+    app.spin=true; renderShell();
+    try{
+      const sr=await fetch(`${HA_URL}/api/miniapp-state`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:app.initData})}); if(!sr.ok)throw new Error(sr.status);
+      const payload=await sr.json(), S=payload.states||[], arr=payload.prices||[];
+      app.states=S; app.data=mapStates(S,arr); app.calendarIds=app.data.calendarIds||[]; app.auth="ok"; app.spin=false; renderShell(); fetchCalendar();
+    }catch(e){console.error(e);app.spin=false;if(app.auth!=="ok")app.auth="error";renderShell()}
+  }
+  async function fetchCalendar(){
+    if(DESKTOP_PREVIEW && !app.initData)return;
+    if(!app.initData || !app.calendarIds.length)return;
+    const start=new Date(), end=new Date(); end.setDate(end.getDate()+14);
+    let out=[];
+    try{const r=await fetch(`${HA_URL}/api/miniapp-calendar`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:app.initData,calendarIds:app.calendarIds,start:start.toISOString(),end:end.toISOString()})});
+      if(r.ok)out=(await r.json()).events||[];
+    }catch{}
+    app.events=out.sort((a,b)=>String(a.start?.dateTime||a.start?.date||"").localeCompare(String(b.start?.dateTime||b.start?.date||""))).slice(0,6);
+    renderShell();
+  }
+  async function auth(){
+    if(DESKTOP_PREVIEW){app.auth="ok";renderShell();return}
+    if(!tg || !tg.initData){app.auth="blocked";renderShell();return}
+    try{tg.ready();tg.expand();app.initData=tg.initData;const r=await fetch(`${HA_URL}/api/miniapp-auth`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:app.initData})});if(!r.ok)throw new Error(r.status);await fetchData();restartPoll()}
+    catch(e){console.error(e);app.auth="error";renderShell()}
+  }
+  function restartPoll(){
+    clearInterval(app.pollTimer);
+    if(DESKTOP_PREVIEW || !app.initData) return;
+    const sec=Math.max(10,Number(app.settings.refresh)||30);
+    app.pollTimer=setInterval(fetchData,sec*1000);
+  }
+  // Fire a single service call. Returns a promise that REJECTS on failure (no optimistic UI here).
+  function svc(domain,service,entity_id,extra={}){
+    if(app.settings.safe && ["turn_off","turn_on"].includes(service) && domain!=="light"){return Promise.reject(new Error("Безопасный режим"))}
+    if(DESKTOP_PREVIEW || !app.initData) return Promise.resolve();
+    return fetch(`${HA_URL}/api/miniapp-action`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:app.initData,domain,service,entity_id,extra})}).then(r=>{if(!r.ok)throw new Error("HA "+r.status)});
+  }
+  // Run command(s): show pending → wait for the real backend response → re-read HA state to
+  // confirm → only then show success (or an error). No UI state is flipped before the response.
+  function cmd(okMsg,...calls){
+    if(DESKTOP_PREVIEW){toast("Демо-режим: команды отключены");return Promise.resolve()}
+    toast("Отправляю…");
+    return Promise.all(calls).then(()=>fetchData()).then(()=>{if(okMsg)toast(okMsg)}).catch(e=>{toast("Ошибка: "+((e&&e.message)||e))});
+  }
+  function setWaterAndVerify(open){
+    if(DESKTOP_PREVIEW){toast("Демо-режим: команды отключены");return Promise.resolve()}
+    if(!isAvail("switch.voda_kran_switch_1")){toast("Кран: нет данных, обновите");return Promise.resolve()}
+    toast("Отправляю…");
+    return svc("switch",open?"turn_on":"turn_off","switch.voda_kran_switch_1")
+      .then(()=>fetchData())
+      .then(()=>{if(app.data.water.open!==open)throw new Error("состояние крана не подтвердилось");toast(open?"Вода открыта":"Вода перекрыта")})
+      .catch(e=>{toast("Ошибка: "+((e&&e.message)||e))});
+  }
+  // Resolve a UI light id to its underlying service call(s), returning a single promise.
+  function lightSvc(id,on){
+    if(LIGHT_IDS[id]){const p=[svc("light",on?"turn_on":"turn_off",LIGHT_IDS[id])];if(id==="sauna")p.push(svc("light",on?"turn_on":"turn_off","light.dream_color_rgb_2"));return Promise.all(p)}
+    if(SWITCH_LIGHT_IDS[id])return svc("switch",on?"turn_on":"turn_off",SWITCH_LIGHT_IDS[id]);
+    if(SCENE_IDS[id])return svc("switch","turn_on",on?SCENE_IDS[id].on:SCENE_IDS[id].off);
+    return Promise.resolve();
+  }
+  function act(name,arg){
+    haptic("medium");
+    const d=app.data;
+    if(name==="refresh"){fetchData();toast("Данные обновляются");return}
+    if(name==="theme"){app.settings.theme=app.settings.theme==="dark"?"light":"dark";saveLS();renderShell();return}
+    if(name==="night"){cmd("Ночной режим включён",...d.lights.map(l=>lightSvc(l.id,false)));return}
+    if(name==="away"){cmd("Ушли: охрана включена",...d.lights.map(l=>lightSvc(l.id,false)),svc("input_boolean","turn_on","input_boolean.security_armed"));return}
+    if(name==="home"){cmd("Режим дома",svc("input_boolean","turn_off","input_boolean.security_armed"));return}
+    if(name==="eco"){cmd("Экономия активна",svc("climate","set_preset_mode","climate.floor_heating",{preset_mode:"auto"}),svc("climate","set_preset_mode","climate.floor_heating_2",{preset_mode:"auto"}));return}
+    if(name==="nightSaver"){const v=!d.nightSaver;cmd(v?"Ночная экономия ВКЛ (до 05:00)":"Ночная экономия ВЫКЛ",svc("input_boolean",v?"turn_on":"turn_off","input_boolean.night_saver"));return}
+    if(name==="zhara"){const v=!d.zhara;cmd(v?"Жара: нагрев выключен":"Жара выключена — нагрев вернулся",svc("script","turn_on",v?"script.rezhim_zhara_on":"script.rezhim_zhara_off"));return}
+    if(name==="sceneAway"){cmd("Режим «Ушёл»",svc("script","turn_on","script.scene_away"));return}
+    if(name==="sceneCinema"){cmd("Режим «Кино»",svc("script","turn_on","script.scene_cinema"));return}
+    if(name==="sceneGuests"){cmd("Режим «Гости»",svc("script","turn_on","script.scene_guests"));return}
+    if(name==="evStart"){cmd("EV зарядка запущена",svc("switch","turn_on","switch.ev_charger_switch"),svc("input_boolean","turn_on","input_boolean.ev_manual_mode"));return}
+    if(name==="evStop"){cmd("EV остановлена",svc("switch","turn_off","switch.ev_charger_switch"),svc("input_boolean","turn_off","input_boolean.ev_manual_mode"));return}
+    if(name==="evScheduleNight"){cmd("EV: ищу лучшие 2 часа ночи",svc("shell_command","ev_night2h",null));return}
+    if(name==="evManual"){const v=!d.ev.manual;cmd(v?"EV: ручной режим":"EV: авто режим",svc("input_boolean",v?"turn_on":"turn_off","input_boolean.ev_manual_mode"));return}
+    if(name==="boiler"){if(!DESKTOP_PREVIEW&&!isAvail("switch.smart_plug_2_socket_1")){toast("Котёл: нет данных, обновите");return}const on=!d.boiler.power;cmd("Котёл "+(on?"включён":"выключен"),svc("switch",on?"turn_on":"turn_off","switch.smart_plug_2_socket_1"));return}
+    if(name==="cwu"){cmd("ГВС "+arg+"°",svc("rest_command","set_boiler_cwu_temp",null,{temp:arg}));return}
+    if(name==="co"){cmd("CO "+arg+"°",svc("rest_command","set_boiler_co_temp",null,{temp:arg}));return}
+    if(name==="floor"){const [i,mode]=arg,eid=i===0?"climate.floor_heating":"climate.floor_heating_2";const calls=[svc("climate","set_preset_mode",eid,{preset_mode:mode})];if(mode==="manual")calls.push(svc("climate","set_temperature",eid,{temperature:30}));cmd("Пол: "+(mode==="manual"?"30°":"авто"),...calls);return}
+    if(name==="openWater"){app.modal="confirmOpenWater";renderShell();return}
+    if(name==="doOpenWater"){app.modal=null;renderShell();setWaterAndVerify(true);return}
+    if(name==="closeWater"){app.modal="confirmWater";renderShell();return}
+    if(name==="doCloseWater"){app.modal=null;renderShell();setWaterAndVerify(false);return}
+    if(name==="arm"){if(!DESKTOP_PREVIEW&&!isAvail("input_boolean.security_armed")){toast("Охрана: нет данных, обновите");return}const v=!d.security.armed;cmd(v?"Охрана включена":"Охрана снята",svc("input_boolean",v?"turn_on":"turn_off","input_boolean.security_armed"));return}
+    if(name==="allLightsOff"){cmd("Свет выключен",...d.lights.map(l=>lightSvc(l.id,false)));return}
+    if(name==="settings"){app.tab="settings";renderShell();return}
+  }
+  function toggleLight(id){
+    const l=app.data.lights.find(x=>x.id===id); if(!l)return;
+    if(!DESKTOP_PREVIEW && l.avail===false){toast(l.name+": нет данных, обновите");return}
+    const on=!l.on;
+    cmd(`${l.name}: ${on?"вкл":"выкл"}`,lightSvc(id,on));
+  }
+  function togglePlug(id){
+    const p=app.data.plugs.find(x=>x.id===id); if(!p)return;
+    if(!DESKTOP_PREVIEW && p.avail===false){toast(p.name+": нет данных, обновите");return}
+    if(!PLUG_IDS[id])return;
+    const on=!p.on;
+    cmd(`${p.name}: ${on?"вкл":"выкл"}`,svc("switch",on?"turn_on":"turn_off",PLUG_IDS[id]));
+  }
+  function rememberScroll(){
+    const el=document.querySelector(".screen");
+    if(el)app.scroll[app.tab]=el.scrollTop;
+  }
+  window.v8act=act; window.v8nav=t=>{rememberScroll();app.fabOpen=false;app.tab=t;haptic();renderShell()}; window.v8toggleLight=toggleLight; window.v8togglePlug=togglePlug;
+  window.v8set=(k,v)=>{app.settings[k]=v;saveLS();if(k==="refresh")restartPoll();renderShell()}; window.v8modal=v=>{app.modal=v;renderShell()};
+  // Radial quick-action menu — routes through existing act()/v8modal only; no new entities/actions.
+  window.v8fabToggle=()=>{app.fabOpen=!app.fabOpen;haptic();renderShell()};
+  window.v8fabClose=()=>{if(app.fabOpen){app.fabOpen=false;renderShell()}};
+  window.v8fabAct=(n,arg)=>{app.fabOpen=false;renderShell();act(n,arg)};
+  window.v8fabModal=m=>{app.fabOpen=false;app.modal=m;haptic();renderShell()};
+  function alerts(){
+    const s=app.data.sensors,a=[]; if(s.smoke)a.push("Дым"); if(s.bath)a.push("Протечка: ванная"); if(s.shower)a.push("Протечка: душевая"); if(s.garage)a.push("Протечка: гараж"); if(s.kitchen)a.push("Протечка: кухня"); if(s.door&&app.data.security.armed)a.push("Дверь открыта"); if(!app.data.water.open)a.push("Вода перекрыта"); return a;
+  }
+  function renderShell(){
+    rememberScroll();
+    root.dataset.theme=app.settings.theme==="dark"?"luxury-dark-mobile":app.settings.theme; root.className="app";
+    if(app.auth==="init"){root.innerHTML=`<div class="loading"><div><div class="loader"></div><div class="sub" style="margin-top:12px">Авторизация</div></div></div>`;return}
+    if(app.auth==="blocked"){root.innerHTML=`<div class="loading"><div>${I("lock",48)}<h2 style="margin:14px 0 8px">Доступ только через Telegram</h2><a class="action primary" style="text-decoration:none;color:var(--text);padding:16px 24px;min-height:auto" href="${CONFIG.botDeepLink}">Открыть Mini App</a></div></div>`;return}
+    if(app.auth==="error"){root.innerHTML=`<div class="loading"><div>${I("x",48)}<h2 style="margin:14px 0 8px">Ошибка авторизации</h2><div class="sub">Открой приложение через Telegram</div></div></div>`;return}
+    const tabs={home:renderHome,control:renderDevices,energy:renderEnergy,events:renderEvents,heat:renderHeat,devices:renderDevices,security:renderSecurity,graph:renderGraph,livemap:renderLivemap,settings:renderSettings};
+    root.innerHTML=`<div class="shell">
+      <header class="top"><div class="brand"><div><b>Умный дом</b><span>${DESKTOP_PREVIEW?"desktop preview":"Telegram Mini App"}</span></div></div>
+      <div class="top-actions"><span class="badge ok"><span class="dot ok"></span>HA online</span><button class="icon-btn ${app.spin?"spin":""}" onclick="v8act('refresh')" aria-label="Обновить">${I("refresh",18)}</button><button class="icon-btn settings-link" onclick="v8nav('settings')" aria-label="Настройки">${I("gear",18)}</button></div></header>
+      <main class="screen">${DESKTOP_PREVIEW?`<div style="margin:10px 0 2px;padding:8px 12px;border:1px solid var(--line2);border-radius:12px;background:rgba(255,189,85,.14);color:var(--amber);font-weight:800;font-size:12px;text-align:center">ДЕМО-режим · показаны примерные данные, не реальное состояние дома</div>`:""}${(tabs[app.tab]||renderHome)()}</main>${renderNav()}${renderFab()}${renderToast()}${renderModal()}</div>`;
+    const el=document.querySelector(".screen");
+    if(el)el.scrollTop=app.scroll[app.tab]||0;
+    runCountUps();
+  }
+  function renderGraph(){
+    if(DESKTOP_PREVIEW) return `<section class="view on"><div class="panel"><div class="head"><div class="title" style="--accent:var(--violet)"><i>${I("graph")}</i>Граф связей</div></div><div class="sub" style="padding:8px 2px">Откроется в приложении Home Assistant (страница /local/graph.html).</div></div></section>`;
+    return `<section class="view on" style="padding:0;height:100%"><div style="display:flex;align-items:center;gap:10px;padding:8px 4px 4px"><button class="icon-btn" onclick="v8nav('home')">${I("x",18)}</button><b style="font-weight:800">Граф связей</b></div><iframe src="/local/graph.html" title="Граф связей" style="display:block;width:100%;height:calc(100vh - 200px);min-height:400px;border:0;border-radius:14px;background:#0a0d12"></iframe></section>`;
+  }
+  function renderLivemap(){
+    if(DESKTOP_PREVIEW) return `<section class="view on"><div class="panel"><div class="head"><div class="title" style="--accent:var(--cyan)"><i>${I("map")}</i>Живая карта</div></div><div class="sub" style="padding:8px 2px">Откроется в приложении Home Assistant (/local/livemap.html).</div></div></section>`;
+    return `<section class="view on" style="padding:0;height:100%"><div style="display:flex;align-items:center;gap:10px;padding:8px 4px 4px"><button class="icon-btn" onclick="v8nav('home')">${I("x",18)}</button><b style="font-weight:800">Живая карта</b></div><iframe src="/local/livemap.html" title="Живая карта" style="display:block;width:100%;height:calc(100vh - 200px);min-height:400px;border:0;border-radius:14px;background:#0e1420"></iframe></section>`;
+  }
+  function renderNav(){
+    const nav=[["home","Дом","home"],["control","Управление","bulb"],["energy","Энергия","bolt"],["events","События","shield"]];
+    return `<nav class="nav">${nav.map(n=>`<button class="${app.tab===n[0]?"on":""}" onclick="v8nav('${n[0]}')">${I(n[2],22)}${n[1]}</button>`).join("")}</nav>`;
+  }
+  function renderToast(){return `<div class="toast ${app.toast?"show":""}">${safeText(app.toast||"")}</div>`}
+  function renderFab(){
+    // Every item uses ONLY already-allow-listed actions via act()/v8modal (critical «Ушёл» → confirm sheet).
+    const items=[
+      {onclick:"v8fabModal('scene:sceneAway')",i:"walk",l:"Ушёл",crit:true},
+      {onclick:"v8fabAct('sceneCinema')",i:"play",l:"Кино"},
+      {onclick:"v8fabAct('sceneGuests')",i:"home",l:"Гости"},
+      {onclick:"v8fabAct('zhara')",i:"sun",l:"Жара"},
+      {onclick:"v8fabAct('nightSaver')",i:"moon",l:"Ночь"},
+      {onclick:"v8fabAct('allLightsOff')",i:"bulb",l:"Свет выкл"}
+    ];
+    const pos=[[-17,-159],[-60,-148],[-98,-126],[-129,-94],[-150,-55],[-160,-11]];
+    const on=app.fabOpen?"on":"";
+    return `<div class="fab-scrim ${on}" onclick="v8fabClose()"></div>
+      <div class="fab-wrap ${on}">
+        ${items.map((it,i)=>`<button class="fab-item ${it.crit?"crit":""}" style="--dx:${pos[i][0]}px;--dy:${pos[i][1]}px;--i:${items.length-i}" onclick="${it.onclick}"><i>${I(it.i,20)}</i>${it.l}</button>`).join("")}
+        <button class="fab" onclick="v8fabToggle()" aria-label="Быстрые действия" aria-expanded="${app.fabOpen?"true":"false"}">${I("plus",26)}</button>
+      </div>`;
+  }
+  function reducedMotion(){try{return window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches}catch{return false}}
+  // Count-up on key numbers — runs only on tab change / first load (not on every poll or toast),
+  // skips non-numeric ("—" / "нет данных"), and always restores the exact rendered text.
+  function runCountUps(){
+    if(reducedMotion()){app._countTab=app.tab;return}
+    if(app._countTab===app.tab)return; app._countTab=app.tab;
+    document.querySelectorAll("[data-countup]").forEach(el=>{
+      const target=parseFloat(el.getAttribute("data-countup"));
+      if(!Number.isFinite(target))return;
+      const dec=parseInt(el.getAttribute("data-dec")||"0",10),finalText=el.textContent,t0=performance.now(),dur=640;
+      function step(t){const k=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-k,3);el.textContent=(target*e).toFixed(dec);if(k<1)requestAnimationFrame(step);else el.textContent=finalText;}
+      requestAnimationFrame(step);
+    });
+  }
+  const SCENE_INFO={
+    sceneAway:{t:"Ушёл",d:"Выключит весь свет в доме (все комнаты, подсветки, ТВ-зона) и включит охрану."},
+    sceneCinema:{t:"Кино",d:"Выключит основной свет и включит подсветку ТВ-зоны."},
+    sceneGuests:{t:"Гости",d:"Включит основной свет по всему дому: прихожая, оба этажа, веранда."},
+    night:{t:"Ночь",d:"Выключит весь свет. Бойлер будет греться только при дешёвом электричестве (≤ 0.04 €/кВт·ч)."}
+  };
+  function renderModal(){
+    if(app.modal&&app.modal.indexOf("scene:")===0){const k=app.modal.slice(6),s=SCENE_INFO[k]||{t:"",d:""};return `<div class="modal on" onclick="if(event.target.className.includes('modal'))v8modal(null)"><div class="sheet"><div class="head"><div class="title" style="--accent:var(--accent-gold)"><i>${I("play")}</i>Сцена «${s.t}»</div><button class="icon-btn" onclick="v8modal(null)">${I("x",18)}</button></div><p class="sub" style="line-height:1.55;margin-bottom:14px">${s.d}</p><div class="grid2"><button class="action" onclick="v8modal(null)">Отмена</button><button class="action primary" onclick="v8modal(null);v8act('${k}')">Запустить</button></div></div></div>`;}
+    if(app.modal==="confirmWater")return `<div class="modal on" onclick="if(event.target.className.includes('modal'))v8modal(null)"><div class="sheet"><div class="head"><div class="title" style="--accent:var(--red)"><i>${I("valve")}</i>Перекрыть воду?</div><button class="icon-btn" onclick="v8modal(null)">${I("x",18)}</button></div><p class="sub" style="line-height:1.55;margin-bottom:14px">Это закроет главный кран на весь дом. Используй при протечке или аварии.</p><div class="grid2"><button class="action" onclick="v8modal(null)">Отмена</button><button class="action danger" onclick="v8act('doCloseWater')">${I("valve")} Закрыть</button></div></div></div>`;
+    if(app.modal==="confirmOpenWater")return `<div class="modal on" onclick="if(event.target.className.includes('modal'))v8modal(null)"><div class="sheet"><div class="head"><div class="title" style="--accent:var(--water)"><i>${I("valve")}</i>Открыть воду?</div><button class="icon-btn" onclick="v8modal(null)">${I("x",18)}</button></div><p class="sub" style="line-height:1.55;margin-bottom:14px">Это откроет главный кран на весь дом. Убедись, что причина перекрытия устранена.</p><div class="grid2"><button class="action" onclick="v8modal(null)">Отмена</button><button class="action primary" onclick="v8act('doOpenWater')">${I("valve")} Открыть</button></div></div></div>`;
+    return "";
+  }
+  function renderRadar(){
+    const a=alerts().length, d=app.data, parts=[
+      ["price",d.price.now<=10?1:.55,d.price.now<=10?"var(--green)":"var(--amber)"],["ev",d.ev.raw==="charger_charging"?1:.35,"var(--green)"],["boiler",d.boiler.power?1:.45,"var(--amber)"],["water",d.water.open?1:.2,d.water.open?"var(--water)":"var(--red)"],["security",a?1:.55,a?"var(--red)":"var(--green)"]
+    ];
+    const rings=parts.map((p,i)=>`<circle cx="70" cy="70" r="${22+i*10}" fill="none" stroke="${p[2]}" stroke-width="5" stroke-dasharray="${Math.round(2*Math.PI*(22+i*10)*p[1])} 999" stroke-linecap="round" transform="rotate(${-90+i*28} 70 70)" opacity="${.55+i*.08}"/>`).join("");
+    return `<div class="radar"><svg width="140" height="140" viewBox="0 0 140 140">${rings}<circle cx="70" cy="70" r="5" fill="var(--cyan)"/></svg><div class="radar-center"><b>${a? a:"OK"}</b>${a?"внимание":"норма"}</div></div>`;
+  }
+  function renderRooms(){
+    const d=app.data,r=d.rooms||[],air=d.air||{};
+    const pmTier=v=>v<=12?"ok":v<=35?"warn":"bad";
+    const tc=t=>t>=26?"var(--red)":t<=18?"var(--blue)":"var(--green)";
+    return `<div class="panel"><div class="head"><div class="title" style="--accent:var(--water)"><i>${I("temp")}</i>Микроклимат</div><span class="badge">${r.length} комн.</span></div>
+      <div class="grid2">${r.map(x=>`<div class="tile" style="--c:var(--water);min-height:76px"><div class="k">${I("temp",15)} ${safeText(x.name)}</div><div class="v mono" style="font-size:22px;color:${Number.isFinite(x.temp)?tc(x.temp):"var(--muted)"}">${Number.isFinite(x.temp)?x.temp.toFixed(1)+"°":"—"}</div><div class="s">${Number.isFinite(x.hum)?"влажность "+Math.round(x.hum)+"%":"нет данных"}</div></div>`).join("")}</div>
+      <div class="row" style="margin-top:8px"><i style="color:var(--green)">${I("leaf",18)}</i><div class="grow"><b>Воздух PM2.5</b><small>мелкие частицы</small></div><div class="right"><span class="badge ${Number.isFinite(air.pm25)?pmTier(air.pm25):""}">${Number.isFinite(air.pm25)?air.pm25+" µg/m³":"—"}</span></div></div>
+      <div class="row"><i style="color:var(--amber)">${I("sun",18)}</i><div class="grow"><b>Освещённость</b><small>гостиная</small></div><div class="right mono">${Number.isFinite(air.lux)?air.lux+" лк":"—"}</div></div></div>`;
+  }
+  function renderHome(){
+    const d=app.data,p=d.price,t=p.avail?priceTier(p.now):["","нет данных","var(--muted)"],a=alerts(),lights=d.lights.filter(x=>x.on).length;
+    return `<section class="view on"><div class="hero sheen"><div class="eyebrow">${now().toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long"})} · ${fmtTime(now())}</div><h1>${greeting()}</h1><div class="meta">Умный дом · состояния обновляются из Home Assistant</div><div class="concept-calm" style="${a.length?"color:var(--red)":""}"><span class="dot ${a.length?"bad":"ok"}"></span>${a.length?`Требуется внимание: ${a.length}`:"В доме всё спокойно"}</div></div>
+      <div class="section-label"><h2>Электричество</h2><span>обновлено сейчас</span></div><div class="panel energy-home sheen" onclick="v8nav('energy')"><div class="concept-price"><div><strong class="mono" data-countup="${p.avail?p.now:""}" data-dec="3">${p.avail?p.now.toFixed(3):"—"}</strong> <small>EUR/кВт·ч</small><div class="tier" style="color:${t[2]}">${t[1]}</div></div><i style="color:var(--accent-gold)">${I("bolt",24)}</i></div><div class="concept-meta"><div class="mini">Следующий час<b>${Number.isFinite(p.next)?p.next.toFixed(3)+" €":"—"}</b></div><div class="mini">Лучшее окно<b>${safeText(p.nightWindow||p.cheapWindow)}</b></div></div></div>
+      <div class="section-label"><h2>Дом сейчас</h2><span>${lights+(d.boiler.power?1:0)} активно</span></div>
+      <div class="panel"><div class="head"><div class="title" style="--accent:var(--accent-gold)"><i>${I("home")}</i>Дом сейчас</div><span class="badge ok">${a.length?"есть внимание":"спокойно"}</span></div><div class="row"><i style="color:var(--amber)">${I("boiler",19)}</i><div class="grow"><b>Электробойлер</b><small>${d.boiler.power?"нагревает воду":"выключен"}</small></div><div class="right">${d.boiler.power?"работает":"ожидает"}</div></div><div class="row"><i style="color:var(--green)">${I("car",19)}</i><div class="grow"><b>Электромобиль</b><small>${safeText(d.ev.status)}</small></div><div class="right">${safeText(d.ev.sched)}</div></div><div class="row"><i style="color:var(--amber)">${I("bulb",19)}</i><div class="grow"><b>Освещение</b><small>активные зоны</small></div><div class="right">${lights}</div></div></div>
+      ${a.length?`<div class="panel danger"><div class="head"><div class="title" style="--accent:var(--red)"><i>${I("shield")}</i>Есть внимание</div><span class="badge bad">${a.length}</span></div>${a.map(x=>`<div class="row"><span class="dot bad"></span><div class="grow"><b>${safeText(x)}</b></div></div>`).join("")}<div class="actions"><button class="action danger" onclick="v8act('closeWater')">${I("valve")}Вода</button><button class="action" onclick="v8act('arm')">${I(d.security.armed?"unlock":"lock")}Охрана</button><button class="action" onclick="v8nav('security')">${I("shield")}Детали</button></div></div>`:""}
+      <div class="section-label"><h2>Быстрые действия</h2></div><div class="quick-grid"><button class="action" onclick="v8nav('control')">${I("bulb")}Свет<small>комнаты и зоны</small></button><button class="action ${d.nightSaver?"primary":""}" onclick="v8act('nightSaver')">${I("moon")}Ночная экономия<small>до 05:00</small></button><button class="action" onclick="v8modal('scene:sceneAway')">${I("walk")}Уехать<small>с подтверждением</small></button><button class="action" onclick="v8modal('scene:night')">${I("stop")}Всё выключить<small>с подтверждением</small></button></div>
+      </section>`;
+  }
+  function renderPriceChart(arr,nowHour,height=128){
+    const day=(arr||[]).slice(0,24),vals=day.filter(Number.isFinite);
+    if(!vals.length) return `<div style="height:${Math.max(height,170)}px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted)"><span style="opacity:.5">${I("bolt",26)}</span><div style="font-weight:700">Нет данных о ценах</div></div>`;
+    const max=Math.max(.20,...vals),min=Math.min(0,...vals),span=max-min||1,w=360,h=160,l=43,r=8,t=10,b=25,pw=w-l-r,ph=h-t-b;
+    const xy=day.map((v,i)=>Number.isFinite(v)?[l+i*pw/23,t+(max-v)*ph/span,v,i]:null).filter(Boolean),points=xy.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" "),area=xy.length?`${l},${t+ph} ${points} ${l+pw},${t+ph}`:"";
+    const ticks=[max,max-span*.25,max-span*.5,max-span*.75,min],nowX=l+Math.min(23,Math.max(0,nowHour))*pw/23,nowV=Number.isFinite(day[nowHour])?day[nowHour]:null,nowY=nowV==null?t+ph:t+(max-nowV)*ph/span;
+    return `<div class="chart price-axis-chart" style="height:${Math.max(height,170)}px"><svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Почасовой график Nord Pool за сегодня"><defs><linearGradient id="priceFill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="var(--accent-gold)" stop-opacity=".18"/><stop offset="1" stop-color="var(--accent-gold)" stop-opacity="0"/></linearGradient></defs>${ticks.map((v,i)=>{const y=t+i*ph/4;return `<line x1="${l}" y1="${y}" x2="${l+pw}" y2="${y}" stroke="var(--line)" stroke-dasharray="3 4"/><text x="1" y="${y+3}" fill="var(--faint)" font-size="8">${v.toFixed(3)} €</text>`}).join("")}<line x1="${l}" y1="${t}" x2="${l}" y2="${t+ph}" stroke="var(--line2)"/><line x1="${l}" y1="${t+ph}" x2="${l+pw}" y2="${t+ph}" stroke="var(--line2)"/>${area?`<polygon points="${area}" fill="url(#priceFill)"/><polyline points="${points}" fill="none" stroke="var(--accent-gold)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`:''}<line x1="${nowX}" y1="${t}" x2="${nowX}" y2="${t+ph}" stroke="var(--text-primary)" stroke-dasharray="2 3" opacity=".6"/><circle cx="${nowX}" cy="${nowY}" r="4" fill="var(--accent-gold)"/>${[0,6,12,18,23].map(hr=>`<text x="${l+hr*pw/23}" y="${h-5}" fill="var(--faint)" font-size="9" text-anchor="middle">${pad(hr)}:00</text>`).join("")}</svg></div>`;
+  }
+  function tile(cls,icon,k,v,s,c,click,wide=false){return `<div class="tile ${wide?"wide":""}" style="--c:${c}" onclick="${click}"><div class="k">${I(icon,18)} ${k}</div><div class="v mono" style="color:${c}">${safeText(v)}</div><div class="s">${safeText(s)}</div></div>`}
+  function renderCalendarMini(){
+    const nameday=(now().getMonth()===5&&now().getDate()===24)?"Jānis":(now().getMonth()===5&&now().getDate()===23)?"Līga":"";
+    const ev=app.events.length?app.events.map(e=>`<div class="row"><span class="dot ok"></span><div class="grow"><b>${safeText(e.summary||"Событие")}</b><small>${safeText(String(e.start?.dateTime||e.start?.date||"").slice(0,16).replace("T"," "))}</small></div></div>`).join(""):`<div class="empty">Событий на ближайшие дни нет</div>`;
+    return `<div class="panel"><div class="head"><div class="title" style="--accent:var(--violet)"><i>${I("calendar")}</i>Календарь</div><span class="badge">${now().toLocaleDateString("ru-RU",{day:"numeric",month:"short"})}</span></div>${nameday?`<div class="row"><span class="dot ok"></span><div class="grow"><b>Именины</b><small>${nameday}</small></div></div>`:""}${ev}</div>`;
+  }
+  function renderHeat(){
+    const d=app.data;
+    return `<section class="view on">
+      <div class="panel ${d.zhara?"danger":""}"><div class="head"><div class="title" style="--accent:${d.zhara?"var(--red)":"var(--amber)"}"><i>${I("sun")}</i>Режим «Жара»</div><div class="switch ${d.zhara?"on":""}" style="--c:var(--red)" onclick="v8act('zhara')"></div></div><div class="sub" style="line-height:1.5">${d.zhara?"Нагрев отключён: полотенцесушитель и тёплые полы выключены, автоматика по цене заморожена. Бойлер (ГВС) работает как обычно.":"Одной кнопкой выключить весь нагрев (полы + полотенцесушитель), кроме бойлера. Для жары дома >25°."}</div></div>
+      <div class="panel" style="padding:0;overflow:hidden"><div class="head" style="padding:14px 16px 0"><div class="title" style="--accent:var(--amber)"><i>${I("boiler")}</i>Схема котла</div></div>
+      <iframe src="/local/boiler.html" title="Схема котла" style="display:block;width:100%;height:300px;border:0;margin-top:8px;background:#eef1f5"></iframe></div>
+      <div class="panel"><div class="head"><div class="title" style="--accent:var(--amber)"><i>${I("flame")}</i>Котёл</div><div class="switch ${d.boiler.power?"on":""}" style="--c:var(--amber)" onclick="v8act('boiler')"></div></div>
+      <div class="cards">${tile("boil","temp","ГВС",d.boiler.cwu+"°",`цель ${d.boiler.cwuSet}°`,"var(--amber)","")}${tile("boil","temp","CO",d.boiler.co+"°",`цель ${d.boiler.coSet}°`,"var(--amber)","")}</div>
+      <div class="head" style="margin-top:14px"><span class="sub">ГВС</span></div><div class="seg" style="--n:5;--c:var(--amber)">${[40,45,50,55,60].map(x=>`<button class="${d.boiler.cwuSet===x?"on":""}" onclick="v8act('cwu',${x})">${x}°</button>`).join("")}</div>
+      <div class="head" style="margin-top:12px"><span class="sub">CO</span></div><div class="seg" style="--n:4;--c:var(--amber)">${[50,60,68,75].map(x=>`<button class="${d.boiler.coSet===x?"on":""}" onclick="v8act('co',${x})">${x}°</button>`).join("")}</div></div>
+      <div class="panel"><div class="head"><div class="title" style="--accent:var(--water)"><i>${I("temp")}</i>Тёплый пол</div></div>${d.floor.map((f,i)=>`<div class="row"><div class="grow"><b>${f.name}</b><small>${f.temp}° · ${f.mode}</small></div><div class="seg" style="width:160px;--n:2;--c:var(--violet)"><button class="${f.mode==="auto"?"on":""}" onclick="v8act('floor',[${i},'auto'])">Авто</button><button class="${f.mode==="manual"?"on":""}" onclick="v8act('floor',[${i},'manual'])">30°</button></div></div>`).join("")}</div>
+      <div class="panel"><div class="head"><div class="title" style="--accent:var(--amber)"><i>${I("temp")}</i>Нагрев (розетки)</div></div><div class="grid2">${d.plugs.filter(p=>p.id==="boil"||p.id==="cal").map(p=>`<div class="tile ${p.avail===false?"":(p.on?"on":"")}" style="--c:var(--amber);min-height:78px${p.avail===false?";opacity:.55":""}" onclick="v8togglePlug('${p.id}')"><div class="k">${I(p.icon,17)} ${safeText(p.name)}</div><div class="s">${p.avail===false?"нет данных":(p.on?"включено":"выключено")}</div></div>`).join("")}</div></div>
+    </section>`;
+  }
+  function renderDevices(){
+    const d=app.data;
+    const lights=new Map(d.lights.map(x=>[x.id,x])), plugs=new Map(d.plugs.map(x=>[x.id,x]));
+    const rooms=[
+      {name:"Кухня",ids:["isl","tbl","led1","led2","rec"]},
+      {name:"Гостиная",ids:["tv1","tv2","gir"]},
+      {name:"Прихожая и двор",ids:["entr","fanar","hall","ver","proj"]},
+      {name:"Баня",ids:["sauna","cal"]},
+      {name:"Аквариум и техника",ids:["akv","hyd"]},
+      {name:"Тепло и вода",ids:["boil"]}
+    ];
+    const deviceTile=x=>x?`<div class="tile ${x.avail===false?"":(x.on?"on":"")}" style="--c:${lights.has(x.id)?"var(--amber)":"var(--green)"};min-height:78px${x.avail===false?";opacity:.55":""}" onclick="${lights.has(x.id)?`v8toggleLight('${x.id}')`:`v8togglePlug('${x.id}')`}"><div class="k">${I(lights.has(x.id)?"bulb":x.icon,17)} ${safeText(x.name)}</div><div class="s">${x.avail===false?"нет данных":(x.on?"включено":"выключено")}</div></div>`:"";
+    const climate=name=>(d.rooms||[]).find(r=>r.name===name);
+    return `<section class="view on">
+      <header class="page-head"><h1>Управление</h1><p>Устройства собраны по помещениям</p></header>
+      <div class="actions"><button class="action" onclick="v8act('allLightsOff')">${I("bulb")}Выключить весь свет</button></div>
+      ${rooms.map(room=>{const c=climate(room.name),items=room.ids.map(id=>lights.get(id)||plugs.get(id)).filter(Boolean);return `<div class="panel"><div class="head"><div class="title" style="--accent:var(--accent-gold)"><i>${I("home")}</i>${safeText(room.name)}</div><span class="badge">${c&&Number.isFinite(c.temp)?c.temp.toFixed(1)+"°":items.filter(x=>x.on).length+" вкл"}</span></div>${c&&Number.isFinite(c.hum)?`<div class="sub" style="margin-bottom:10px">Влажность ${Math.round(c.hum)}%</div>`:""}<div class="grid2">${items.map(deviceTile).join("")}</div></div>`}).join("")}
+    </section>`;
+  }
+  function renderEnergy(){
+    const d=app.data,p=d.price,max=Math.max(...p.arr,1),t=p.avail?priceTier(p.now):["","нет данных","var(--muted)"],pk=d.cost.priceKnown,maxCost=Math.max(...d.cost.items.filter(i=>i.avail).map(i=>i.cost),.01);
+    return `<section class="view on"><header class="page-head"><h1>Энергия</h1><p>Цена Nord Pool и измеряемые нагрузки</p></header><div class="panel"><div class="head"><div class="title" style="--accent:var(--blue)"><i>${I("bolt")}</i>Электричество</div><span class="badge ${t[0]}">${t[1]}</span></div>
+      <div class="v mono" style="font-size:44px;font-weight:800;color:${t[2]}" data-countup="${p.avail?p.now:""}" data-dec="3">${p.avail?p.now.toFixed(3):"—"}</div><div class="sub">EUR/кВт·ч · следующий час ${Number.isFinite(p.next)?p.next.toFixed(3):"—"}</div>
+      ${renderPriceChart(p.arr,now().getHours(),170)}
+      <div class="best-window"><b>Ночная EV 2ч</b><div class="sub">${safeText(p.nightWindow||"нет данных")} · самые дешёвые 2 часа ночи</div></div></div>
+      <div class="panel"><div class="head"><div class="title"><i>${I("plug")}</i>Стоимость Nord Pool</div><span class="badge mono">${pk?"≈ "+d.cost.total.toFixed(2)+" €":"—"}</span></div><div class="sub" style="margin:-2px 0 8px">Сегодня · предварительно (кВт·ч × средняя цена Nord Pool)</div>${d.cost.items.map(i=>`<div class="row"><i style="color:var(--${i.system})">${I(i.icon,19)}</i><div class="grow"><b>${i.name}</b><small>${i.avail?`<span style="display:inline-block;width:${Math.max(4,i.cost/maxCost*100)}%;height:4px;border-radius:8px;background:var(--${i.system})"></span>`:"нет данных с датчика"}</small></div><div class="right mono">${i.avail?`${i.kwh.toFixed(1)}<small>${pk?"≈ "+i.cost.toFixed(2)+" € · предв.":"цена ?"}</small>`:`<span style="color:var(--muted)">—</span>`}</div></div>`).join("")}<div class="row" style="border-top:1px solid var(--line);margin-top:10px;padding-top:12px"><i style="color:var(--amber)">${I("bolt",19)}</i><div class="grow"><b>Итого за месяц</b><small>накоплено с 1-го числа</small></div><div class="right mono" style="color:var(--amber)"><span data-countup="${d.cost.month||0}" data-dec="2">${(d.cost.month||0).toFixed(2)}</span> €</div></div></div><div class="panel"><div class="head"><div class="title" style="--accent:var(--green)"><i>${I("car")}</i>EV зарядка</div><span class="badge ${d.ev.manual?"warn":"ok"}">${d.ev.manual?"ручной":"авто"}</span></div><div class="grid2">${tile("ev","car","Статус",d.ev.status,`${d.ev.kwh.toFixed(1)} кВт·ч · старт ${d.ev.sched}`,"var(--green)","v8act('evManual')")}${tile("price","bolt","Цена",p.avail?p.now.toFixed(3):"—","сейчас","var(--blue)","")}</div><div class="actions"><button class="action primary" onclick="v8act('evStart')">${I("play")}Зарядить</button><button class="action" onclick="v8act('evScheduleNight')">${I("moon")}Ночь 2ч</button><button class="action" onclick="v8act('evStop')">${I("stop")}Стоп</button><button class="action" onclick="v8act('evManual')">${I("sliders")}Ручной</button></div></div></section>`;
+  }
+  function renderSecurity(){
+    const d=app.data,a=alerts(), sensors=[["door","Входная дверь",!d.sensors.door,d.sensors.door?"Открыта":"Закрыта"],["smoke","Дым",!d.sensors.smoke,d.sensors.smoke?"ДЫМ":"Норма"],["water","Ванная",!d.sensors.bath,d.sensors.bath?"ТЕЧЬ":"Сухо"],["water","Душевая 1эт",!d.sensors.shower,d.sensors.shower?"ТЕЧЬ":"Сухо"],["water","Гараж",!d.sensors.garage,d.sensors.garage?"ТЕЧЬ":"Сухо"],["water","Кухня",!d.sensors.kitchen,d.sensors.kitchen?"ТЕЧЬ":"Сухо"],["motion","Движение (гостиная)",!d.sensors.motion,d.sensors.motion?"Есть!":"Нет"]];
+    return `<section class="view on"><div class="panel"><div class="head"><div class="title" style="--accent:${a.length?"var(--red)":"var(--green)"}"><i>${I("shield")}</i>${a.length?"Есть внимание":"Всё в норме"}</div><span class="badge ${a.length?"bad":"ok"}">${a.length?a.length:"OK"}</span></div><div class="grid2"><button class="action ${d.security.armed?"danger":"primary"}" onclick="v8act('arm')">${I(d.security.armed?"unlock":"lock")}${d.security.armed?"Снять":"Охрана"}</button><button class="action ${d.water.open?"":"danger"}" onclick="${d.water.open?"v8act('closeWater')":"v8act('openWater')"}">${I("valve")}${d.water.open?"Закрыть воду":"Открыть воду"}</button></div></div>
+      <div class="panel"><div class="head"><div class="title"><i>${I("wifi")}</i>Датчики</div><span class="sub">Протечки · дверь · дым</span></div>${sensors.map(s=>`<div class="row"><span class="dot ${s[2]?"ok":"bad"}"></span><i style="color:var(--muted)">${I(s[0],18)}</i><div class="grow"><b>${s[1]}</b></div><div class="right ${s[2]?"":"sensor-danger"}" style="color:${s[2]?"var(--muted)":"var(--red)"}">${s[3]}</div></div>`).join("")}</div>
+      <div class="panel"><div class="head"><div class="title"><i>${I("battery")}</i>Батареи</div></div><div class="grid2">${d.batteries.map(b=>`<div class="tile" style="min-height:74px"><div class="k">${b.name}</div><div class="v mono" style="font-size:21px;color:${b.pct<=15?"var(--red)":b.pct<=30?"var(--amber)":"var(--green)"}">${b.pct}%</div></div>`).join("")}</div></div></section>`;
+  }
+  function renderEvents(){
+    const d=app.data,a=alerts();
+    return `<section class="view on"><header class="page-head"><h1>События</h1><p>Только важное и требующее внимания</p></header><div class="panel"><div class="head"><div class="title" style="--accent:${a.length?'var(--red)':'var(--green)'}"><i>${I('shield')}</i>${a.length?'Требуется внимание':'В доме всё спокойно'}</div><span class="badge ${a.length?'bad':'ok'}">${a.length||'OK'}</span></div>${a.length?a.map(x=>`<div class="row"><span class="dot bad"></span><div class="grow"><b>${safeText(x)}</b></div></div>`).join(''):'<div class="sub">Критические датчики доступны, активных тревог нет.</div>'}</div><div class="panel"><div class="head"><div class="title" style="--accent:var(--accent-gold)"><i>${I('calendar')}</i>Последние события</div></div><div class="row"><span class="dot ok"></span><div class="grow"><b>Данные дома обновлены</b><small>состояния получены через защищённый Mini App backend</small></div><div class="right">сейчас</div></div><div class="row"><span class="dot ok"></span><div class="grow"><b>Электричество</b><small>текущая цена ${d.price.avail?d.price.now.toFixed(3):"—"} EUR/кВт·ч</small></div><div class="right">${fmtTime(now())}</div></div>${app.events.slice(0,4).map(e=>`<div class="row"><span class="dot"></span><div class="grow"><b>${safeText(e.summary||'Событие')}</b><small>${safeText(String(e.start?.dateTime||e.start?.date||'').slice(0,16).replace('T',' '))}</small></div></div>`).join('')}</div><div class="section-label"><h2>Системы</h2></div><div class="quick-grid"><button class="action" onclick="v8nav('security')">${I('shield')}Безопасность<small>вода, дым, охрана</small></button><button class="action" onclick="v8nav('heat')">${I('flame')}Тепло и вода<small>котёл, полы, кран</small></button><button class="action" onclick="v8nav('graph')">${I('graph')}Граф связей<small>диагностика дома</small></button><button class="action" onclick="v8nav('settings')">${I('gear')}Настройки<small>тема и обновление</small></button></div></section>`;
+  }
+  function renderSettings(){
+    const s=app.settings;
+    return `<section class="view on"><div class="panel"><div class="head"><div class="title" style="--accent:var(--cyan)"><i>${I("gear")}</i>Настройки</div><button class="badge" onclick="v8nav('home')">← Назад</button></div>
+      ${settingRow("Тема","Авто/тёмная/светлая",`<div class="seg" style="width:190px;--n:2;--c:var(--blue)"><button class="${s.theme==="dark"?"on":""}" onclick="v8set('theme','dark')">Тёмная</button><button class="${s.theme==="light"?"on":""}" onclick="v8set('theme','light')">Светлая</button></div>`)}
+      ${settingRow("Виброотклик","Лёгкий haptic при нажатиях",sw("haptic",s.haptic))}
+      ${settingRow("Крупные кнопки","Для управления на ходу",sw("big",s.big))}
+      ${settingRow("Компактно","Больше данных на экране",sw("compact",s.compact))}
+      ${settingRow("Безопасный режим","Блокирует опасные команды",sw("safe",s.safe))}
+      ${settingRow("Обновление","Интервал опроса HA",`<select onchange="v8set('refresh',Number(this.value))" style="background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:9px"><option ${s.refresh===10?"selected":""} value="10">10 сек</option><option ${s.refresh===30?"selected":""} value="30">30 сек</option><option ${s.refresh===60?"selected":""} value="60">60 сек</option></select>`)}
+      <div class="actions"><button class="action primary" onclick="v8act('refresh')">${I("refresh")}Обновить</button><button class="action" onclick="localStorage.removeItem('${LS}');location.reload()">${I("x")}Сброс</button></div></div></section>`;
+  }
+  function settingRow(title,sub,control){return `<div class="row"><div class="grow"><b>${title}</b><small>${sub}</small></div>${control}</div>`}
+  function sw(k,v){return `<div class="switch ${v?"on":""}" style="--c:var(--cyan)" onclick="v8set('${k}',${!v})"></div>`}
+  renderShell(); auth();
+})();
+</script>
+</body>
+</html>

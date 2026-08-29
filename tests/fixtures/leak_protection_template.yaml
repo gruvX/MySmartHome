@@ -1,0 +1,252 @@
+# Secret-free snapshot of the leak-protection template as DEPLOYED in
+# /config/configuration.yaml (top-level `template:` block, added 2026-07-27).
+# tests/test_leak_truth.py parses this when no local configuration.yaml snapshot exists.
+# Keep in sync with the deployed file — it is the ONE source of truth for leak status.
+template:
+  # --- SINGLE SOURCE OF TRUTH for leak protection (added 2026-07-27) -----------
+  # Every UI (tablet panel, Telegram Mini App) reads THIS entity and nothing else.
+  # Do NOT re-implement "is this sensor OK" anywhere else - that is exactly the bug
+  # that recurred for two months (~10 divergent copies of the rule).
+  #
+  # state: leak | blind | ok   (worst first: any leak -> leak; else any blind -> blind; else ok)
+  # PER-SENSOR RULE (the one rule):
+  #   1. leak   if HA state == 'on' OR the Tuya-cloud raw value == '1'  ('1'=wet, '2'=dry, MEASURED)
+  #   2. else ALIVE:  cloud is USABLE when sensor.tuya_leak_cloud is not unavailable/unknown,
+  #                   its src != 'error' and (now - ts) < 300 s.
+  #                   USABLE     -> alive := online[entity] is true
+  #                   NOT usable -> alive := HA state in ('on','off') AND last_updated age < 24 h
+  #   3. blind  if not alive, otherwise dry
+  # CONSEQUENCE: these are battery SLEEPERS - they report only on wet/dry events. Silence for
+  # hours or a whole day is NORMAL. A silent-but-cloud-online sensor is `dry`, NEVER `blind`.
+  # Silence alone must never produce `blind`. There is NO 3-hour staleness rule any more.
+  # The 4 heavy templates below (state, per_sensor, leak_names, blind_names) hold the
+  # BYTE-IDENTICAL rule text; tests/test_leak_truth.py asserts they stay identical.
+  - sensor:
+      - name: "Защита от протечки"
+        unique_id: leak_protection_status
+        icon: mdi:water-alert-outline
+        state: |
+          {%- set ids = [
+              ['binary_sensor.vannaia_moisture','Ванная'],
+              ['binary_sensor.garazh_moisture','Гараж'],
+              ['binary_sensor.kukhnia_moisture','Кухня'],
+              ['binary_sensor.water_sensor_4_moisture','Душевая 1эт'] ] -%}
+          {%- set cl = 'sensor.tuya_leak_cloud' -%}
+          {%- set cs = states(cl) -%}
+          {%- set src = state_attr(cl,'src') -%}
+          {%- set ts = state_attr(cl,'ts') -%}
+          {%- set raw = state_attr(cl,'raw') -%}
+          {%- set onl = state_attr(cl,'online') -%}
+          {%- set nsx = namespace(h=[], a=[]) -%}
+          {%- for id, nm in ids -%}
+            {%- set nsx.h = nsx.h + [[id, states(id)]] -%}
+            {%- set so = states[id] -%}
+            {%- set nsx.a = nsx.a + [[id, (as_timestamp(now()) - as_timestamp(so.last_updated)) if so is not none else -1]] -%}
+          {%- endfor -%}
+          {%- set hsmap = dict(nsx.h) -%}
+          {%- set hagemap = dict(nsx.a) -%}
+          {%- set raw = raw if raw is mapping else {} -%}
+          {%- set onl = onl if onl is mapping else {} -%}
+          {%- set hsmap = hsmap if hsmap is mapping else {} -%}
+          {%- set hagemap = hagemap if hagemap is mapping else {} -%}
+          {%- set has_ts = ts is not none and (ts | float(0)) > 0 -%}
+          {%- set cage = ((as_timestamp(now()) - (ts | float(0))) | round(0) | int) if has_ts else -1 -%}
+          {%- set usable = (cs not in ['unavailable','unknown','none','None','']) and (src is string) and (src != 'error') and has_ts and cage >= 0 and cage < 300 -%}
+          {%- set ns = namespace(pairs=[], leak=[], blind=[]) -%}
+          {%- for id, nm in ids -%}
+            {%- set hs = hsmap.get(id) | string -%}
+            {%- set rv = raw.get(id) | string -%}
+            {%- if hs == 'on' or rv == '1' -%}
+              {%- set ns.pairs = ns.pairs + [[id,'leak']] -%}
+              {%- set ns.leak = ns.leak + [nm] -%}
+            {%- else -%}
+              {%- if usable -%}
+                {%- set alive = (onl.get(id) | string | lower) == 'true' -%}
+              {%- else -%}
+                {%- set ha = hagemap.get(id) | float(-1) -%}
+                {%- set alive = (hs in ['on','off']) and ha >= 0 and ha < 86400 -%}
+              {%- endif -%}
+              {%- if alive -%}
+                {%- set ns.pairs = ns.pairs + [[id,'dry']] -%}
+              {%- else -%}
+                {%- set ns.pairs = ns.pairs + [[id,'blind']] -%}
+                {%- set ns.blind = ns.blind + [nm] -%}
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {%- set per = dict(ns.pairs) -%}
+          {%- set status = 'leak' if ns.leak | count > 0 else ('blind' if ns.blind | count > 0 else 'ok') -%}
+          {{ status }}
+        attributes:
+          per_sensor: |
+            {%- set ids = [
+                ['binary_sensor.vannaia_moisture','Ванная'],
+                ['binary_sensor.garazh_moisture','Гараж'],
+                ['binary_sensor.kukhnia_moisture','Кухня'],
+                ['binary_sensor.water_sensor_4_moisture','Душевая 1эт'] ] -%}
+            {%- set cl = 'sensor.tuya_leak_cloud' -%}
+            {%- set cs = states(cl) -%}
+            {%- set src = state_attr(cl,'src') -%}
+            {%- set ts = state_attr(cl,'ts') -%}
+            {%- set raw = state_attr(cl,'raw') -%}
+            {%- set onl = state_attr(cl,'online') -%}
+            {%- set nsx = namespace(h=[], a=[]) -%}
+            {%- for id, nm in ids -%}
+              {%- set nsx.h = nsx.h + [[id, states(id)]] -%}
+              {%- set so = states[id] -%}
+              {%- set nsx.a = nsx.a + [[id, (as_timestamp(now()) - as_timestamp(so.last_updated)) if so is not none else -1]] -%}
+            {%- endfor -%}
+            {%- set hsmap = dict(nsx.h) -%}
+            {%- set hagemap = dict(nsx.a) -%}
+            {%- set raw = raw if raw is mapping else {} -%}
+            {%- set onl = onl if onl is mapping else {} -%}
+            {%- set hsmap = hsmap if hsmap is mapping else {} -%}
+            {%- set hagemap = hagemap if hagemap is mapping else {} -%}
+            {%- set has_ts = ts is not none and (ts | float(0)) > 0 -%}
+            {%- set cage = ((as_timestamp(now()) - (ts | float(0))) | round(0) | int) if has_ts else -1 -%}
+            {%- set usable = (cs not in ['unavailable','unknown','none','None','']) and (src is string) and (src != 'error') and has_ts and cage >= 0 and cage < 300 -%}
+            {%- set ns = namespace(pairs=[], leak=[], blind=[]) -%}
+            {%- for id, nm in ids -%}
+              {%- set hs = hsmap.get(id) | string -%}
+              {%- set rv = raw.get(id) | string -%}
+              {%- if hs == 'on' or rv == '1' -%}
+                {%- set ns.pairs = ns.pairs + [[id,'leak']] -%}
+                {%- set ns.leak = ns.leak + [nm] -%}
+              {%- else -%}
+                {%- if usable -%}
+                  {%- set alive = (onl.get(id) | string | lower) == 'true' -%}
+                {%- else -%}
+                  {%- set ha = hagemap.get(id) | float(-1) -%}
+                  {%- set alive = (hs in ['on','off']) and ha >= 0 and ha < 86400 -%}
+                {%- endif -%}
+                {%- if alive -%}
+                  {%- set ns.pairs = ns.pairs + [[id,'dry']] -%}
+                {%- else -%}
+                  {%- set ns.pairs = ns.pairs + [[id,'blind']] -%}
+                  {%- set ns.blind = ns.blind + [nm] -%}
+                {%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {%- set per = dict(ns.pairs) -%}
+            {%- set status = 'leak' if ns.leak | count > 0 else ('blind' if ns.blind | count > 0 else 'ok') -%}
+            {{ per | to_json }}
+          leak_names: |
+            {%- set ids = [
+                ['binary_sensor.vannaia_moisture','Ванная'],
+                ['binary_sensor.garazh_moisture','Гараж'],
+                ['binary_sensor.kukhnia_moisture','Кухня'],
+                ['binary_sensor.water_sensor_4_moisture','Душевая 1эт'] ] -%}
+            {%- set cl = 'sensor.tuya_leak_cloud' -%}
+            {%- set cs = states(cl) -%}
+            {%- set src = state_attr(cl,'src') -%}
+            {%- set ts = state_attr(cl,'ts') -%}
+            {%- set raw = state_attr(cl,'raw') -%}
+            {%- set onl = state_attr(cl,'online') -%}
+            {%- set nsx = namespace(h=[], a=[]) -%}
+            {%- for id, nm in ids -%}
+              {%- set nsx.h = nsx.h + [[id, states(id)]] -%}
+              {%- set so = states[id] -%}
+              {%- set nsx.a = nsx.a + [[id, (as_timestamp(now()) - as_timestamp(so.last_updated)) if so is not none else -1]] -%}
+            {%- endfor -%}
+            {%- set hsmap = dict(nsx.h) -%}
+            {%- set hagemap = dict(nsx.a) -%}
+            {%- set raw = raw if raw is mapping else {} -%}
+            {%- set onl = onl if onl is mapping else {} -%}
+            {%- set hsmap = hsmap if hsmap is mapping else {} -%}
+            {%- set hagemap = hagemap if hagemap is mapping else {} -%}
+            {%- set has_ts = ts is not none and (ts | float(0)) > 0 -%}
+            {%- set cage = ((as_timestamp(now()) - (ts | float(0))) | round(0) | int) if has_ts else -1 -%}
+            {%- set usable = (cs not in ['unavailable','unknown','none','None','']) and (src is string) and (src != 'error') and has_ts and cage >= 0 and cage < 300 -%}
+            {%- set ns = namespace(pairs=[], leak=[], blind=[]) -%}
+            {%- for id, nm in ids -%}
+              {%- set hs = hsmap.get(id) | string -%}
+              {%- set rv = raw.get(id) | string -%}
+              {%- if hs == 'on' or rv == '1' -%}
+                {%- set ns.pairs = ns.pairs + [[id,'leak']] -%}
+                {%- set ns.leak = ns.leak + [nm] -%}
+              {%- else -%}
+                {%- if usable -%}
+                  {%- set alive = (onl.get(id) | string | lower) == 'true' -%}
+                {%- else -%}
+                  {%- set ha = hagemap.get(id) | float(-1) -%}
+                  {%- set alive = (hs in ['on','off']) and ha >= 0 and ha < 86400 -%}
+                {%- endif -%}
+                {%- if alive -%}
+                  {%- set ns.pairs = ns.pairs + [[id,'dry']] -%}
+                {%- else -%}
+                  {%- set ns.pairs = ns.pairs + [[id,'blind']] -%}
+                  {%- set ns.blind = ns.blind + [nm] -%}
+                {%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {%- set per = dict(ns.pairs) -%}
+            {%- set status = 'leak' if ns.leak | count > 0 else ('blind' if ns.blind | count > 0 else 'ok') -%}
+            {{ ns.leak | to_json }}
+          blind_names: |
+            {%- set ids = [
+                ['binary_sensor.vannaia_moisture','Ванная'],
+                ['binary_sensor.garazh_moisture','Гараж'],
+                ['binary_sensor.kukhnia_moisture','Кухня'],
+                ['binary_sensor.water_sensor_4_moisture','Душевая 1эт'] ] -%}
+            {%- set cl = 'sensor.tuya_leak_cloud' -%}
+            {%- set cs = states(cl) -%}
+            {%- set src = state_attr(cl,'src') -%}
+            {%- set ts = state_attr(cl,'ts') -%}
+            {%- set raw = state_attr(cl,'raw') -%}
+            {%- set onl = state_attr(cl,'online') -%}
+            {%- set nsx = namespace(h=[], a=[]) -%}
+            {%- for id, nm in ids -%}
+              {%- set nsx.h = nsx.h + [[id, states(id)]] -%}
+              {%- set so = states[id] -%}
+              {%- set nsx.a = nsx.a + [[id, (as_timestamp(now()) - as_timestamp(so.last_updated)) if so is not none else -1]] -%}
+            {%- endfor -%}
+            {%- set hsmap = dict(nsx.h) -%}
+            {%- set hagemap = dict(nsx.a) -%}
+            {%- set raw = raw if raw is mapping else {} -%}
+            {%- set onl = onl if onl is mapping else {} -%}
+            {%- set hsmap = hsmap if hsmap is mapping else {} -%}
+            {%- set hagemap = hagemap if hagemap is mapping else {} -%}
+            {%- set has_ts = ts is not none and (ts | float(0)) > 0 -%}
+            {%- set cage = ((as_timestamp(now()) - (ts | float(0))) | round(0) | int) if has_ts else -1 -%}
+            {%- set usable = (cs not in ['unavailable','unknown','none','None','']) and (src is string) and (src != 'error') and has_ts and cage >= 0 and cage < 300 -%}
+            {%- set ns = namespace(pairs=[], leak=[], blind=[]) -%}
+            {%- for id, nm in ids -%}
+              {%- set hs = hsmap.get(id) | string -%}
+              {%- set rv = raw.get(id) | string -%}
+              {%- if hs == 'on' or rv == '1' -%}
+                {%- set ns.pairs = ns.pairs + [[id,'leak']] -%}
+                {%- set ns.leak = ns.leak + [nm] -%}
+              {%- else -%}
+                {%- if usable -%}
+                  {%- set alive = (onl.get(id) | string | lower) == 'true' -%}
+                {%- else -%}
+                  {%- set ha = hagemap.get(id) | float(-1) -%}
+                  {%- set alive = (hs in ['on','off']) and ha >= 0 and ha < 86400 -%}
+                {%- endif -%}
+                {%- if alive -%}
+                  {%- set ns.pairs = ns.pairs + [[id,'dry']] -%}
+                {%- else -%}
+                  {%- set ns.pairs = ns.pairs + [[id,'blind']] -%}
+                  {%- set ns.blind = ns.blind + [nm] -%}
+                {%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {%- set per = dict(ns.pairs) -%}
+            {%- set status = 'leak' if ns.leak | count > 0 else ('blind' if ns.blind | count > 0 else 'ok') -%}
+            {{ ns.blind | to_json }}
+          checked: |
+            {{ now().isoformat(timespec='seconds') }}
+          cloud_src: |
+            {%- set cl = 'sensor.tuya_leak_cloud' -%}
+            {%- set ts = state_attr(cl,'ts') -%}
+            {%- set src = state_attr(cl,'src') -%}
+            {%- set has_ts = ts is not none and (ts | float(0)) > 0 -%}
+            {%- set cage = ((as_timestamp(now()) - (ts | float(0))) | round(0) | int) if has_ts else -1 -%}
+            {{ src if src is string else 'unknown' }}
+          cloud_age_sec: |
+            {%- set cl = 'sensor.tuya_leak_cloud' -%}
+            {%- set ts = state_attr(cl,'ts') -%}
+            {%- set src = state_attr(cl,'src') -%}
+            {%- set has_ts = ts is not none and (ts | float(0)) > 0 -%}
+            {%- set cage = ((as_timestamp(now()) - (ts | float(0))) | round(0) | int) if has_ts else -1 -%}
+            {{ cage }}

@@ -1,0 +1,33 @@
+# =============================================================================
+# rest_command + REST sensors for a local device API (e.g. ecoNET24 boiler)
+#   →  configuration.yaml
+# De-identified. Host + credentials come from secrets.yaml — never inline them.
+# Reload after adding a NEW rest_command:  POST /api/services/rest_command/reload
+# =============================================================================
+
+rest_command:
+  # Write a setpoint. IMPORTANT for ecoNET24: use rmCurrNewParam (it actually
+  # writes); the plain newParam endpoint returns OK but changes nothing.
+  boiler_set_cwu:
+    url: "http://<DEVICE_IP>/econet/rmCurrNewParam?newParamKey=<PARAM_INDEX>&newParamValue={{ value }}"
+    method: GET
+    username: !secret boiler_user
+    password: !secret boiler_password
+
+# Poll the device and expose fields as sensors. Guard EVERY numeric field so a
+# missing key yields 0 (never ''), and set per-field availability — otherwise a
+# WiFi drop makes value_template raise ValueError.
+rest:
+  - resource: "http://<DEVICE_IP>/econet/regParams"
+    username: !secret boiler_user
+    password: !secret boiler_password
+    scan_interval: 60
+    sensor:
+      - name: Boiler CWU Temperature
+        unique_id: boiler_cwu_temperature
+        value_template: >
+          {% set curr = value_json.curr %}
+          {% if curr and curr.tempCWU is defined %}{{ curr.tempCWU }}{% else %}0{% endif %}
+        availability: "{{ value_json.curr is defined and value_json.curr.tempCWU is defined }}"
+        unit_of_measurement: "°C"
+        device_class: temperature

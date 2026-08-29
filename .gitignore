@@ -1,0 +1,148 @@
+# Local/runtime state
+.tmp_chrome_profile/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+
+# Local editor/agent state
+.claude/settings.local.json
+.codex/
+
+# Secrets and local deployment config
+.env
+.env.*
+!.env.example
+secrets.*
+*.secret.*
+local_config.json
+local_secrets.json
+
+# Generated backups and diagnostics
+backups/
+# Только каталог сырых снимков в корне. Скриншоты для README лежат в
+# assets/screenshots/ и ДОЛЖНЫ коммититься, иначе на GitHub битые картинки.
+/screenshots/
+*.bak
+*_backup.*
+*_current.*
+*_tmp.*
+
+# Project files that currently contain live credentials.
+# Keep local, do not commit until sanitized.
+docs/ai_deploy_guide.md
+docs/HA_System_Report.md
+
+# Private session notes and progress logs
+docs/progress.md
+docs/session_summary.md
+
+# Historical one-off HA scripts contain local tokens/passwords.
+# Keep them local until each file is sanitized.
+scripts/
+fix_tuya_reload_on_wet.py
+
+# Generated/deployed tablet builds can contain HA bearer tokens.
+tablet/tablet.html
+tablet/tablet_v2.html
+tablet/tablet_command.html
+tablet/design_source.html
+tablet/design_src/
+# Deployed/dev tablet panel + scratch builds follow the same convention:
+# they are deployed source (may embed a localStorage bearer token) — never
+# commit. Only tablet/assets/ and React *.jsx templates are tracked.
+tablet/tablet-panel.js
+tablet/tablet-panel.*.js
+tablet/tablet-panel.dev.html
+tablet/tablet-redirect.html
+tablet/_*.html
+tablet/_*.js
+
+# P0 orchestrator: close accidental-commit gaps for real credentials.
+# (.tmp_chrome_profile/ and .claude/settings.local.json already covered above.)
+*.bak*
+.claude-flow/
+
+# --- Session hygiene 2026-07-21 ---------------------------------------------
+# Local agent / session state (not project deliverables).
+.claude/
+.impeccable/
+.codex/
+
+# Token helper: hardcodes local sudo/admin credentials — keep local, never commit.
+set_new_ha_token.py
+
+# Scratch working copy of HA automations (not the deployed source of truth).
+scratch_automations.yaml
+
+# Verbatim snapshots of deployed scripts captured for before/after audits.
+# The human-readable *.diff is committed; the full copies stay local.
+*deployed_baseline*
+*deployed_patched*
+*deployed_v2*
+
+# Screenshot/render bundles under docs — owner keeps md/json/diff only, not images
+docs/**/*.png
+docs/**/*.jpg
+docs/**/*.jpeg
+docs/**/*.webp
+
+# Verbatim snapshots of the deployed HA config captured for the 2026-08-19 EV
+# auto-charge audit. /config/configuration.yaml embeds the ecoNET boiler
+# credentials inline, so these two directories must never be committed. The
+# authoritative rollback copy lives on the box at
+# /config/backup_ev_auto_20260819/ (md5s recorded in the session report).
+docs/audit/ev_auto_20260819/pull/
+docs/audit/ev_auto_20260819/staged/
+
+# --- Публикация репозитория 2026-08-29 ---------------------------------------
+# Рабочие каталоги стендов, рендеры и снимки живого дома. Это гигабайты картинок
+# и КОПИИ ЖИВОГО КОНФИГА: /config/configuration.yaml содержит учётные данные
+# котла ecoNET, а копии панелей и Mini App — имя владельца и его Telegram-id.
+# Ничего из этого в публичный репозиторий попадать не должно.
+.playwright-cli/
+output/
+home/
+electric/
+docs/audit/*/srv/
+docs/audit/**/new_config.yaml
+docs/audit/**/new_automations.yaml
+docs/audit/**/new_scripts.yaml
+docs/audit/**/new_component.py
+docs/audit/**/live_component.py
+docs/audit/**/*.html
+docs/audit/**/*.js
+
+# Любой файл-зеркало задеплоенного состояния: он снят с живого дома как есть,
+# со всеми именами и идентификаторами. Публикуем только обезличенный исходник.
+*.deployed.*
+
+# Сборки панели с зашитым названием дома (444 КБ и 352 КБ бинарного JS).
+tablet/tablet-panel-flow.js
+tablet/tablet-panel-v2.js
+tablet/tablet-panel-flow.dev.html
+
+# Прототип на node внутри docs/design: 134 МБ зависимостей и сборок.
+node_modules/
+**/node_modules/
+docs/design/**/dist/
+docs/design/**/.vite/
+*.tsbuildinfo
+
+# В docs/audit и docs/design публикуем ТОЛЬКО человекочитаемые отчёты (*.md).
+# Остальное — рабочие дампы: полные выгрузки состояний, реестр сущностей,
+# копии автоматизаций, отчёты стендов. Это инвентарь дома целиком, наружу не идёт.
+docs/audit/**
+!docs/audit/**/
+!docs/audit/**/*.md
+docs/design/**
+!docs/design/**/
+!docs/design/**/*.md
+# ...но не README/LICENSE из node_modules: они утащили в репозиторий 73 файла
+# сторонних пакетов и 22 МБ при клонировании.
+docs/design/**/node_modules/**
+
+# Внутренние журналы работы с секретами: не персональны, но публично описывают,
+# какие учётные данные существовали и где лежали. Наружу не идут.
+docs/CLEANUP_MANIFEST.md
+docs/orchestrator/P1_security_backlog.md

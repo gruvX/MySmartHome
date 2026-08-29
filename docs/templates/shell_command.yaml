@@ -1,0 +1,29 @@
+# =============================================================================
+# command_line sensors + shell_command  →  configuration.yaml
+# De-identified. The scripts read their OWN secrets from local_secrets.json /
+# env — do NOT pass tokens on the command line.
+# Reload:  POST /api/services/command_line/reload   (NOT reload_core_config)
+# =============================================================================
+
+command_line:
+  # EV charger status polled from cloud API by an on-HA python script.
+  # Script writes cache to /config/.ev_cache/ (NOT /tmp — HA runs as another user)
+  # and ALWAYS prints output before writing cache.
+  - sensor:
+      name: EV Charger Status
+      unique_id: ev_charger_status
+      command: "python3 /config/ev_query.py status"
+      scan_interval: 300          # raise this if the cloud API has a low quota
+      value_template: "{{ value }}"
+
+  - sensor:
+      name: EV Charger Energy
+      unique_id: ev_charger_energy
+      command: "python3 /config/ev_query.py energy"
+      scan_interval: 300
+      unit_of_measurement: kWh
+      value_template: "{{ value | float(0) }}"
+
+# One-shot triggers (e.g. recompute the cheapest charge window)
+shell_command:
+  ev_compute_window: "python3 /config/ev_best2h.py"

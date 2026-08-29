@@ -1,0 +1,389 @@
+- id: '1789300001001'
+  alias: "\U0001F6A8 Сторож сирены — недоступна (только уведомление)"
+  description: >-
+    NOTIFICATION-ONLY watchdog. Следит за siren.alarm (актуатор звукового
+    оповещения пожар/взлом). 2026-07-16 09:55 siren.alarm + select.alarm_volume
+    + number.alarm_time ушли в unavailable — тихая сирена не сработала бы. Эта
+    автоматизация ТОЛЬКО шлёт Telegram-сообщение, НЕ управляет никакими
+    устройствами (нет siren/switch/lock/climate/script/input_boolean вызовов).
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: siren.alarm
+    to: unavailable
+    for: 00:15:00
+    id: down
+  - trigger: state
+    entity_id: siren.alarm
+    to: unknown
+    for: 00:15:00
+    id: down
+  - trigger: state
+    entity_id: siren.alarm
+    from: unavailable
+    for: 00:02:00
+    id: up
+  - trigger: state
+    entity_id: siren.alarm
+    from: unknown
+    for: 00:02:00
+    id: up
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.id == ''down'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: "⚠️ Сирена недоступна более 15 мин ({{ states('siren.alarm')\
+            \ }}).\nЗвуковое оповещение при пожаре/взломе может НЕ сработать — проверьте\
+            \ устройство (питание/переподключение/WiFi).\nЗатронуты: siren.alarm,\
+            \ select.alarm_volume, number.alarm_time."
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.id == ''up'' and states(''siren.alarm'') not in
+          [''unavailable'', ''unknown''] }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: "✅ Сирена снова доступна ({{ states('siren.alarm') }}). Звуковое\
+            \ оповещение восстановлено."
+- id: '1789400001001'
+  alias: "\U0001F525 Сторож котла — сигнал тревоги (только уведомление)"
+  description: >-
+    NOTIFICATION-ONLY watchdog. Следит за binary_sensor.boiler_alarm
+    (ecoNET curr.alarmOutput). 2026-07-16 реальный простой отопления ~7.4 ч
+    остался незамеченным, потому что этот сигнал никто не мониторил. Эта
+    автоматизация ТОЛЬКО шлёт Telegram-сообщение и НЕ управляет никакими
+    устройствами (нет boiler/switch/climate/select/number/script/input_boolean
+    вызовов — только telegram_bot.send_message). Работает круглосуточно:
+    отсутствие тепла опасно и ночью.
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.boiler_alarm
+    to: 'on'
+    for: 00:05:00
+    id: down
+  - trigger: state
+    entity_id: binary_sensor.boiler_alarm
+    from: 'on'
+    to: 'off'
+    for: 00:02:00
+    id: up
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.id == ''down'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: "\u26A0\uFE0F Котёл: сигнал тревоги (alarmOutput) активен >5 мин.\
+            \ Возможно погас огонь / нет тепла (режим {{ states('sensor.boiler_mode')\
+            \ }}, CO {{ states('sensor.boiler_co_temperature') }}\u00B0). Проверьте котёл."
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.id == ''up'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: "\u2705 Котёл: сигнал тревоги снят."
+- id: '1789500001001'
+  alias: "\U0001F5A5️ Proxmox: узел mylab офлайн (только уведомление)"
+  description: >-
+    NOTIFICATION-ONLY watchdog. Следит за binary_sensor.mylab_status (device_class
+    running) — доступность узла Proxmox mylab. Единственное действие —
+    telegram_bot.send_message (chat_id 100000000). НЕ управляет устройствами,
+    НЕ вызывает Proxmox button/switch/service.
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.mylab_status
+    to: 'off'
+    for: 00:05:00
+    id: down
+  - trigger: state
+    entity_id: binary_sensor.mylab_status
+    to: unavailable
+    for: 00:05:00
+    id: down
+  - trigger: state
+    entity_id: binary_sensor.mylab_status
+    to: unknown
+    for: 00:05:00
+    id: down
+  - trigger: state
+    entity_id: binary_sensor.mylab_status
+    from: 'off'
+    to: 'on'
+    for: 00:02:00
+    id: up
+  - trigger: state
+    entity_id: binary_sensor.mylab_status
+    from: unavailable
+    to: 'on'
+    for: 00:02:00
+    id: up
+  - trigger: state
+    entity_id: binary_sensor.mylab_status
+    from: unknown
+    to: 'on'
+    for: 00:02:00
+    id: up
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.id == ''down'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: "⚠️ Proxmox: узел mylab недоступен > 5 мин (состояние {{ states('binary_sensor.mylab_status') }}). ВМ и резервное копирование могут не работать. Проверьте хост."
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.id == ''up'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: "✅ Proxmox: узел mylab снова онлайн."
+- id: '1789500001002'
+  alias: "\U0001F6D1 Proxmox: ВМ неожиданно остановлена (только уведомление)"
+  description: >-
+    NOTIFICATION-ONLY watchdog. Следит за статусом 5 рабочих ВМ (device_class
+    running) и сообщает, когда running-ВМ переходит в stopped. Шаблон/база
+    vmid 9000 (binary_sensor.homelab_clean_ubuntu_2404_status) НАМЕРЕННО исключён —
+    остановленный шаблон это норма, не тревога. Единственное действие —
+    telegram_bot.send_message (chat_id 100000000). НЕ управляет устройствами,
+    НЕ вызывает Proxmox button/switch/service.
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id:
+    - binary_sensor.homelab_staging_status
+    - binary_sensor.homelab_dev_status
+    - binary_sensor.termix_status
+    - binary_sensor.homeassistant_status
+    - binary_sensor.homelab_ci_runner_status
+    from: 'on'
+    to: 'off'
+    for: 00:02:00
+    id: down
+  - trigger: state
+    entity_id:
+    - binary_sensor.homelab_staging_status
+    - binary_sensor.homelab_dev_status
+    - binary_sensor.termix_status
+    - binary_sensor.homeassistant_status
+    - binary_sensor.homelab_ci_runner_status
+    from: 'off'
+    to: 'on'
+    for: 00:02:00
+    id: up
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.id == ''down'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: "\U0001F6D1 Proxmox: ВМ остановлена — {{ trigger.to_state.attributes.friendly_name | default(trigger.entity_id) }} ({{ trigger.entity_id }}). Незапланированная остановка? Проверьте на хосте."
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.id == ''up'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: "✅ Proxmox: ВМ снова запущена — {{ trigger.to_state.attributes.friendly_name | default(trigger.entity_id) }}."
+- id: '1789500001003'
+  alias: "\U0001F5C4️ Proxmox: хранилище заполнено (только уведомление)"
+  description: >-
+    NOTIFICATION-ONLY watchdog. Следит за % использования активных хранилищ
+    (nas, local-btrfs) и сообщает при >= 90% дольше 10 мин. Неактивное
+    хранилище local (usage unknown) исключено. НЕ RAM. Единственное действие —
+    telegram_bot.send_message (chat_id 100000000). НЕ управляет устройствами,
+    НЕ вызывает Proxmox button/switch/service.
+  mode: single
+  triggers:
+  - trigger: numeric_state
+    entity_id:
+    - sensor.storage_mycloud_home_storage_usage_percentage
+    - sensor.storage_local_btrfs_storage_usage_percentage
+    above: 90
+    for: 00:10:00
+    id: down
+  - trigger: numeric_state
+    entity_id:
+    - sensor.storage_mycloud_home_storage_usage_percentage
+    - sensor.storage_local_btrfs_storage_usage_percentage
+    below: 90
+    for: 00:05:00
+    id: up
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.id == ''down'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: "\U0001F5C4️ Proxmox: хранилище заполнено — {{ trigger.to_state.attributes.friendly_name | default(trigger.entity_id) }} = {{ trigger.to_state.state }}% (>= 90%). Освободите место."
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.id == ''up'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: "✅ Proxmox: хранилище в норме — {{ trigger.to_state.attributes.friendly_name | default(trigger.entity_id) }} = {{ trigger.to_state.state }}%."
+- id: '1789500001004'
+  alias: "\U0001F4BE Proxmox: ошибка/устаревание бэкапа (только уведомление)"
+  description: >-
+    NOTIFICATION-ONLY watchdog. Сообщает, когда binary_sensor.mylab_backup_status
+    (device_class problem) = проблема, ИЛИ когда последний бэкап
+    (sensor.mylab_last_backup) старше 36 ч. Проверка устаревания дважды в день
+    (09:00 / 21:00), чтобы не спамить. Единственное действие —
+    telegram_bot.send_message (chat_id 100000000). НЕ управляет устройствами,
+    НЕ вызывает Proxmox button/switch/service.
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.mylab_backup_status
+    to: 'on'
+    for: 00:10:00
+    id: problem
+  - trigger: state
+    entity_id: binary_sensor.mylab_backup_status
+    from: 'on'
+    to: 'off'
+    for: 00:05:00
+    id: problem_ok
+  - trigger: time
+    at: '09:00:00'
+    id: stale
+  - trigger: time
+    at: '21:00:00'
+    id: stale
+  - trigger: state
+    entity_id: sensor.mylab_last_backup
+    id: fresh
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.id == ''problem'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: "\U0001F6D1 Proxmox: статус резервного копирования = проблема. Последняя копия: {{ states('sensor.mylab_last_backup') }}. Проверьте задание бэкапа."
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.id == ''problem_ok'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: "✅ Proxmox: статус резервного копирования снова в норме."
+    - conditions:
+      - condition: template
+        value_template: >-
+          {{ trigger.id == 'stale'
+             and states('sensor.mylab_last_backup') not in ['unknown', 'unavailable']
+             and (now() - as_datetime(states('sensor.mylab_last_backup'))).total_seconds() > 129600 }}
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: "\U0001F552 Proxmox: бэкап устарел — последняя копия {{ states('sensor.mylab_last_backup') }} (> 36 ч назад). Проверьте расписание бэкапа."
+    - conditions:
+      - condition: template
+        value_template: >-
+          {{ trigger.id == 'fresh' and trigger.from_state is not none
+             and trigger.from_state.state not in ['unknown', 'unavailable']
+             and trigger.to_state.state not in ['unknown', 'unavailable']
+             and (as_datetime(trigger.to_state.state) - as_datetime(trigger.from_state.state)).total_seconds() > 129600 }}
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: "✅ Proxmox: бэкап снова свежий ({{ states('sensor.mylab_last_backup') }}) после длительного перерыва."
+- id: '1789500001005'
+  alias: "\U0001F4E1 Proxmox: метрика узла зависла (только уведомление)"
+  description: >-
+    NOTIFICATION-ONLY watchdog. Следит за конвейером данных: ключевая метрика узла
+    sensor.mylab_cpu_usage. Тревога, если метрика недоступна > 30 мин ИЛИ не
+    обновлялась > 30 мин (напоминание не чаще раза в 3 ч). Единственное действие —
+    telegram_bot.send_message (chat_id 100000000). НЕ управляет устройствами,
+    НЕ вызывает Proxmox button/switch/service.
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: sensor.mylab_cpu_usage
+    to: unavailable
+    for: 00:30:00
+    id: down
+  - trigger: state
+    entity_id: sensor.mylab_cpu_usage
+    to: unknown
+    for: 00:30:00
+    id: down
+  - trigger: time_pattern
+    minutes: /30
+    id: stale_check
+  - trigger: state
+    entity_id: sensor.mylab_cpu_usage
+    id: up
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.id == ''down'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: "\U0001F4E1 Proxmox: метрика узла (ЦП) недоступна > 30 мин ({{ states('sensor.mylab_cpu_usage') }}). Конвейер данных Proxmox мог зависнуть — проверьте интеграцию/узел."
+    - conditions:
+      - condition: template
+        value_template: >-
+          {{ trigger.id == 'stale_check'
+             and states('sensor.mylab_cpu_usage') not in ['unavailable', 'unknown']
+             and (now() - states.sensor.mylab_cpu_usage.last_updated).total_seconds() > 1800
+             and (this.attributes.last_triggered is none
+                  or (now() - this.attributes.last_triggered).total_seconds() > 10800) }}
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: "\U0001F4E1 Proxmox: метрика узла (ЦП) не обновлялась > 30 мин. Конвейер данных Proxmox мог зависнуть — проверьте интеграцию/узел."
+    - conditions:
+      - condition: template
+        value_template: >-
+          {{ trigger.id == 'up' and trigger.from_state is not none
+             and states('sensor.mylab_cpu_usage') not in ['unavailable', 'unknown']
+             and (trigger.from_state.state in ['unavailable', 'unknown']
+                  or (now() - trigger.from_state.last_updated).total_seconds() > 1800) }}
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: "✅ Proxmox: метрика узла (ЦП) снова обновляется ({{ states('sensor.mylab_cpu_usage') }})."

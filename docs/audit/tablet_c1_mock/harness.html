@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>Tablet C1 mock harness</title>
+<style>html,body{margin:0;background:#0a0c0f}</style>
+</head>
+<body>
+<tablet-c1-panel id="p"></tablet-c1-panel>
+<script src="../../../tablet/tablet-panel.c1.js"></script>
+<script>
+// De-identified / live-safe demo states. Energy readings mirror the audit
+// (docs/audit/energy_inventory.json + ENERGY_DATA_QUALITY.md); no tokens, no
+// personal data. Timestamps are relative so the mock always shows a fresh vs
+// stale contrast (Гидрофор deliberately stale, Бойлер plug offline).
+const now = Date.now();
+const iso = (minAgo) => new Date(now - minAgo * 60000).toISOString();
+const S = {};
+const put = (id, state, attrs, minAgo) =>
+  S[id] = { entity_id: id, state: String(state), attributes: attrs || {}, last_updated: iso(minAgo == null ? 3 : minAgo), last_changed: iso(minAgo == null ? 3 : minAgo) };
+
+// --- Nord Pool ---
+put('sensor.nord_pool_lv_current_price', '0.052', { unit_of_measurement: 'EUR/kWh' }, 8);
+put('sensor.nord_pool_lv_next_price', '0.061', { unit_of_measurement: 'EUR/kWh' }, 8);
+put('sensor.nord_pool_lv_lowest_price', '0.011', { start: iso(-180), end: iso(-240) }, 8); // window later tonight (negative = future)
+put('sensor.nord_pool_lv_highest_price', '0.146', { start: iso(-360), end: iso(-420) }, 8);
+
+// --- Confirmed energy devices (kWh totals) ---
+put('sensor.zigbee_plug_2_total_energy', '275.69', { unit_of_measurement: 'kWh' }, 70);        // STALE (>45m) — flapping
+put('input_number.midnight_gidro_energy', '275.34', {}, 360);
+// Бойлер: plug offline (known issue) -> unavailable
+put('sensor.boiler_total_energy', 'unavailable', { unit_of_measurement: 'kWh' }, 55);
+put('input_number.midnight_boiler_energy', '10.099', {}, 360);
+put('sensor.ev_charger_energy', '883.15', { unit_of_measurement: 'kWh' }, 5);
+put('input_number.midnight_ev_energy', '882.8', {}, 360);
+put('sensor.terarium_total_energy', '119.60', { unit_of_measurement: 'kWh' }, 12);
+put('input_number.midnight_kalarifer_energy', '119.39', {}, 360);
+put('sensor.akvarium_svet_total_energy', '0.55', { unit_of_measurement: 'kWh' }, 4);
+put('input_number.midnight_akv_energy', '0.02', {}, 360);
+put('sensor.cherepakha_total_energy', '0.62', { unit_of_measurement: 'kWh' }, 6);
+put('input_number.midnight_chep_energy', '0.02', {}, 360);
+put('sensor.zigbee_plug_total_energy', '0', { unit_of_measurement: 'kWh' }, 300);              // DEAD (frozen), no midnight snapshot
+put('sensor.75_qled_energy', '0.0', { unit_of_measurement: 'kWh' }, 30);                        // DEAD (always 0)
+put('input_number.midnight_tv_energy', '0.0', {}, 360);
+
+// --- Batteries ---
+put('sensor.door_sensor_battery', '12', { unit_of_measurement: '%' }, 30);   // crit
+put('sensor.motion_sensor_battery', '24', { unit_of_measurement: '%' }, 30);  // warn
+put('sensor.pir_motion_sensor_battery', '28', { unit_of_measurement: '%' }, 30); // warn
+put('sensor.garazh_battery', '88', { unit_of_measurement: '%' }, 30);
+put('sensor.kukhnia_battery', '91', { unit_of_measurement: '%' }, 30);
+put('sensor.vannaia_battery', '76', { unit_of_measurement: '%' }, 30);
+put('sensor.water_sensor_4_battery', '83', { unit_of_measurement: '%' }, 30);
+put('sensor.wifi_th_smoke_sensor_battery', '64', { unit_of_measurement: '%' }, 30);
+put('sensor.intellektualnyi_dvernoi_zvonok_battery', '55', { unit_of_measurement: '%' }, 30);
+put('sensor.ostrov_vykliuchatel_battery', '70', { unit_of_measurement: '%' }, 30);
+put('sensor.perenosnoi_pult_battery', '90', { unit_of_measurement: '%' }, 30);
+put('sensor.stsenarnyi_pult_battery', '95', { unit_of_measurement: '%' }, 30);
+put('sensor.vykuliuchatel_2_etazh_battery', '60', { unit_of_measurement: '%' }, 30);
+put('sensor.miaomiaoc_cn_blt_3_living_t1_battery_level_p_3_1', '77', { unit_of_measurement: '%' }, 30);
+put('sensor.miaomiaoc_cn_blt_3_bedroom2_t1_battery_level_p_3_1', '42', { unit_of_measurement: '%' }, 30);
+put('sensor.signalizatsiia_dvernogo_datchika_battery', 'unavailable', {}, 120);
+put('sensor.signalizatsiia_dvernogo_datchika_battery_2', 'unavailable', {}, 120);
+put('sensor.occupancysensor_batareia', 'unavailable', {}, 120);
+
+document.getElementById('p').hass = { states: S };
+</script>
+</body>
+</html>

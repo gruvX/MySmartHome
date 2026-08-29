@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Emergency card mock — Безопасность (classic)</title>
+<style>
+/* ---- Classic tablet dark tokens (copied from tablet-panel.js PANEL_CSS) ---- */
+:root{
+  --bg:#0b0d0f; --panel:#15191d; --panel-2:#1c2126; --panel-3:#252b31;
+  --ink:#f7f2e8; --muted:#aaa59b; --faint:#8a857a; --line:#303841;
+  --green:#9ed95c; --cyan:#50d5ff; --amber:#f3bd56; --red:#ee6868;
+  --radius:8px; --ease:cubic-bezier(.23,1,.32,1);
+  font-family:"Aptos","Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink); font-variant-numeric:tabular-nums;
+  font-family:"Aptos","Segoe UI",system-ui,sans-serif;
+  padding:24px; min-height:100vh;
+  /* GUARANTEE: the page itself never scrolls sideways */
+  overflow-x:hidden;
+}
+.stage{max-width:1000px;margin:0 auto}
+.stage-note{font-size:12px;color:var(--faint);margin:0 0 14px;letter-spacing:.04em}
+
+/* ============================================================
+   EMERGENCY CARD  (.emg)
+   NEVER reuses .signal (which clips with text-overflow:ellipsis).
+   All meaningful text wraps — see .emg-wrap rule below.
+   ============================================================ */
+.emg{
+  border-radius:var(--radius); border:1px solid var(--line);
+  background:var(--panel); overflow:hidden;
+}
+/* left status rail — the one strong visual-priority cue */
+.emg{border-left:6px solid var(--green)}
+.emg.level-yellow{border-left-color:var(--amber)}
+.emg.level-red{border-left-color:var(--red)}
+.emg.level-unknown{border-left-color:var(--faint)}
+
+.emg-head{
+  display:flex; align-items:center; gap:12px;
+  padding:14px 18px; border-bottom:1px solid var(--line);
+}
+.emg-head svg{width:26px;height:26px;flex:0 0 auto}
+.emg.level-green  .emg-head svg{color:var(--green)}
+.emg.level-yellow .emg-head svg{color:var(--amber)}
+.emg.level-red    .emg-head svg{color:var(--red)}
+.emg.level-unknown .emg-head svg{color:var(--faint)}
+.emg-title{font-size:15px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin:0}
+.emg-spacer{flex:1 1 auto}
+.emg-lvbadge{
+  display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 12px;
+  border-radius:999px;font-size:12px;font-weight:800;letter-spacing:.04em;
+  /* label wraps rather than clips on tiny widths */
+  white-space:normal;line-height:1.15;text-align:center;
+}
+.lv-green {color:#101214;background:var(--green)}
+.lv-yellow{color:#241706;background:var(--amber)}
+.lv-red   {color:#fff0f0;background:var(--red)}
+.lv-unknown{color:var(--ink);background:var(--panel-3);border:1px solid var(--faint)}
+
+.emg-body{padding:16px 18px;display:grid;gap:14px}
+
+/* ---- NORMAL: one calm line + compact non-clickable chips ---- */
+.emg-calm{
+  display:flex;align-items:center;gap:10px;
+  font-size:15px;font-weight:700;color:var(--green);
+}
+.emg-calm svg{width:18px;height:18px;color:var(--green)}
+.emg-chips{display:flex;flex-wrap:wrap;gap:8px}
+.emg-chip{
+  display:inline-flex;align-items:center;gap:7px;
+  border:1px solid var(--line);background:var(--panel-2);border-radius:7px;
+  padding:7px 11px;font-size:13px;color:var(--ink);
+  /* chips wrap their own text, never clip */
+  white-space:normal;max-width:100%;
+}
+.emg-chip .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:var(--green)}
+.emg-chip.warn .dot{background:var(--amber)}
+.emg-chip.bad  .dot{background:var(--red)}
+.emg-chip.unknown .dot{background:var(--faint);box-shadow:inset 0 0 0 2px var(--panel-2)}
+.emg-chip .lbl{color:var(--muted)}
+.emg-chip.unknown{border-style:dashed;color:var(--faint)}
+
+/* ---- ATTENTION: readable problem lines ---- */
+.emg-attn{
+  display:flex;gap:11px;align-items:flex-start;
+  border:1px solid color-mix(in srgb,var(--amber) 40%,var(--line));
+  background:color-mix(in srgb,var(--amber) 10%,var(--panel-2));
+  border-radius:8px;padding:12px 14px;
+}
+.emg-attn .ic{width:18px;height:18px;flex:0 0 auto;color:var(--amber);margin-top:2px}
+.emg-attn .txt{font-size:14px;line-height:1.45;color:var(--ink)}
+.emg-attn .txt b{color:var(--amber)}
+
+/* ---- CRITICAL / UNAVAILABLE incident block ---- */
+.emg-incident{
+  border:1px solid color-mix(in srgb,var(--red) 45%,var(--line));
+  background:color-mix(in srgb,var(--red) 12%,var(--panel-2));
+  border-radius:9px;padding:14px 16px;display:grid;gap:10px;
+}
+.emg-incident.unknown{
+  border-color:var(--faint);
+  background:repeating-linear-gradient(135deg,var(--panel-2),var(--panel-2) 10px,color-mix(in srgb,var(--faint) 9%,var(--panel-2)) 10px,color-mix(in srgb,var(--faint) 9%,var(--panel-2)) 20px);
+}
+.emg-inc-what{
+  display:flex;gap:10px;align-items:center;
+  font-size:17px;font-weight:800;color:var(--red);
+}
+.emg-incident.unknown .emg-inc-what{color:var(--ink)}
+.emg-inc-what svg{width:22px;height:22px;flex:0 0 auto}
+.emg-fields{display:grid;gap:8px}
+.emg-field{display:grid;grid-template-columns:150px 1fr;gap:6px 14px;align-items:start}
+.emg-field .k{
+  font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--faint);padding-top:2px;
+}
+.emg-field .v{font-size:14px;line-height:1.5;color:var(--ink)}
+.emg-field .v .mono{
+  font-family:"Cascadia Code",ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:12.5px;color:var(--muted);
+}
+.emg-field .v .state-on{color:var(--red);font-weight:800}
+.emg-field .v .state-unknown{color:var(--faint);font-weight:800;font-style:italic}
+.emg-field .v .state-off{color:var(--green);font-weight:800}
+
+/* ---- gated safe action ---- */
+.emg-action{
+  display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;
+  border-top:1px dashed color-mix(in srgb,var(--red) 40%,var(--line));
+  padding-top:11px;margin-top:2px;
+}
+.emg-incident.unknown .emg-action{border-top-color:var(--faint)}
+.emg-btn{
+  display:inline-flex;align-items:center;gap:9px;min-height:44px;
+  padding:0 18px;border-radius:8px;border:1px solid var(--red);
+  background:color-mix(in srgb,var(--red) 22%,var(--panel-3));
+  color:#fff0f0;font-size:14px;font-weight:800;cursor:pointer;
+  white-space:normal;text-align:left;line-height:1.25;
+}
+.emg-btn svg{width:18px;height:18px;flex:0 0 auto}
+.emg-btn.neutral{border-color:var(--faint);background:var(--panel-3);color:var(--ink)}
+.emg-action .gate{font-size:12.5px;color:var(--muted);line-height:1.45;flex:1 1 220px}
+
+/* ---- "what to check" list (UNAVAILABLE) ---- */
+.emg-check{display:grid;gap:6px}
+.emg-check .k{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+.emg-check ul{margin:0;padding-left:20px;display:grid;gap:5px}
+.emg-check li{font-size:13.5px;line-height:1.5;color:var(--ink)}
+
+/* ---- compact "rest is normal" footer for red/yellow states ---- */
+.emg-rest{
+  font-size:12.5px;color:var(--muted);line-height:1.5;
+  border-top:1px solid var(--line);padding-top:11px;
+}
+.emg-rest b{color:var(--ink)}
+
+/* =========================================================
+   GLOBAL NO-ELLIPSIS / NO-CLIP GUARANTEE for the card.
+   Any descendant text is allowed to wrap onto as many lines
+   as it needs; nothing is ever hidden behind "…".
+   ========================================================= */
+.emg, .emg *{
+  overflow-wrap:anywhere;    /* long entity ids / labels break to next line */
+  word-break:normal;
+}
+.emg [class]{
+  text-overflow:clip;        /* never render the ellipsis glyph */
+}
+</style>
+</head>
+<body>
+<div class="stage">
+  <p class="stage-note" id="stageNote"></p>
+  <div id="card"></div>
+</div>
+
+<script>
+/* ---- minimal icon set (same paths as production) ---- */
+const ICONS={
+  shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  droplet:'<path d="M12 2s6 7 6 12a6 6 0 0 1-12 0c0-5 6-12 6-12z"/>',
+  flame:'<path d="M12 22c4 0 7-3 7-7 0-5-5-8-5-13-4 3-2 7-6 10-2 2-3 4-3 6 0 3 3 4 7 4z"/>',
+  door:'<path d="M4 21h16"/><path d="M7 21V3h10v18"/><path d="M14 12h.01"/>',
+  bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  alert:'<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+  help:'<circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 2.5"/><path d="M12 17h.01"/>'
+};
+const icon=n=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICONS[n]||ICONS.shield)+'</svg>';
+
+/* ---------- reusable pieces ---------- */
+function head(level,badgeText){
+  const lv={green:'lv-green',yellow:'lv-yellow',red:'lv-red',unknown:'lv-unknown'}[level];
+  return '<div class="emg-head">'+icon('shield')+
+    '<h2 class="emg-title">Безопасность</h2><div class="emg-spacer"></div>'+
+    '<span class="emg-lvbadge '+lv+'">'+badgeText+'</span></div>';
+}
+function chip(cls,label,val){
+  return '<span class="emg-chip '+cls+'"><span class="dot"></span><span class="lbl">'+label+':</span> '+val+'</span>';
+}
+function field(k,v){return '<div class="emg-field"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>';}
+
+/* ---------- the four states ---------- */
+function normalCard(){
+  return '<div class="emg level-green">'+head('green','норма')+
+    '<div class="emg-body">'+
+      '<div class="emg-calm">'+icon('check')+'Всё в норме · дом под наблюдением</div>'+
+      '<div class="emg-chips">'+
+        chip('','Охрана','снята')+
+        chip('','Дверь','закрыта')+
+        chip('','Дым','норма')+
+        chip('','Главный кран','открыт (нормальный режим)')+
+        chip('','Датчики протечки','4 · сухо')+
+        chip('','Автозащита','активна')+
+      '</div>'+
+    '</div></div>';
+}
+
+function attentionCard(){
+  return '<div class="emg level-yellow">'+head('yellow','внимание · 2')+
+    '<div class="emg-body">'+
+      '<div class="emg-attn">'+icon('door')+
+        '<div class="txt"><b>Дверь открыта.</b> Охрана снята — это не тревога, но дверь стоит закрыть или включить охрану, если вы уходите.</div></div>'+
+      '<div class="emg-attn">'+icon('droplet')+
+        '<div class="txt"><b>Состояние крана неизвестно.</b> Нет подтверждения от Tuya. Управление краном возможно, но фактическое положение сейчас не подтверждено — проверьте связь.</div></div>'+
+      '<div class="emg-rest"><b>Остальное в норме:</b> дым — норма, 4 датчика протечки сухие, автозащита от протечки и дыма активна, сирена молчит.</div>'+
+    '</div></div>';
+}
+
+function criticalCard(){
+  // Two stacked incidents prove wrapping + stacking. Full text, no truncation.
+  const leak=
+    '<div class="emg-incident">'+
+      '<div class="emg-inc-what">'+icon('droplet')+'Протечка воды</div>'+
+      '<div class="emg-fields">'+
+        field('Что случилось','Сработал датчик протечки — обнаружена вода.')+
+        field('Источник','Датчик «Кухня» · <span class="mono">binary_sensor.kukhnia_moisture</span> (комната: кухня, под мойкой)')+
+        field('Когда','Сработал 2 мин назад · сегодня в 09:32')+
+        field('Фактическое состояние','Главный кран: <span class="state-on">ОТКРЫТ</span> — вода сейчас подаётся на весь дом (состояние подтверждено чтением от Tuya, <span class="mono">switch.voda_kran_switch_1 = on</span>)')+
+      '</div>'+
+      '<div class="emg-action">'+
+        '<button class="emg-btn">'+icon('droplet')+'Аварийно закрыть главный кран воды</button>'+
+        '<span class="gate">Действие защищено: спросит подтверждение, затем дождётся фактического подтверждения от крана и покажет успех только когда кран реально закрыт.</span>'+
+      '</div>'+
+    '</div>';
+  const smoke=
+    '<div class="emg-incident">'+
+      '<div class="emg-inc-what">'+icon('flame')+'Задымление</div>'+
+      '<div class="emg-fields">'+
+        field('Что случилось','Сработал датчик дыма — возможно возгорание.')+
+        field('Источник','Датчик «Дым» · <span class="mono">binary_sensor.wifi_th_smoke_sensor_smoke</span>')+
+        field('Когда','Сработал 40 сек назад · сегодня в 09:34')+
+        field('Фактическое состояние','Сирена: <span class="state-on">ВКЛЮЧЕНА</span> (<span class="mono">siren.alarm = on</span>). Проверьте помещение лично, прежде чем отключать сирену.')+
+      '</div>'+
+      '<div class="emg-action">'+
+        '<button class="emg-btn neutral">'+icon('bell')+'Отключить сирену</button>'+
+        '<span class="gate">Отключайте только после личной проверки, что задымления нет. Отключение сирены не устраняет причину.</span>'+
+      '</div>'+
+    '</div>';
+  return '<div class="emg level-red">'+head('red','ТРЕВОГА · 2 события')+
+    '<div class="emg-body">'+leak+smoke+
+      '<div class="emg-rest"><b>Прочее:</b> охрана снята, дверь закрыта. Данные обновлены только что.</div>'+
+    '</div></div>';
+}
+
+function unavailableCard(){
+  // A protective sensor we cannot read = NOT safe -> treated as red-level,
+  // but rendered with a distinct "unknown" signature (never green, never "0").
+  const inc=
+    '<div class="emg-incident unknown">'+
+      '<div class="emg-inc-what">'+icon('help')+'Датчик протечки недоступен — защита работает вслепую</div>'+
+      '<div class="emg-fields">'+
+        field('Что случилось','Часть защитных датчиков не отвечает или давно не обновлялась. Пока они молчат, протечку в этих зонах обнаружить нельзя — это НЕ значит «сухо».')+
+        field('Источник','Датчик «Гараж» · <span class="mono">binary_sensor.garazh_moisture</span> — состояние: <span class="state-unknown">недоступен</span><br>Датчик «Ванная» · <span class="mono">binary_sensor.vannaia_moisture</span> — устарел: последнее обновление <b>5 ч назад</b> (порог 3 ч), доверять «сухо» нельзя')+
+        field('Когда','Гараж пропал 12 мин назад · Ванная молчит с 04:41')+
+        field('Фактическое состояние','Главный кран: <span class="state-unknown">неизвестно</span> — нет ответа от Tuya (<span class="mono">switch.voda_kran_switch_1 = unavailable</span>). Показывается «неизвестно», а не «закрыт» и не «0».')+
+      '</div>'+
+      '<div class="emg-check">'+
+        '<div class="k">Что проверить</div>'+
+        '<ul>'+
+          '<li>Питание и Wi-Fi датчика в гараже (та же слабая зона, что котёл и бойлер).</li>'+
+          '<li>Связь с облаком Tuya — при сбое кран и датчики читаются как «недоступно».</li>'+
+          '<li>Обновить состояния и убедиться, что датчик ванной снова отвечает.</li>'+
+        '</ul>'+
+      '</div>'+
+      '<div class="emg-action">'+
+        '<button class="emg-btn neutral">'+icon('droplet')+'Аварийно закрыть кран (если подозреваете протечку)</button>'+
+        '<span class="gate">Пока датчики слепы, безопаснее закрыть воду вручную. Действие защищено подтверждением и проверкой фактического состояния крана.</span>'+
+      '</div>'+
+    '</div>';
+  return '<div class="emg level-unknown">'+head('unknown','НЕ БЕЗОПАСНО · датчики недоступны')+
+    '<div class="emg-body">'+inc+
+      '<div class="emg-chips">'+
+        chip('','Дым','норма')+
+        chip('unknown','Кухня (протечка)','сухо')+
+        chip('unknown','Душевая 1эт (протечка)','сухо')+
+        chip('','Охрана','снята')+
+      '</div>'+
+      '<div class="emg-rest">Зелёным показаны только реально подтверждённые датчики. Недоступные и устаревшие показаны серым как «неизвестно» — не как норма.</div>'+
+    '</div></div>';
+}
+
+const STATES={
+  normal:{fn:normalCard, note:'Состояние NORMAL — компактно, «всё в норме», зелёный, ничего значимого не скрыто.'},
+  attention:{fn:attentionCard, note:'Состояние ATTENTION (жёлтый) — короткие, полностью читаемые строки проблем.'},
+  critical:{fn:criticalCard, note:'Состояние CRITICAL (красный) — карточка расширена: что / источник / время / факт (read-back) / безопасное действие. Без «…».'},
+  unavailable:{fn:unavailableCard, note:'Состояние UNAVAILABLE/UNKNOWN — недоступный/устаревший защитный датчик = НЕ безопасно; «неизвестно», не зелёный, не «0», с «что проверить».'}
+};
+
+const q=new URLSearchParams(location.search);
+const key=(q.get('state')||'normal').toLowerCase();
+const s=STATES[key]||STATES.normal;
+document.getElementById('stageNote').textContent=s.note;
+document.getElementById('card').innerHTML=s.fn();
+</script>
+</body>
+</html>

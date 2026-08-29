@@ -1,0 +1,9 @@
+{
+  "domain": "miniapp_auth",
+  "name": "MiniApp Telegram Auth",
+  "documentation": "",
+  "dependencies": ["http"],
+  "codeowners": [],
+  "requirements": [],
+  "version": "2.0.0"
+}

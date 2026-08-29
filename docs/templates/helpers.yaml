@@ -1,0 +1,56 @@
+# =============================================================================
+# Input helpers + presence template sensor  →  configuration.yaml
+# De-identified template. Replace every <PLACEHOLDER>. No real IDs/secrets here.
+# Reload after edit:  POST /api/services/input_boolean/reload  (and _number/_datetime)
+# NOTE: adding the FIRST top-level `template:` block needs a full HA restart.
+# =============================================================================
+
+input_boolean:
+  ev_manual_mode:
+    name: EV Manual Mode          # auto-scheduler skips when on
+    icon: mdi:car-electric
+  security_armed:
+    name: Security Armed
+    icon: mdi:shield-home
+  ha_startup_grace:
+    name: HA Startup Grace Period  # blocks leak alarm N min after restart
+    icon: mdi:timer-sand
+  night_saver:
+    name: Night Energy Saver
+    icon: mdi:weather-night
+
+input_number:
+  # Midnight energy snapshot per metered device (kWh at 00:01, for daily deltas)
+  midnight_<DEVICE>_energy:
+    name: Midnight <DEVICE> Energy Snapshot
+    min: 0
+    max: 99999
+    step: 0.01
+    unit_of_measurement: kWh
+  # Monthly cost accumulator per device (EUR, accrued daily, reset 1st of month)
+  cost_month_<DEVICE>:
+    name: Monthly cost <DEVICE>
+    min: 0
+    max: 99999
+    step: 0.01
+    unit_of_measurement: "€"
+
+input_datetime:
+  ev_charge_start:
+    name: EV Next Charge Time
+    has_date: true
+    has_time: true
+
+# Combined GPS + home-WiFi presence with debounce. Use THIS in presence
+# automations, not the raw person/GPS entity.
+template:
+  - binary_sensor:
+      - name: "Presence <PERSON>"
+        unique_id: presence_<PERSON>
+        device_class: presence
+        delay_on: "00:00:10"
+        delay_off: "00:10:00"        # 10-min debounce avoids flapping
+        state: >
+          {{ is_state('<PERSON_ENTITY>', 'home')
+             or is_state('<DEVICE_TRACKER_PHONE>', 'home')
+             or is_state('<SENSOR_SSID>', '<HOME_SSID>') }}

@@ -1,0 +1,2227 @@
+# Verbatim copy of every automation the 2026-08-19 EV auto-charge package
+# changed or added, taken from /config/automations.yaml (md5 of the whole file:
+# 8f2bd14e75ec42b37052e234ecd079db).
+- id: '1778700001004'
+  alias: "\U0001F4F2 Telegram меню с кнопками"
+  description: Отправляет inline-клавиатуру при сообщении 'меню'
+  triggers:
+  - platform: event
+    event_type: telegram_text
+    event_data:
+      chat_id: 100000000
+  conditions:
+  - condition: template
+    value_template: '{{ trigger.event.data.text | lower | trim in [''меню'', ''menu'']
+      }}'
+  actions:
+  - action: telegram_bot.send_message
+    data:
+      message: "\U0001F3E0 Управление домом:"
+      inline_keyboard:
+      - - - "\U0001F4CA Статус"
+          - /status
+        - - "\U0001F9E0 Диагностика"
+          - /diag
+      - - - "\U0001F525 Бойлер ВКЛ"
+          - /boiler_on
+        - - "\U0001F9CA Бойлер ВЫКЛ"
+          - /boiler_off
+      - - - "\U0001F525 Полотенцесушитель ВКЛ"
+          - /kalar_on
+        - - "\U0001F9CA Полотенцесушитель ВЫКЛ"
+          - /kalar_off
+      - - - "\U0001F697 EV зарядить"
+          - /ev_on
+        - - "\U0001F697 EV стоп"
+          - /ev_off
+      - - - "\U0001F4C5 EV расписание"
+          - /ev_schedule
+        - - "\U0001F4A7 Кран ОТКРЫТЬ"
+          - /water_on
+      - - - "\U0001F319 Зарядить ночью"
+          - /ev_night
+        - - ☀️ Зарядить днём
+          - /ev_day
+      - - - ⛔ Отменить зарядку
+          - /ev_cancel
+      - - - "\U0001F319 Ночной режим"
+          - /night
+      - - - "\U0001F319 Эконом ВКЛ"
+          - /night_saver_on
+        - - ☀️ Эконом ВЫКЛ
+          - /night_saver_off
+      - - - "\U0001F525 Жара ВКЛ"
+          - /zhara_on
+        - - ❄️ Жара ВЫКЛ
+          - /zhara_off
+      - - - "\U0001F6AA Ушёл"
+          - /scene_away
+        - - "\U0001F3AC Кино"
+          - /scene_cinema
+      - - - "\U0001F389 Гости"
+          - /scene_guests
+      - - - "\U0001F310 Открыть приложение"
+          - https://t.me/your_home_bot/smarthome
+      chat_id: 100000000
+  mode: single
+- id: '1778700001005'
+  alias: 📲 Telegram обработчик кнопок
+  description: Все inline-кнопки включая подменю света
+  triggers:
+  - platform: event
+    event_type: telegram_callback
+  conditions:
+  - condition: template
+    value_template: '{{ trigger.event.data.chat_id | string == ''100000000'' }}'
+  actions:
+  - variables:
+      callback_data: '{{ trigger.event.data.data }}'
+      callback_id: '{{ trigger.event.data.id }}'
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/security_arm'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: 🛡 Охрана включена
+        continue_on_error: true
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.security_armed
+      - action: notify.send_message
+        target:
+          entity_id: notify.telegram_owner
+        data:
+          message: '🛡 Охрана включена
+
+
+            Датчики: дверь + движение
+
+            Для снятия: /security_disarm или кнопка в панелях'
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/security_disarm'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: 🔓 Охрана снята
+        continue_on_error: true
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.security_armed
+      - action: siren.turn_off
+        target:
+          entity_id: siren.alarm
+      - action: notify.send_message
+        target:
+          entity_id: notify.telegram_owner
+        data:
+          message: 🔓 Охрана снята. Сирена выключена.
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/siren_off'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: 🔕 Сирена выключена
+        continue_on_error: true
+      - action: siren.turn_off
+        target:
+          entity_id: siren.alarm
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/leak_confirm'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: 🚰 Закрываю кран…
+        continue_on_error: true
+      - action: switch.turn_off
+        target:
+          entity_id: switch.voda_kran_switch_1
+      - action: switch.turn_off
+        target:
+          entity_id: switch.zigbee_plug_2_socket_1
+      - action: select.select_option
+        target:
+          entity_id: select.alarm_volume
+        data:
+          option: high
+      - action: number.set_value
+        target:
+          entity_id: number.alarm_time
+        data:
+          value: 120
+      - action: siren.turn_on
+        target:
+          entity_id: siren.alarm
+      - alias: Подтверждение закрытия крана — вне очереди обработчика
+        action: script.turn_on
+        target:
+          entity_id: script.leak_valve_verify
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/moisture_false_alarm'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: 🚫 Ложная тревога — кран не закрываю
+        continue_on_error: true
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.tuya_reconnect_grace
+      - action: script.turn_on
+        target:
+          entity_id: script.tuya_grace_release
+      - action: notify.send_message
+        target:
+          entity_id: notify.telegram_owner
+        data:
+          message: '🚫 Ложная тревога подтверждена.
+
+            Кран и гидрофор не трогаю.
+
+            Датчик влаги — проверь вручную.'
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/ev_stop'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: ⛔ EV зарядка остановлена
+        continue_on_error: true
+      - action: switch.turn_off
+        target:
+          entity_id: switch.ev_charger_switch
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.ev_manual_mode
+      - alias: Проверка результата по sensor.ev_charger_status — вне очереди обработчика
+        action: script.turn_on
+        target:
+          entity_id: script.ev_verify_stop
+        data:
+          variables:
+            ok_msg: ⛔ EV зарядка остановлена вручную.
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/ev_start'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: 🚗⚡ EV зарядка запущена
+        continue_on_error: true
+      - action: switch.turn_on
+        target:
+          entity_id: switch.ev_charger_switch
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.ev_manual_mode
+      - alias: Проверка результата по sensor.ev_charger_status — вне очереди обработчика
+        action: script.turn_on
+        target:
+          entity_id: script.ev_verify_start
+        data:
+          variables:
+            ok_msg: 🚗⚡ EV зарядка запущена вручную.
+    - alias: Разовая заявка «Зарядить ночью» — окно 23:00-07:00
+      conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/ev_night'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: 🌙 Ищу самые дешёвые 2 часа ночью…
+        continue_on_error: true
+      - alias: Скрипт сам выберет окно, снимет разовую отмену и пришлёт подтверждение
+          с конкретным окном и ценой. НИКАКИХ команд устройствам
+        action: shell_command.ev_night2h
+    - alias: Разовая заявка «Зарядить днём» — окно 08:00-22:00
+      conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/ev_day'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: ☀️ Ищу самые дешёвые 2 часа днём…
+        continue_on_error: true
+      - action: shell_command.ev_day2h
+    - alias: Отменить ОДНУ следующую зарядку
+      conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/ev_cancel'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: ⛔ Следующая зарядка отменена
+        continue_on_error: true
+      - alias: Скрипт снимает разовую заявку, ставит отмену и присылает подтверждение.
+          Запуск fire-and-forget, чтобы его сбой не оборвал обработчик
+        action: script.turn_on
+        target:
+          entity_id: script.ev_cancel_next
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/siren_alarm'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: 🚨 Режим тревоги! Сирена 5 мин.
+        continue_on_error: true
+      - action: select.select_option
+        target:
+          entity_id: select.alarm_volume
+        data:
+          option: high
+      - action: number.set_value
+        target:
+          entity_id: number.alarm_time
+        data:
+          value: 300
+      - action: siren.turn_on
+        target:
+          entity_id: siren.alarm
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '🚨 ТРЕВОГА АКТИВИРОВАНА!
+
+            Сирена включена на 5 минут.
+
+            Вызови 112 если необходимо.'
+          inline_keyboard:
+          - - - 🔕 Выключить сирену
+              - /siren_off
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/patrol_off_yes'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: ✅ Подсветка выключена. Спокойной ночи!
+        continue_on_error: true
+      - action: homeassistant.turn_off
+        target:
+          entity_id:
+          - switch.kukhnia_poloski_switch_1
+          - switch.kukhnia_poloski_switch_2
+          - switch.gostinnaia_zanaveska_zona_switch_1
+          - switch.gostinnaia_zanaveska_zona_switch_2
+          - switch.svet_tv_zona_switch_1
+          - switch.svet_tv_zona_switch_2
+          - switch.smart_switch_2ch_switch_1
+          - switch.smart_switch_2ch_switch_2
+          - light.dream_color_rgb
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/patrol_off_no'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: 👍 Оставляем. Спокойной ночи!
+        continue_on_error: true
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/m_main'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '🏠 Главное меню:'
+          inline_keyboard:
+          - - - 📊 Инфо
+              - /m_info
+            - - ⚡ Энергия
+              - /m_energy
+          - - - 💡 Свет
+              - /m_light
+            - - 🔌 Устройства
+              - /m_devices
+          - - - 💧 Вода
+              - /m_water
+            - - 🌡️ Климат
+              - /m_climate
+          - - - 🌙 Ночной режим
+              - /night
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/m_info'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '📊 Инфо:'
+          inline_keyboard:
+          - - - 📊 Статус
+              - /status
+            - - 🧠 Диагностика
+              - /diag
+          - - - ⚡ Цены Nord Pool
+              - /price
+            - - 📈 Отчёт за день
+              - /report
+          - - - 🌡️ Температура
+              - /temp
+          - - - ⬅️ Главное меню
+              - /m_main
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/m_energy'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '⚡ Энергия:'
+          inline_keyboard:
+          - - - 🔥 Бойлер ВКЛ
+              - /boiler_on
+            - - 🧊 Бойлер ВЫКЛ
+              - /boiler_off
+          - - - 🚗 EV зарядить
+              - /ev_on
+            - - 🚗 EV стоп
+              - /ev_off
+          - - - 📅 EV расписание
+              - /ev_schedule
+          - - - 🌙 Зарядить ночью
+              - /ev_night
+            - - ☀️ Зарядить днём
+              - /ev_day
+          - - - ⛔ Отменить зарядку
+              - /ev_cancel
+          - - - ⬅️ Главное меню
+              - /m_main
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/m_light'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '💡 Свет — выбери этаж:'
+          inline_keyboard:
+          - - - 💡 1й этаж
+              - /m_light_1
+            - - 💡 2й этаж
+              - /m_light_2
+          - - - 💡 Улица/двор
+              - /m_light_out
+          - - - 🌑 ВЕСЬ СВЕТ ВЫКЛ
+              - /light_all_off
+          - - - ⬅️ Главное меню
+              - /m_main
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/m_light_1'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '💡 Свет — 1й этаж:'
+          inline_keyboard:
+          - - - 💡 Кухня
+              - /l1_kuh_on
+            - - 🌑 Кухня
+              - /l1_kuh_off
+          - - - 💡 Кухня полоски
+              - /l1_strip_on
+            - - 🌑 Кухня полоски
+              - /l1_strip_off
+          - - - 💡 Остров
+              - /l1_isl_on
+            - - 🌑 Остров
+              - /l1_isl_off
+          - - - 💡 Над столом
+              - /l1_tbl_on
+            - - 🌑 Над столом
+              - /l1_tbl_off
+          - - - 💡 Над аквариумом
+              - /l1_akv_on
+            - - 🌑 Над аквариумом
+              - /l1_akv_off
+          - - - 💡 Стена
+              - /l1_wall_on
+            - - 🌑 Стена
+              - /l1_wall_off
+          - - - 💡 ТВ зона
+              - /l1_tv_on
+            - - 🌑 ТВ зона
+              - /l1_tv_off
+          - - - 💡 Занавески
+              - /l1_cur_on
+            - - 🌑 Занавески
+              - /l1_cur_off
+          - - - 💡 Лестница
+              - /l1_stairs_on
+            - - 🌑 Лестница
+              - /l1_stairs_off
+          - - - 💡 Прихожая
+              - /l1_hall_on
+            - - 🌑 Прихожая
+              - /l1_hall_off
+          - - - 🌑 Весь 1й этаж ВЫКЛ
+              - /l1_all_off
+          - - - ⬅️ Свет
+              - /m_light
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/m_light_2'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '💡 Свет — 2й этаж:'
+          inline_keyboard:
+          - - - 💡 Коридор 2й эт
+              - /l2_corr_on
+            - - 🌑 Коридор 2й эт
+              - /l2_corr_off
+          - - - 💡 2й этаж
+              - /l2_floor_on
+            - - 🌑 2й этаж
+              - /l2_floor_off
+          - - - 💡 Dream Color
+              - /l2_rgb_on
+            - - 🌑 Dream Color
+              - /l2_rgb_off
+          - - - ⬅️ Свет
+              - /m_light
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/m_light_out'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '💡 Свет — улица/двор:'
+          inline_keyboard:
+          - - - 💡 Веранда
+              - /lo_ver_on
+            - - 🌑 Веранда
+              - /lo_ver_off
+          - - - 💡 Гирлянда
+              - /lo_gir_on
+            - - 🌑 Гирлянда
+              - /lo_gir_off
+          - - - 💡 Прожектор
+              - /lo_prj_on
+            - - 🌑 Прожектор
+              - /lo_prj_off
+          - - - ⬅️ Свет
+              - /m_light
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/m_devices'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '🔌 Устройства:'
+          inline_keyboard:
+          - - - 🐠 Аквариум ВКЛ
+              - /akv_on
+            - - 🐠 Аквариум ВЫКЛ
+              - /akv_off
+          - - - 🐢 Черепаха ВКЛ
+              - /chep_on
+            - - 🐢 Черепаха ВЫКЛ
+              - /chep_off
+          - - - 🌊 Гидрофор ВКЛ
+              - /gidro_on
+            - - 🌊 Гидрофор ВЫКЛ
+              - /gidro_off
+          - - - 🔥 Полотенцесушитель ВКЛ
+              - /kalar_on
+            - - ❄️ Полотенцесушитель ВЫКЛ
+              - /kalar_off
+          - - - 🔌 Все розетки ВЫКЛ
+              - /sockets_off
+          - - - ⬅️ Главное меню
+              - /m_main
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/m_water'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '💧 Вода:'
+          inline_keyboard:
+          - - - 💧 Кран ОТКРЫТЬ
+              - /water_on
+          - - - ⬅️ Главное меню
+              - /m_main
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/m_climate'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '🌡️ Климат — тёплый пол:'
+          inline_keyboard:
+          - - - 🔥 Пол ванная ВКЛ
+              - /floor1_on
+            - - ❄️ Пол ванная ВЫКЛ
+              - /floor1_off
+          - - - 🔥 Пол душевая ВКЛ
+              - /floor2_on
+            - - ❄️ Пол душевая ВЫКЛ
+              - /floor2_off
+          - - - ⬅️ Главное меню
+              - /m_main
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/status'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '📊 Статус {{ now().strftime(''%d.%m %H:%M'') }}
+
+            ⚡ Цена: {{ states(''sensor.nord_pool_lv_current_price'') | float(0) | round(4) }} EUR/kWh
+
+            🔥 Бойлер: {{ ''вкл'' if is_state(''switch.smart_plug_2_socket_1'',''on'') else ''выкл''
+            }}
+
+            🚗 EV: {{ ''вкл'' if is_state(''switch.ev_charger_switch'',''on'') else ''выкл'' }}{%
+            if is_state(''input_boolean.ev_manual_mode'',''on'') %} (ручной){% endif %}
+
+            💧 Кран: {{ ''открыт'' if is_state(''switch.voda_kran_switch_1'',''on'') else ''закрыт''
+            }}
+
+            🚪 Дверь: {{ ''открыта'' if is_state(''binary_sensor.door_sensor_door'',''on'') else ''закрыта''
+            }}
+
+            💨 Дым: {{ ''🔥 ТРЕВОГА!'' if is_state(''binary_sensor.wifi_th_smoke_sensor_smoke'',''on'')
+            else ''OK'' }}
+
+            💧 Влага: ванная={{ ''⚠️'' if is_state(''binary_sensor.vannaia_moisture'',''on'') else
+            ''OK'' }} гараж={{ ''⚠️'' if is_state(''binary_sensor.garazh_moisture'',''on'') else
+            ''OK'' }} душевая={{ ''⚠️'' if is_state(''binary_sensor.water_sensor_4_moisture'',''on'')
+            else ''OK'' }}'
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/diag'' }}'
+      sequence:
+      - action: automation.trigger
+        target:
+          entity_id: automation.polnaia_samodiagnostika_doma_ai
+        data:
+          skip_condition: true
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/price'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '⚡ Электричество {{ now().strftime(''%d.%m %H:%M'') }}
+
+            {% set p = states(''sensor.nord_pool_lv_current_price'') | float(0) %}{% set pn = states(''sensor.nord_pool_lv_next_price'')
+            | float(0) %}{% set pl = states(''sensor.nord_pool_lv_lowest_price'') | float(0) %}{%
+            set ph = states(''sensor.nord_pool_lv_highest_price'') | float(0) %}{% set ls = state_attr(''sensor.nord_pool_lv_lowest_price'',''start'')
+            %}{% set hs = state_attr(''sensor.nord_pool_lv_highest_price'',''start'') %}{% set lh
+            = (as_datetime(ls) | as_local).strftime(''%H:%M'') if ls else ''??'' %}{% set hh = (as_datetime(hs)
+            | as_local).strftime(''%H:%M'') if hs else ''??'' %}{% if p<=0.04 %}🟢{% elif p<=0.10
+            %}🟡{% elif p<=0.20 %}🟠{% else %}🔴{% endif %} Сейчас: {{ ''%.4f''|format(p) }} EUR/kWh
+
+            → След: {{ ''%.4f''|format(pn) }} EUR/kWh
+
+            🔽 Дешевле: {{ lh }} = {{ ''%.4f''|format(pl) }} EUR
+
+            🔺 Дороже:  {{ hh }} = {{ ''%.4f''|format(ph) }} EUR'
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/report'' }}'
+      sequence:
+      - action: automation.trigger
+        target:
+          entity_id: automation.ezhednevnyi_otchet_potrebleniia
+        data:
+          skip_condition: true
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/temp'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '🌡️ Температура {{ now().strftime(''%H:%M'') }}
+
+            🏠 Кухня: {{ states(''sensor.kukhnia_temperature'') | float(-99) | round(1) }}°C
+
+            🌤 Улица: {{ states(''sensor.smart_weather_station_temperature'') | float(-99) | round(1)
+            }}°C
+
+            🛁 Пол ванная: {{ state_attr(''climate.floor_heating'',''temperature'') }}°C ({{ state_attr(''climate.floor_heating'',''preset_mode'')
+            }})
+
+            🚿 Пол душевая: {{ state_attr(''climate.floor_heating_2'',''temperature'') }}°C ({{ state_attr(''climate.floor_heating_2'',''preset_mode'')
+            }})'
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/boiler_on'' }}'
+      sequence:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.boiler_manual_mode
+      - action: switch.turn_on
+        target:
+          entity_id: switch.smart_plug_2_socket_1
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '🔥 Бойлер ВКЛ ✅
+
+            Ручной режим на 3 ч — цена не переключит.'
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/boiler_off'' }}'
+      sequence:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.boiler_manual_mode
+      - action: switch.turn_off
+        target:
+          entity_id: switch.smart_plug_2_socket_1
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '🧊 Бойлер ВЫКЛ ✅
+
+            Ручной режим на 3 ч — цена не включит обратно.'
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/ev_on'' }}'
+      sequence:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.ev_manual_mode
+      - action: switch.turn_on
+        target:
+          entity_id: switch.ev_charger_switch
+      - alias: Проверка результата по sensor.ev_charger_status — вне очереди обработчика
+        action: script.turn_on
+        target:
+          entity_id: script.ev_verify_start
+        data:
+          variables:
+            ok_msg: '🚗 EV ВКЛ ✅
+
+              ⚡ {{ states(''sensor.nord_pool_lv_current_price'') | float(0) | round(4) }} EUR/kWh'
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/ev_off'' }}'
+      sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_manual_mode
+      - action: switch.turn_off
+        target:
+          entity_id: switch.ev_charger_switch
+      - alias: Проверка результата по sensor.ev_charger_status — вне очереди обработчика
+        action: script.turn_on
+        target:
+          entity_id: script.ev_verify_stop
+        data:
+          variables:
+            ok_msg: 🚗 EV ВЫКЛ ✅ Авторежим восстановлен.
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/ev_schedule'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: |-
+            {%- set dt = as_datetime(states('input_datetime.ev_charge_start')) | as_local -%}
+            {%- set ch = states('sensor.nord_pool_lv_lowest_price') | float(0) -%}
+            {%- set req = is_state('input_boolean.ev_night_requested', 'on') -%}
+            {%- set cancelled = is_state('input_boolean.ev_charge_cancelled', 'on') -%}
+            🚗 EV расписание:
+              📅 {{ dt.strftime('%d.%m.%Y') }} {{ dt.strftime('%H:%M') }}–{{ (dt + timedelta(hours=2)).strftime('%H:%M') }}
+              ⚡ {{ '%.4f'|format(ch) }} EUR/кВт·ч
+            {% if is_state('input_boolean.ev_manual_mode','on') %}⚠️ Ручной режим активен.{% elif is_state('sensor.ev_charger_status','charger_charging') %}✅ Зарядка идёт.{% else %}⏳ Ожидание.{% endif %}
+            {% if req %}🌙 Стоит разовая заявка — она сильнее автоматического расписания.{% endif %}
+            {% if cancelled %}⛔ Следующая зарядка отменена один раз. Нажми «Зарядить ночью/днём», чтобы вернуть.{% endif %}
+            {% if not req and not cancelled %}🤖 Автоматически: самое дешёвое 2ч окно на ближайшие 24 ч.{% endif %}
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/light_all_off'' }}'
+      sequence:
+      - action: light.turn_off
+        target:
+          entity_id: all
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 Весь свет выключен ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_kuh_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vkliuchit_svet_kukhnia
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 💡 Кухня ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_kuh_off'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vykliuchit_svet_kukhnia
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 Кухня ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_strip_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.kukhnia_poloski
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 💡 Кухня полоски ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_strip_off'' }}'
+      sequence:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.kukhnia_poloski
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 Кухня полоски ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_isl_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vkliuchit_svet_ostrov
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 💡 Остров ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_isl_off'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vykliuchit_ostrov_svet
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 Остров ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_tbl_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vkliuchit_svet_nad_stolom
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 💡 Над столом ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_tbl_off'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vykliuchit_svet_nad_stolom
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 Над столом ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_akv_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vkliuchit_svet_nad_akvariumom
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 💡 Над аквариумом ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_akv_off'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vykliuchit_svet_nad_akvariumom
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 Над аквариумом ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_wall_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vkliuchit_svet_stena
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 💡 Стена ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_wall_off'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vykliuchit_svet_stena
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 Стена ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_tv_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vkliuchit_svet_tv_zona
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 💡 ТВ зона ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_tv_off'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vykliuchit_svet_tv_zona
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 ТВ зона ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_cur_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vkliuchit_svet_zanaveski
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 💡 Занавески ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_cur_off'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vykliuchit_svet_zanaveski
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 Занавески ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_stairs_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vkliuchit_svet_u_lestnitsy
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 💡 Лестница ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_stairs_off'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vykliuchit_svet_u_lestnitsi
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 Лестница ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_hall_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.prikhozhaia_i_fanar
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 💡 Прихожая ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_hall_off'' }}'
+      sequence:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.prikhozhaia_i_fanar
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 Прихожая ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l1_all_off'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vykliuchit_svet_pervyi_etazh
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 Весь 1й этаж ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l2_corr_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vkliuchit_koridor_vtoroi_etazh
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 💡 Коридор 2й эт ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l2_corr_off'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vykliuchit_vtoroi_etazh_koridor
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 Коридор 2й эт ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l2_floor_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.vtoroi_etazh
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 💡 2й этаж ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l2_floor_off'' }}'
+      sequence:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.vtoroi_etazh
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 2й этаж ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l2_rgb_on'' }}'
+      sequence:
+      - action: light.turn_on
+        target:
+          entity_id:
+          - light.dream_color_rgb
+          - light.dream_color_rgb_2
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 💡 Dream Color ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/l2_rgb_off'' }}'
+      sequence:
+      - action: light.turn_off
+        target:
+          entity_id:
+          - light.dream_color_rgb
+          - light.dream_color_rgb_2
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 Dream Color ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/lo_ver_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.veranda
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 💡 Веранда ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/lo_ver_off'' }}'
+      sequence:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.veranda
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 Веранда ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/lo_gir_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.smart_switch_2ch_switch_1
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 💡 Гирлянда ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/lo_gir_off'' }}'
+      sequence:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.smart_switch_2ch_switch_1
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 Гирлянда ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/lo_prj_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.smart_switch_2ch_switch_2
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 💡 Прожектор ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/lo_prj_off'' }}'
+      sequence:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.smart_switch_2ch_switch_2
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌑 Прожектор ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/akv_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.akvarium_svet_socket_1
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🐠 Аквариум ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/akv_off'' }}'
+      sequence:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.akvarium_svet_socket_1
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🐠 Аквариум ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/chep_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.retserkuliatsiia_goriachai_vody_socket_1
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🐢 Черепаха ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/chep_off'' }}'
+      sequence:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.retserkuliatsiia_goriachai_vody_socket_1
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🐢 Черепаха ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/gidro_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.zigbee_plug_2_socket_1
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌊 Гидрофор ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/gidro_off'' }}'
+      sequence:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.zigbee_plug_2_socket_1
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌊 Гидрофор ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/kalar_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.kalarifer_socket_1
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🔥 Полотенцесушитель ВКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/kalar_off'' }}'
+      sequence:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.kalarifer_socket_1
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: ❄️ Полотенцесушитель ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/sockets_off'' }}'
+      sequence:
+      - action: switch.turn_off
+        target:
+          entity_id:
+          - switch.smart_plug_2_socket_1
+          - switch.kalarifer_socket_1
+          - switch.akvarium_svet_socket_1
+          - switch.retserkuliatsiia_goriachai_vody_socket_1
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🔌 Основные розетки ВЫКЛ ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/water_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.voda_kran_switch_1
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 💧 Кран открыт ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/water_off'' }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '⚠️ Закрытие главного крана отключено: открытый кран — штатное состояние дома.
+            Закрывай только при реальной аварии/протечке.'
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/floor1_on'' }}'
+      sequence:
+      - action: climate.set_preset_mode
+        target:
+          entity_id: climate.floor_heating
+        data:
+          preset_mode: manual
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🔥 Пол ванная — ручной 30°C ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/floor1_off'' }}'
+      sequence:
+      - action: climate.set_preset_mode
+        target:
+          entity_id: climate.floor_heating
+        data:
+          preset_mode: auto
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: ❄️ Пол ванная — авто ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/floor2_on'' }}'
+      sequence:
+      - action: climate.set_preset_mode
+        target:
+          entity_id: climate.floor_heating_2
+        data:
+          preset_mode: manual
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🔥 Пол душевая — ручной 30°C ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/floor2_off'' }}'
+      sequence:
+      - action: climate.set_preset_mode
+        target:
+          entity_id: climate.floor_heating_2
+        data:
+          preset_mode: auto
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: ❄️ Пол душевая — авто ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/night'' }}'
+      sequence:
+      - action: light.turn_off
+        target:
+          entity_id: all
+      - action: switch.turn_off
+        target:
+          entity_id: switch.ev_charger_switch
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_manual_mode
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: 🌙 Ночной режим ✅
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/night_saver_on'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: 🌙 Ночная экономия включена
+        continue_on_error: true
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.night_saver
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/night_saver_off'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: ☀️ Ночная экономия выключена
+        continue_on_error: true
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.night_saver
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/zhara_on'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: '🔥 Жара: нагрев выключен (бойлер работает)'
+        continue_on_error: true
+      - action: script.turn_on
+        target:
+          entity_id: script.rezhim_zhara_on
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/zhara_off'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: ❄️ Жара выключена — нагрев вернулся
+        continue_on_error: true
+      - action: script.turn_on
+        target:
+          entity_id: script.rezhim_zhara_off
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/scene_away'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: '🚪 Ушёл: свет выкл, охрана вкл'
+        continue_on_error: true
+      - action: script.turn_on
+        target:
+          entity_id: script.scene_away
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/scene_cinema'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: 🎬 Кино включён
+        continue_on_error: true
+      - action: script.turn_on
+        target:
+          entity_id: script.scene_cinema
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/scene_guests'' }}'
+      sequence:
+      - action: telegram_bot.answer_callback_query
+        data:
+          callback_query_id: '{{ callback_id }}'
+          message: '🎉 Гости: свет включён'
+        continue_on_error: true
+      - action: script.turn_on
+        target:
+          entity_id: script.scene_guests
+    - conditions:
+      - condition: template
+        value_template: '{{ callback_data == ''/noop_test'' }}'
+      sequence:
+      - stop: /noop_test handled by automation 1778700001006 (test, no actions)
+    default:
+    - action: telegram_bot.send_message
+      data:
+        chat_id: 100000000
+        message: '❓ Неизвестная команда: {{ callback_data }}'
+  - alias: Погасить спиннер (косметика; протухший query id не должен обрывать обработчик)
+    action: telegram_bot.answer_callback_query
+    continue_on_error: true
+    data:
+      callback_query_id: '{{ callback_id }}'
+      message: OK
+      show_alert: false
+  mode: queued
+  max: 10
+- id: '1778800001001'
+  alias: "\U0001F697 EV зарядка — планировщик"
+  description: 'Автоматическое расписание зарядки: раз за разом выбирает САМОЕ ДЕШЁВОЕ
+    2ч окно на ближайшие 24 ч (ночь или день — что реально дешевле) и пишет его в
+    input_datetime.ev_charge_start. Владельцу планировать ничего не нужно.
+
+    Запускает shell_command.ev_auto2h (/config/ev_auto2h.py). ПОЧЕМУ НЕ ev_best2h.py:
+    тот файл закреплён тестом tests/test_ev_notify_surgical.py на изменения только
+    в уведомлениях, а искать он умеет по ВСЕМУ загруженному горизонту (сегодня +
+    завтра, до ~34 ч вперёд) — плановое время могло уехать за завтра и оставить
+    разрыв до ~37 ч вообще без зарядки. Ограничение «окно начинается не позже
+    now+24ч» живёт в новом файле, ev_best2h.py не изменён и остаётся доступен
+    вручную через shell_command.ev_find_best2h.
+
+    Триггеры: обновление цен Nord Pool (08-22), старт HA, 14:05, публикация цен на
+    завтра, и часовая страховка, которая срабатывает ТОЛЬКО если план прокис
+    (время в прошлом или дальше 24 ч) — без неё сутки простоя HA оставляли дом без
+    зарядки до следующего обновления цен.'
+  triggers:
+  - trigger: state
+    entity_id: sensor.nord_pool_lv_lowest_price
+    id: price_update
+  - trigger: homeassistant
+    event: start
+    id: ha_start
+  - trigger: time
+    at: '14:05:00'
+    id: daily_14h
+  - alias: Публикация цен на завтра (~13-14:00) — пересчитать план сразу, а не ждать
+      следующего обновления Nord Pool
+    trigger: state
+    entity_id: binary_sensor.nord_pool_lv_tomorrow_price_available
+    to: 'on'
+    id: tomorrow_published
+  - alias: Часовая страховка от прокисшего плана (см. условие ниже). Гарантия «зарядка
+      планируется каждый день» держится на ней
+    trigger: time_pattern
+    minutes: '7'
+    id: periodic
+  conditions:
+  - condition: template
+    alias: НЕ перебивать явно запрошенную ночную зарядку (для ВСЕХ триггеров, включая
+      ha_start и 14:05)
+    value_template: >-
+      {% set req = states('input_boolean.ev_night_requested') %} {% set ws =
+      state_attr('input_datetime.ev_night_window_start', 'timestamp') | float(0) %} {{
+      not (req == 'on' and ws > 0 and now().timestamp() < (ws + 10800)) }}
+  - condition: template
+    value_template: '{{ trigger.id != ''price_update'' or (8 <= now().hour < 22) }}'
+    alias: price_update только с 08 до 22 (не перебивать ночное расписание)
+  - condition: template
+    alias: Часовая страховка работает ТОЛЬКО по прокисшему плану — иначе она перебивала
+      бы свежий план каждый час, в том числе через 7 минут после начала зарядки (тогда
+      цепочка проверок +6/+10/+12 мин читала бы уже другое окно)
+    value_template: >-
+      {% set cs = state_attr('input_datetime.ev_charge_start', 'timestamp') | float(0)
+      %} {{ trigger.id != 'periodic' or cs <= 0 or cs < (now().timestamp() - 1800) or cs
+      > (now().timestamp() + 86400) }}
+  actions:
+  - if:
+    - condition: trigger
+      id: ha_start
+    then:
+    - delay: 00:01:00
+  - action: shell_command.ev_auto2h
+  mode: single
+- id: '1778800001002'
+  alias: 🚗 EV зарядка — автозарядка 2ч
+  description: 'По расписанию: включает EV на 2ч. Выключает бойлер на время зарядки. После зарядки:
+    включает бойлер если цена ≤ 0.10 EUR/kWh.'
+  triggers:
+  - trigger: time
+    at: input_datetime.ev_charge_start
+  conditions:
+  - condition: template
+    value_template: '{{ not is_state(''input_boolean.ev_manual_mode'', ''on'') }}'
+  - condition: template
+    value_template: '{{ states(''switch.ev_charger_switch'') not in [''unavailable'', ''unknown'']
+      }}'
+  actions:
+  - alias: Разовая отмена — пропустить ИМЕННО это окно и погасить отмену. Стоит первым
+      шагом намеренно — так отмена гасится ровно один раз, без гонки с отдельной
+      автоматизацией, и ни одна команда устройству не выдаётся
+    if:
+    - condition: template
+      value_template: '{{ is_state(''input_boolean.ev_charge_cancelled'', ''on'') }}'
+    then:
+    - alias: Запомнить, КАКОЕ окно было пропущено — сторож 1790100001001 по этой метке
+        молчит про это окно
+      action: input_datetime.set_datetime
+      target:
+        entity_id: input_datetime.ev_cancel_consumed
+      data:
+        timestamp: '{{ state_attr(''input_datetime.ev_charge_start'', ''timestamp'') | float(now().timestamp())
+          }}'
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.ev_charge_cancelled
+    - action: telegram_bot.send_message
+      data:
+        chat_id: 100000000
+        parse_mode: html
+        message: '⛔ EV: эта зарядка пропущена — ты нажал «Отменить зарядку».
+
+
+          Окно {{ states(''input_datetime.ev_charge_start'') | e }} (2 ч) пропущено, зарядка
+          не включалась.
+
+
+          Разовая отмена снята: следующая зарядка пройдёт по автоматическому расписанию
+          как обычно. Нужна зарядка раньше — «Зарядить ночью» / «Зарядить днём».
+
+
+          Плановое время <code>input_datetime.ev_charge_start</code>: {{ states(''input_datetime.ev_charge_start'')
+          | e }}'
+    - stop: Зарядка пропущена по разовой отмене владельца
+  - variables:
+      price_now: '{{ states(''sensor.nord_pool_lv_current_price'') | float(0) }}'
+      ev_energy_before: '{{ states(''sensor.ev_charger_energy'') | float(-1) }}'
+  - action: switch.turn_on
+    target:
+      entity_id: switch.ev_charger_switch
+  - action: switch.turn_off
+    target:
+      entity_id: switch.smart_plug_2_socket_1
+    alias: Бойлер OFF на время зарядки EV
+  - alias: Проверка 2 — зарядка реально началась (облако Tuya, лаг до 5 мин)
+    wait_template: '{{ is_state(''sensor.ev_charger_status'', ''charger_charging'') }}'
+    timeout: 00:06:00
+    continue_on_timeout: true
+  - variables:
+      ev_charging_ok: '{{ is_state(''sensor.ev_charger_status'', ''charger_charging'') }}'
+  - choose:
+    - alias: Зарядка подтверждена — обычное уведомление
+      conditions:
+      - condition: template
+        value_template: '{{ ev_charging_ok }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '🚗⚡ EV зарядка началась!
+
+            ⚡ Цена: {{ ''%.4f'' | format(price_now) }} EUR/kWh
+
+            ⏱ Стоп в {{ (now() + timedelta(hours=2)).strftime(''%H:%M'') }}
+
+            📅 Зарядка до {{ (now() + timedelta(hours=2)).strftime(''%d.%m %H:%M'') }}'
+          inline_keyboard:
+          - - - ⛔ EV СТОП
+              - /ev_stop
+          parse_mode: html
+    - alias: Зарядка не началась — настоящая причина из sensor.ev_charger_status
+      conditions:
+      - condition: template
+        value_template: '{{ not ev_charging_ok }}'
+      - condition: template
+        value_template: '{{ (now().timestamp() - (state_attr(''input_datetime.tuya_cmd_fail_ev'',
+          ''timestamp'') | float(0))) > 21600 }}'
+      sequence:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.tuya_cmd_fail_ev
+        data:
+          timestamp: '{{ now().timestamp() }}'
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: '{%- set s = states(''sensor.ev_charger_status'') -%}{%- set causes = {''charger_free'':
+            ''машина не подключена'', ''charger_insert'': ''машина подключена, но зарядка не началась'',
+            ''charger_pause'': ''зарядка на паузе'', ''charger_end'': ''зарядка уже завершена''}
+            -%}{%- set cause = causes.get(s, ''нет связи с зарядкой (Tuya)'' if s in [''unavailable'',
+            ''unknown'', ''none'', ''None'', '''', ''cloud_error''] else ''статус '' ~ (s | e)) -%}⚠️
+            EV: зарядка не началась — {{ cause }}
+
+
+            Статус <code>sensor.ev_charger_status</code>: {{ s | e }} (ожидался <code>charger_charging</code>),
+            проверка 6 мин.
+
+
+            Реле <code>switch.ev_charger_switch</code> на этой зарядке читается <code>off</code>
+            даже во время зарядки, поэтому по нему успех не определяется.
+
+
+            Повтор этого сообщения — не чаще раза в 6 ч.'
+  - delay: 02:00:00
+  - variables:
+      price_after: '{{ states(''sensor.nord_pool_lv_current_price'') | float(0) }}'
+  - alias: Стоп по окончании окна — реле не показатель, выключаем безусловно (идемпотентно)
+    action: switch.turn_off
+    target:
+      entity_id: switch.ev_charger_switch
+  - alias: Проверка — зарядка реально прекратилась (облако Tuya, лаг до 5 мин)
+    wait_template: '{{ not is_state(''sensor.ev_charger_status'', ''charger_charging'') }}'
+    timeout: 00:06:00
+    continue_on_timeout: true
+  - alias: Восстановить бойлер если цена дешёвая
+    choose:
+    - conditions:
+      - condition: numeric_state
+        entity_id: sensor.nord_pool_lv_current_price
+        below: 0.1
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.smart_plug_2_socket_1
+        alias: Бойлер ON — цена дешёвая
+  - variables:
+      ev_charged: '{{ ev_charging_ok or ((ev_energy_before | float(-1)) >= 0 and (states(''sensor.ev_charger_energy'')
+        | float(-1)) > (ev_energy_before | float(-1))) or ((state_attr(''sensor.ev_charger_energy'',
+        ''session_kwh'') | float(0)) > 0) }}'
+  - choose:
+    - alias: Зарядка была и остановлена — обычное уведомление
+      conditions:
+      - condition: template
+        value_template: '{{ ev_charged and not is_state(''sensor.ev_charger_status'', ''charger_charging'')
+          }}'
+      sequence:
+      - action: notify.send_message
+        target:
+          entity_id: notify.telegram_owner
+        data:
+          message: '🚗 EV зарядка завершена (2ч) ✅
+
+            💰 Цена: {{ ''%.4f'' | format(price_after) }} EUR/kWh
+
+            📅 Следующий сеанс: {{ (as_datetime(states(''input_datetime.ev_charge_start'')) | as_local).strftime(''%d.%m
+            %H:%M'') }}'
+    - alias: СТОП не подействовал
+      conditions:
+      - condition: template
+        value_template: '{{ is_state(''sensor.ev_charger_status'', ''charger_charging'') }}'
+      - condition: template
+        value_template: '{{ (now().timestamp() - (state_attr(''input_datetime.tuya_cmd_fail_ev'',
+          ''timestamp'') | float(0))) > 21600 }}'
+      sequence:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.tuya_cmd_fail_ev
+        data:
+          timestamp: '{{ now().timestamp() }}'
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: '⚠️ EV: зарядка не остановлена
+
+
+            После команды СТОП статус <code>sensor.ev_charger_status</code> = {{ states(''sensor.ev_charger_status'')
+            | e }} (ожидался любой, кроме <code>charger_charging</code>; проверка 6 мин).
+
+
+            Зарядка продолжается. Реле <code>switch.ev_charger_switch</code> здесь не показатель
+            — оно читается <code>off</code> и во время зарядки.
+
+
+            Повтор этого сообщения — не чаще раза в 6 ч.'
+    - alias: Окно закончилось, зарядки так и не было
+      conditions:
+      - condition: template
+        value_template: '{{ not ev_charged }}'
+      - condition: template
+        value_template: '{{ (now().timestamp() - (state_attr(''input_datetime.tuya_cmd_fail_ev'',
+          ''timestamp'') | float(0))) > 21600 }}'
+      sequence:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.tuya_cmd_fail_ev
+        data:
+          timestamp: '{{ now().timestamp() }}'
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: '{%- set s = states(''sensor.ev_charger_status'') -%}{%- set causes = {''charger_free'':
+            ''машина не подключена'', ''charger_insert'': ''машина подключена, но зарядка не началась'',
+            ''charger_pause'': ''зарядка на паузе'', ''charger_end'': ''зарядка уже завершена''}
+            -%}{%- set cause = causes.get(s, ''нет связи с зарядкой (Tuya)'' if s in [''unavailable'',
+            ''unknown'', ''none'', ''None'', '''', ''cloud_error''] else ''статус '' ~ (s | e)) -%}⚠️
+            EV: 2-часовое окно закончилось, зарядка так и не началась — {{ cause }}
+
+
+            Статус <code>sensor.ev_charger_status</code>: {{ s | e }}
+
+
+            Счётчик <code>sensor.ev_charger_energy</code>: {{ states(''sensor.ev_charger_energy'')
+            | e }} кВт·ч (в начале окна было {{ ev_energy_before | e }})
+
+
+            Уведомление о завершении не отправлено — завершать было нечего.
+
+
+            Повтор этого сообщения — не чаще раза в 6 ч.'
+  mode: single
+- id: '1790100001001'
+  alias: 🚗 Сторож EV — плановая зарядка (только уведомление)
+  description: Независимая проверка EV-зарядки. Через 10 мин после планового старта
+    проверяет, идёт ли зарядка; отдельно ловит зарядку дольше планового окна. НИКОГДА
+    не подаёт команд устройствам. Нужна потому, что ошибка Tuya (ApiRequestException)
+    обрывает основную автоматизацию на шаге команды, до всех проверок и уведомлений.
+  triggers:
+  - trigger: time
+    at: input_datetime.ev_charge_start
+    id: planned_start
+  - alias: Стабильная ссылка на ЗАПРОШЕННОЕ ночное окно. Отдельный helper, который
+      планировщик не трогает, поэтому этот триггер нельзя молча перевести на другое
+      время, изменив input_datetime.ev_charge_start.
+    trigger: time
+    at: input_datetime.ev_night_window_start
+    id: night_planned_start
+  - trigger: state
+    entity_id: sensor.ev_charger_status
+    to: charger_charging
+    for: 02:30:00
+    id: overrun
+  conditions:
+  - condition: template
+    value_template: '{{ not is_state(''input_boolean.ev_manual_mode'', ''on'') }}'
+  actions:
+  - alias: Дать основной автоматизации 10 мин на старт зарядки
+    if:
+    - condition: trigger
+      id:
+      - planned_start
+      - night_planned_start
+    then:
+    - delay: 00:10:00
+  - choose:
+    - alias: Плановый старт был, а зарядки нет
+      conditions:
+      - condition: trigger
+        id: planned_start
+      - condition: template
+        alias: Ночной заявкой занимается отдельная ветка ниже (иначе два сообщения
+          об одном и том же). Helper отсутствует -> условие истинно -> ветка работает
+          как раньше.
+        value_template: '{{ not is_state(''input_boolean.ev_night_requested'', ''on'')
+          }}'
+      - condition: template
+        value_template: '{{ not is_state(''sensor.ev_charger_status'', ''charger_charging'')
+          }}'
+      - condition: template
+        alias: Это окно не отменял сам владелец (метка ev_cancel_consumed). Помощник
+          отсутствует -> 0 -> условие истинно -> ветка работает как раньше
+        value_template: >-
+          {% set cs = state_attr('input_datetime.ev_charge_start', 'timestamp') | float(0)
+          %} {% set cc = state_attr('input_datetime.ev_cancel_consumed', 'timestamp') |
+          float(0) %} {{ cs <= 0 or ((cc - cs) | abs) > 60 }}
+      - condition: template
+        alias: СВЕЖИЙ charger_free — это случай «машина не подключена», им занимается
+          1791000001001 (перенос зарядки + одно сообщение). Иначе владелец получил бы
+          два сообщения об одном событии
+        value_template: >-
+          {% set s = states('sensor.ev_charger_status') %} {% set src =
+          state_attr('sensor.ev_charger_status', 'src') %} {% set age =
+          state_attr('sensor.ev_charger_status', 'stale_age') | float(-1) %} {{ not (s ==
+          'charger_free' and src in ['local', 'cloud'] and age >= 0 and age < 900) }}
+      - condition: template
+        value_template: '{{ (now().timestamp() - (state_attr(''input_datetime.tuya_cmd_fail_ev'',
+          ''timestamp'') | float(0))) > 21600 }}'
+      sequence:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.tuya_cmd_fail_ev
+        data:
+          timestamp: '{{ now().timestamp() }}'
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: |-
+            {%- set s = states('sensor.ev_charger_status') -%}
+            {%- set src = state_attr('sensor.ev_charger_status', 'src') -%}
+            {%- set age = state_attr('sensor.ev_charger_status', 'stale_age') | float(-1) -%}
+            {%- set fresh = (src in ['local', 'cloud']) and age >= 0 and age < 900 -%}
+            {%- set dead = s in ['unavailable', 'unknown', 'none', 'None', ''] -%}
+            {%- set causes = {'charger_free': 'машина не подключена', 'charger_insert': 'машина подключена, но зарядка не началась', 'charger_pause': 'зарядка на паузе', 'charger_end': 'зарядка уже завершена', 'charger_charging': 'зарядка идёт (статус свежий)'} -%}
+            {%- if dead -%}{%- set cause = 'нет связи с зарядкой (статус недоступен)' -%}
+            {%- elif s == 'cloud_error' -%}{%- set cause = 'нет свежих данных от зарядки (кэш/квота Tuya) — причину назвать нельзя' -%}
+            {%- elif not fresh -%}{%- set cause = 'нет свежих данных от зарядки (кэш/квота Tuya) — причину назвать нельзя, последний известный статус устарел' -%}
+            {%- else -%}{%- set cause = causes.get(s, 'статус ' ~ (s | e)) -%}
+            {%- endif -%}
+            {%- if fresh -%}{%- set stale_note = '' -%}
+            {%- elif age >= 0 -%}{%- set stale_note = ' — данные НЕ свежие (источник ' ~ ((src if src is string else 'неизвестен') | e) ~ ', возраст ' ~ ((age / 60) | round(0) | int | string) ~ ' мин)' -%}
+            {%- else -%}{%- set stale_note = ' — данные НЕ свежие (возраст неизвестен)' -%}
+            {%- endif -%}
+            ⚠️ EV: плановая зарядка не началась
+
+            Через 10 мин после планового старта зарядка не идёт.
+
+            Причина: {{ cause }}
+
+            Статус <code>sensor.ev_charger_status</code>: {{ s | e }} (ожидался <code>charger_charging</code>){{ stale_note }}
+            Плановое время <code>input_datetime.ev_charge_start</code>: {{ states('input_datetime.ev_charge_start') | e }}
+            Счётчик <code>sensor.ev_charger_energy</code>: {{ states('sensor.ev_charger_energy') | e }} кВт·ч
+
+            Реле <code>switch.ev_charger_switch</code> на этой зарядке читается <code>off</code> даже во время зарядки — по нему успех не определяется.
+
+            Это независимая проверка: она срабатывает даже если сама автоматизация оборвалась ошибкой Tuya.
+            Повтор этого сообщения — не чаще раза в 6 ч.
+    - alias: Ночная заявка — плановый старт был, а зарядки нет
+      conditions:
+      - condition: trigger
+        id: night_planned_start
+      - condition: template
+        alias: Заявка ещё активна (она же — токен «вердикт не отправлен»)
+        value_template: '{{ is_state(''input_boolean.ev_night_requested'', ''on'') }}'
+      - condition: template
+        alias: Зарядка не идёт
+        value_template: '{{ not is_state(''sensor.ev_charger_status'', ''charger_charging'')
+          }}'
+      - condition: template
+        alias: Это окно не отменял сам владелец (нажал «Отменить зарядку» после заявки)
+        value_template: >-
+          {% set cs = state_attr('input_datetime.ev_charge_start', 'timestamp') | float(0)
+          %} {% set cc = state_attr('input_datetime.ev_cancel_consumed', 'timestamp') |
+          float(0) %} {{ cs <= 0 or ((cc - cs) | abs) > 60 }}
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: |-
+            {%- set s = states('sensor.ev_charger_status') -%}
+            {%- set src = state_attr('sensor.ev_charger_status', 'src') -%}
+            {%- set age = state_attr('sensor.ev_charger_status', 'stale_age') | float(-1) -%}
+            {%- set fresh = (src in ['local', 'cloud']) and age >= 0 and age < 900 -%}
+            {%- set dead = s in ['unavailable', 'unknown', 'none', 'None', ''] -%}
+            {%- set causes = {'charger_free': 'машина не подключена', 'charger_insert': 'машина подключена, но зарядка не началась', 'charger_pause': 'зарядка на паузе', 'charger_end': 'зарядка уже завершена', 'charger_charging': 'зарядка идёт (статус свежий)'} -%}
+            {%- if dead -%}{%- set cause = 'нет связи с зарядкой (статус недоступен)' -%}
+            {%- elif s == 'cloud_error' -%}{%- set cause = 'нет свежих данных от зарядки (кэш/квота Tuya) — причину назвать нельзя' -%}
+            {%- elif not fresh -%}{%- set cause = 'нет свежих данных от зарядки (кэш/квота Tuya) — причину назвать нельзя, последний известный статус устарел' -%}
+            {%- else -%}{%- set cause = causes.get(s, 'статус ' ~ (s | e)) -%}
+            {%- endif -%}
+            {%- if fresh -%}{%- set stale_note = '' -%}
+            {%- elif age >= 0 -%}{%- set stale_note = ' — данные НЕ свежие (источник ' ~ ((src if src is string else 'неизвестен') | e) ~ ', возраст ' ~ ((age / 60) | round(0) | int | string) ~ ' мин)' -%}
+            {%- else -%}{%- set stale_note = ' — данные НЕ свежие (возраст неизвестен)' -%}
+            {%- endif -%}
+            {%- set wt = states('input_datetime.ev_night_window_start') -%}
+            {%- set wts = state_attr('input_datetime.ev_night_window_start', 'timestamp') | float(0) -%}
+            {%- set wh = (wts | timestamp_custom('%H', true) | int(-1)) if wts > 0 else -1 -%}
+            {%- set kind = 'ночная' if (wh >= 23 or (wh >= 0 and wh < 7)) else 'дневная' -%}
+            ⚠️ EV: {{ kind | e }} зарядка по заявке НЕ состоялась
+
+            Заявка была на {{ wt | e }} (окно 2 ч, запрошено кнопкой «Зарядить ночью» / «Зарядить днём»).
+            Через 10 мин после планового старта зарядка не идёт.
+
+            Причина: {{ cause }}
+
+            Статус <code>sensor.ev_charger_status</code>: {{ s | e }} (ожидался <code>charger_charging</code>){{ stale_note }}
+            Плановое время <code>input_datetime.ev_charge_start</code>: {{ states('input_datetime.ev_charge_start') | e }}
+            Заявка <code>input_datetime.ev_night_window_start</code>: {{ wt | e }}
+            Счётчик <code>sensor.ev_charger_energy</code>: {{ states('sensor.ev_charger_energy') | e }} кВт·ч
+
+            Реле <code>switch.ev_charger_switch</code> на этой зарядке читается <code>off</code> даже во время зарядки — по нему успех не определяется.
+
+            Это сообщение отправляется РОВНО ОДИН РАЗ на заявку.
+      - alias: Вердикт доставлен — гасим заявку, чтобы сообщение было РОВНО одно
+        action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_night_requested
+    - alias: Ночная заявка — зарядка идёт, вердикт не нужен
+      conditions:
+      - condition: trigger
+        id: night_planned_start
+      - condition: template
+        value_template: '{{ is_state(''sensor.ev_charger_status'', ''charger_charging'')
+          }}'
+      sequence:
+      - alias: Отметить, что зарядка в запрошенном окне наблюдалась
+        action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.ev_night_charge_seen
+        data:
+          timestamp: '{{ now().timestamp() }}'
+    - alias: Зарядка идёт дольше планового окна
+      conditions:
+      - condition: trigger
+        id: overrun
+      - condition: template
+        value_template: '{{ (now().timestamp() - (state_attr(''input_datetime.ev_overrun_notify'',
+          ''timestamp'') | float(0))) > 21600 }}'
+      sequence:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.ev_overrun_notify
+        data:
+          timestamp: '{{ now().timestamp() }}'
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: '⚠️ EV: зарядка идёт дольше планового окна
+
+            <code>sensor.ev_charger_status</code> = charger_charging уже 2 ч 30 мин,
+            а плановое окно — 2 ч.
+
+            Реле <code>switch.ev_charger_switch</code>: {{ states(''switch.ev_charger_switch'')
+            }}
+
+            Счётчик <code>sensor.ev_charger_energy</code>: {{ states(''sensor.ev_charger_energy'')
+            }} кВт·ч
+
+            Команда СТОП могла не пройти (Tuya) — проверь и при необходимости останови
+            вручную.
+
+            Повтор этого сообщения — не чаще раза в 6 ч.'
+  mode: queued
+  max: 5
+- id: '1790500001001'
+  alias: '🚗 EV: ночная заявка — учёт, перехват и поздний вердикт'
+  description: 'Жизненный цикл ЗАЯВКИ на ночную зарядку (input_boolean.ev_night_requested).
+
+    ЗАЧЕМ: 18.08 в 18:23 владелец запросил ночную зарядку на 19.08 03:45; в 19:49
+    планировщик (ev_best2h.py через shell_command.ev_find_best2h) перезаписал input_datetime.ev_charge_start
+    на 14:15, поэтому в 03:45 автозарядка 1778800001002 не сработала. Сторож 1790100001001
+    ждал ТОТ ЖЕ helper, поэтому тоже промолчал — владелец не получил вообще ничего.
+
+    ЧТО ДЕЛАЕТ: (1) отмечает, что зарядка в окне реально наблюдалась; (2) ловит перезапись
+    планового времени поверх активной заявки и сообщает об этом; (3) поздний вердикт,
+    если окно прошло без зарядки (работает даже после рестарта HA); (4) детерминированно
+    гасит заявку — по завершении зарядки и по ограниченному сроку истечения.
+
+    СРОК ИСТЕЧЕНИЯ: заявка гасится не позже начала окна + 3 ч (= конец окна + 1 ч).
+    Плюс условие планировщика 1778800001001 перестаёт учитывать заявку в тот же момент
+    НЕЗАВИСИМО от состояния флага, поэтому зависший флаг не может заблокировать планировщик
+    навсегда.
+
+    НИКОГДА не подаёт команд устройствам: только input_boolean/input_datetime и Telegram.'
+  triggers:
+  - alias: Зарядка реально пошла
+    trigger: state
+    entity_id: sensor.ev_charger_status
+    to: charger_charging
+    id: charging
+  - alias: Зарядка завершена / машина отключена — как в 1748000001006
+    trigger: state
+    entity_id: sensor.ev_charger_status
+    to:
+    - charger_end
+    - charger_free
+    id: completed
+  - alias: Кто-то перезаписал плановое время поверх активной заявки
+    trigger: state
+    entity_id: input_datetime.ev_charge_start
+    id: overwritten
+  - alias: Поздний вердикт и срок истечения заявки
+    trigger: time_pattern
+    minutes: /10
+    id: sweep
+  conditions: []
+  actions:
+  - variables:
+      ws: '{{ state_attr(''input_datetime.ev_night_window_start'', ''timestamp'') | float(0)
+        }}'
+      seen: '{{ state_attr(''input_datetime.ev_night_charge_seen'', ''timestamp'') | float(0)
+        }}'
+      cs: '{{ state_attr(''input_datetime.ev_charge_start'', ''timestamp'') | float(0) }}'
+      req: '{{ is_state(''input_boolean.ev_night_requested'', ''on'') }}'
+  - choose:
+    - alias: Зарядка пошла — отметить наблюдение (сообщений нет)
+      conditions:
+      - condition: trigger
+        id: charging
+      - condition: template
+        value_template: '{{ req }}'
+      sequence:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.ev_night_charge_seen
+        data:
+          timestamp: '{{ now().timestamp() }}'
+    - alias: Зарядка завершена внутри/после окна — детерминированно гасим заявку
+      conditions:
+      - condition: trigger
+        id: completed
+      - condition: template
+        value_template: '{{ req }}'
+      - condition: template
+        alias: Только если окно УЖЕ началось. Иначе charger_free до окна (машина ещё
+          не подключена в момент заявки) погасил бы заявку сразу и баг вернулся бы.
+        value_template: '{{ (ws | float(0)) > 0 and now().timestamp() >= (ws | float(0))
+          }}'
+      sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_night_requested
+    - alias: Плановое время перезаписано поверх активной заявки — РОВНО одно сообщение
+      conditions:
+      - condition: trigger
+        id: overwritten
+      - condition: template
+        value_template: '{{ req }}'
+      - condition: template
+        alias: Расхождение с запрошенным окном больше минуты (attribute-only изменения
+          и запись того же значения не считаются)
+        value_template: '{{ (ws | float(0)) > 0 and ((cs | float(0)) - (ws | float(0)))
+          | abs > 60 }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: |-
+            {%- set s = states('sensor.ev_charger_status') -%}
+            {%- set src = state_attr('sensor.ev_charger_status', 'src') -%}
+            {%- set age = state_attr('sensor.ev_charger_status', 'stale_age') | float(-1) -%}
+            {%- set fresh = (src in ['local', 'cloud']) and age >= 0 and age < 900 -%}
+            {%- set dead = s in ['unavailable', 'unknown', 'none', 'None', ''] -%}
+            {%- set causes = {'charger_free': 'машина не подключена', 'charger_insert': 'машина подключена, но зарядка не началась', 'charger_pause': 'зарядка на паузе', 'charger_end': 'зарядка уже завершена', 'charger_charging': 'зарядка идёт (статус свежий)'} -%}
+            {%- if dead -%}{%- set cause = 'нет связи с зарядкой (статус недоступен)' -%}
+            {%- elif s == 'cloud_error' -%}{%- set cause = 'нет свежих данных от зарядки (кэш/квота Tuya) — причину назвать нельзя' -%}
+            {%- elif not fresh -%}{%- set cause = 'нет свежих данных от зарядки (кэш/квота Tuya) — причину назвать нельзя, последний известный статус устарел' -%}
+            {%- else -%}{%- set cause = causes.get(s, 'статус ' ~ (s | e)) -%}
+            {%- endif -%}
+            {%- if fresh -%}{%- set stale_note = '' -%}
+            {%- elif age >= 0 -%}{%- set stale_note = ' — данные НЕ свежие (источник ' ~ ((src if src is string else 'неизвестен') | e) ~ ', возраст ' ~ ((age / 60) | round(0) | int | string) ~ ' мин)' -%}
+            {%- else -%}{%- set stale_note = ' — данные НЕ свежие (возраст неизвестен)' -%}
+            {%- endif -%}
+            {%- set wt = states('input_datetime.ev_night_window_start') -%}
+            {%- set nv = states('input_datetime.ev_charge_start') -%}
+            {%- set ctx = trigger.to_state.context if trigger is defined and trigger.to_state is defined and trigger.to_state is not none else none -%}
+            {%- set pid = ctx.parent_id if ctx is not none else none -%}
+            {%- set uid = ctx.user_id if ctx is not none else none -%}
+            {%- if pid -%}{%- set who = 'автоматизация или скрипт HA' -%}
+            {%- elif uid -%}{%- set who = 'внешняя запись под токеном (скрипт ev_day2h.py / ev_best2h.py через API, либо ручная правка helper)' -%}
+            {%- else -%}{%- set who = 'источник записи не определён' -%}
+            {%- endif -%}
+            ⚠️ EV: ночная заявка перебита — зарядки в запрошенном окне НЕ будет
+
+            Заявка была на {{ wt | e }} (окно 2 ч).
+            Плановое время <code>input_datetime.ev_charge_start</code> теперь = {{ nv | e }}.
+
+            Кто перебил: {{ who }}
+
+            Заявка снята. Если ночная зарядка всё ещё нужна — нажми «Ночь 2ч» ещё раз.
+
+            Это сообщение отправляется РОВНО ОДИН РАЗ на заявку.
+      - alias: Вердикт доставлен — гасим заявку
+        action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_night_requested
+    - alias: Окно прошло — поздний вердикт и срок истечения заявки
+      conditions:
+      - condition: trigger
+        id: sweep
+      - condition: template
+        value_template: '{{ req }}'
+      - condition: template
+        alias: Начало окна + 3 ч (= конец окна + 1 ч)
+        value_template: '{{ (ws | float(0)) > 0 and now().timestamp() > ((ws | float(0))
+          + 10800) }}'
+      sequence:
+      - alias: Сообщать только если зарядка в этом окне ни разу не наблюдалась
+        if:
+        - condition: template
+          value_template: '{{ (seen | float(0)) < (ws | float(0)) }}'
+        then:
+        - action: telegram_bot.send_message
+          data:
+            chat_id: 100000000
+            parse_mode: html
+            message: |-
+              {%- set s = states('sensor.ev_charger_status') -%}
+              {%- set src = state_attr('sensor.ev_charger_status', 'src') -%}
+              {%- set age = state_attr('sensor.ev_charger_status', 'stale_age') | float(-1) -%}
+              {%- set fresh = (src in ['local', 'cloud']) and age >= 0 and age < 900 -%}
+              {%- set dead = s in ['unavailable', 'unknown', 'none', 'None', ''] -%}
+              {%- set causes = {'charger_free': 'машина не подключена', 'charger_insert': 'машина подключена, но зарядка не началась', 'charger_pause': 'зарядка на паузе', 'charger_end': 'зарядка уже завершена', 'charger_charging': 'зарядка идёт (статус свежий)'} -%}
+              {%- if dead -%}{%- set cause = 'нет связи с зарядкой (статус недоступен)' -%}
+              {%- elif s == 'cloud_error' -%}{%- set cause = 'нет свежих данных от зарядки (кэш/квота Tuya) — причину назвать нельзя' -%}
+              {%- elif not fresh -%}{%- set cause = 'нет свежих данных от зарядки (кэш/квота Tuya) — причину назвать нельзя, последний известный статус устарел' -%}
+              {%- else -%}{%- set cause = causes.get(s, 'статус ' ~ (s | e)) -%}
+              {%- endif -%}
+              {%- if fresh -%}{%- set stale_note = '' -%}
+              {%- elif age >= 0 -%}{%- set stale_note = ' — данные НЕ свежие (источник ' ~ ((src if src is string else 'неизвестен') | e) ~ ', возраст ' ~ ((age / 60) | round(0) | int | string) ~ ' мин)' -%}
+              {%- else -%}{%- set stale_note = ' — данные НЕ свежие (возраст неизвестен)' -%}
+              {%- endif -%}
+              {%- set wt = states('input_datetime.ev_night_window_start') -%}
+              ⚠️ EV: ночное окно прошло, зарядки так и не было
+
+              Заявка была на {{ wt | e }} (окно 2 ч) — окно закончилось, зарядка ни разу не переходила
+              в <code>charger_charging</code>.
+
+              Причина: {{ cause }}
+
+              Статус <code>sensor.ev_charger_status</code>: {{ s | e }}{{ stale_note }}
+              Счётчик <code>sensor.ev_charger_energy</code>: {{ states('sensor.ev_charger_energy') | e }} кВт·ч
+
+              Это поздняя проверка (окно + 1 ч): она срабатывает даже если HA был выключен
+              в момент планового старта. Отправляется РОВНО ОДИН РАЗ на заявку.
+      - alias: Срок истечения — заявка гасится в любом случае, чтобы флаг не завис
+        action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_night_requested
+    - alias: Заявка неактивна, но флаг завис без записанного окна — снять
+      conditions:
+      - condition: trigger
+        id: sweep
+      - condition: template
+        value_template: '{{ req and (ws | float(0)) <= 0 }}'
+      sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_night_requested
+    - alias: Срок истечения РАЗОВОЙ ОТМЕНЫ — 24 ч. Стоит последней ветвью намеренно
+        (choose берёт первое совпадение), чтобы никогда не перебить вердикт по заявке
+      conditions:
+      - condition: trigger
+        id: sweep
+      - condition: template
+        value_template: '{{ is_state(''input_boolean.ev_charge_cancelled'', ''on'') }}'
+      - condition: template
+        alias: Метка постановки + 24 ч. Помощник отсутствует -> 0 -> условие истинно ->
+          отмена снимается сразу, а не висит вечно
+        value_template: '{{ now().timestamp() > ((state_attr(''input_datetime.ev_cancel_armed_at'',
+          ''timestamp'') | float(0)) + 86400) }}'
+      sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_charge_cancelled
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: 'ℹ️ EV: разовая отмена зарядки истекла (24 ч) и снята автоматически.
+
+
+            Ни одна плановая зарядка за это время так и не начиналась, поэтому отменять
+            было нечего. Автоматическое расписание работает как обычно.
+
+
+            Флаг <code>input_boolean.ev_charge_cancelled</code> выключен.'
+  mode: queued
+  max: 10
+- id: '1791000001001'
+  alias: '🚗 EV: машина не подключена — перенос зарядки (без команд устройствам)'
+  description: 'Плановое окно наступило, а машина НЕ подключена: один раз сообщить и
+    перенести зарядку на следующее самое дешёвое окно, вместо того чтобы молча пропустить
+    сутки.
+
+    СТРОГО ПО СВЕЖЕМУ СТАТУСУ. Пробная квота Tuya IoT Core исчерпана (code 28841004),
+    поэтому sensor.ev_charger_status отдаётся из кэша (src=cache, stale_age ~18000 c)
+    и заморожен на charger_insert. Утверждать «машина не подключена» по устаревшему
+    значению нельзя, поэтому ветка требует src=cloud И stale_age < 900. Любой НЕсвежий
+    статус — это случай сторожа 1790100001001, который прямо говорит «нет свежих данных,
+    причину назвать нельзя».
+
+    ЛИМИТ: не больше 2 переносов за местные сутки (input_number.ev_replan_count,
+    обнуляется когда input_datetime.ev_replan_day не сегодняшний). Лимит считает сам
+    /config/ev_replan_next.py; исчерпан — одно сообщение и всё, никаких повторов.
+
+    ЗАДЕРЖКА 12 мин: после автозарядки 1778800001002 (её проверка 6 мин) и сторожа
+    1790100001001 (10 мин), чтобы порядок сообщений был «почему» -> «что делаю».
+
+    Разовая заявка «Зарядить ночью/днём» НЕ переносится: это осознанный выбор владельца
+    на конкретное окно. Отменённое окно тоже не переносится.
+
+    НИКОГДА не подаёт команд устройствам: только shell_command, который пишет helpers
+    и отправляет Telegram.'
+  triggers:
+  - trigger: time
+    at: input_datetime.ev_charge_start
+    id: planned_start
+  conditions:
+  - condition: template
+    value_template: '{{ not is_state(''input_boolean.ev_manual_mode'', ''on'') }}'
+  actions:
+  - alias: Дать автозарядке (6 мин) и сторожу (10 мин) высказаться первыми
+    delay: 00:12:00
+  - condition: template
+    alias: Разовая заявка владельца не переносится
+    value_template: '{{ not is_state(''input_boolean.ev_night_requested'', ''on'') }}'
+  - condition: template
+    alias: Это окно не отменял сам владелец
+    value_template: >-
+      {% set cs = state_attr('input_datetime.ev_charge_start', 'timestamp') | float(0) %}
+      {% set cc = state_attr('input_datetime.ev_cancel_consumed', 'timestamp') | float(0)
+      %} {{ cs <= 0 or ((cc - cs) | abs) > 60 }}
+  - condition: template
+    alias: ТОЛЬКО свежий charger_free. Кэш/квота/unavailable -> ничего не утверждаем и
+      не переносим
+    value_template: >-
+      {% set s = states('sensor.ev_charger_status') %} {% set src =
+      state_attr('sensor.ev_charger_status', 'src') %} {% set age =
+      state_attr('sensor.ev_charger_status', 'stale_age') | float(-1) %} {{ s ==
+      'charger_free' and src in ['local', 'cloud'] and age >= 0 and age < 900 }}
+  - alias: Перенос и сообщение делает /config/ev_replan_next.py (лимит внутри скрипта)
+    action: shell_command.ev_replan_next
+  mode: single

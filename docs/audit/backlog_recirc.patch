@@ -1,0 +1,30 @@
+Backlog fix L1 — recirc "Already running" x4 log noise
+=======================================================
+Automation id: 1789000001001  ("Рециркуляция ГВС по расписанию + присутствие")
+
+Problem: mode: single + three overlapping triggers (time_pattern /10, presence
+state, night_saver state) can re-fire while a prior run is still in-flight for an
+instant. HA then logs a WARNING "... Already running" (seen x4 at 03:55). The run
+that is dropped changes nothing - the choose block is idempotent (only toggles the
+switch when it is in the wrong state), so no behavior is lost.
+
+Fix: add `max_exceeded: silent`. This keeps mode: single (extra concurrent triggers
+are still dropped exactly as before - zero runtime-behavior change) and only
+suppresses the WARNING log line. `mode: restart`/`mode: queued` were rejected
+because they WOULD change which runs execute.
+
+Deploy: RELOAD-only - POST /api/services/automation/reload (no HA restart needed).
+Apply from the directory containing automations.yaml with:
+    patch -p1 < backlog_recirc.patch      (or: git apply -p1 backlog_recirc.patch)
+Diff is against automations.yaml as fetched from /config on 2026-07-16.
+
+--- a/automations.yaml
++++ b/automations.yaml
+@@ -4148,6 +4148,7 @@
+     выключен: экономия ~15-20 кВт·ч/мес + бак ГВС меньше остывает (бойлер реже
+     догревает). Ночную экономию не трогает — рециркуляция убрана из 1784000001002.
+   mode: single
++  max_exceeded: silent
+   triggers:
+   - trigger: time_pattern
+     minutes: /10

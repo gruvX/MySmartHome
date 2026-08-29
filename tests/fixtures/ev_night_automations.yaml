@@ -1,0 +1,740 @@
+# Verbatim copy of the four automations that carry the EV sticky-request
+# machinery, taken from /config/automations.yaml. Refreshed 2026-08-19 when the
+# daily-auto-charge package landed (24h planner, one-shot day request, one-shot
+# cancel). Regenerate with docs/audit/ev_auto_20260819/patch_autos.py output.
+- id: '1778800001001'
+  alias: "\U0001F697 EV зарядка — планировщик"
+  description: 'Автоматическое расписание зарядки: раз за разом выбирает САМОЕ ДЕШЁВОЕ
+    2ч окно на ближайшие 24 ч (ночь или день — что реально дешевле) и пишет его в
+    input_datetime.ev_charge_start. Владельцу планировать ничего не нужно.
+
+    Запускает shell_command.ev_auto2h (/config/ev_auto2h.py). ПОЧЕМУ НЕ ev_best2h.py:
+    тот файл закреплён тестом tests/test_ev_notify_surgical.py на изменения только
+    в уведомлениях, а искать он умеет по ВСЕМУ загруженному горизонту (сегодня +
+    завтра, до ~34 ч вперёд) — плановое время могло уехать за завтра и оставить
+    разрыв до ~37 ч вообще без зарядки. Ограничение «окно начинается не позже
+    now+24ч» живёт в новом файле, ev_best2h.py не изменён и остаётся доступен
+    вручную через shell_command.ev_find_best2h.
+
+    Триггеры: обновление цен Nord Pool (08-22), старт HA, 14:05, публикация цен на
+    завтра, и часовая страховка, которая срабатывает ТОЛЬКО если план прокис
+    (время в прошлом или дальше 24 ч) — без неё сутки простоя HA оставляли дом без
+    зарядки до следующего обновления цен.'
+  triggers:
+  - trigger: state
+    entity_id: sensor.nord_pool_lv_lowest_price
+    id: price_update
+  - trigger: homeassistant
+    event: start
+    id: ha_start
+  - trigger: time
+    at: '14:05:00'
+    id: daily_14h
+  - alias: Публикация цен на завтра (~13-14:00) — пересчитать план сразу, а не ждать
+      следующего обновления Nord Pool
+    trigger: state
+    entity_id: binary_sensor.nord_pool_lv_tomorrow_price_available
+    to: 'on'
+    id: tomorrow_published
+  - alias: Часовая страховка от прокисшего плана (см. условие ниже). Гарантия «зарядка
+      планируется каждый день» держится на ней
+    trigger: time_pattern
+    minutes: '7'
+    id: periodic
+  conditions:
+  - condition: template
+    alias: НЕ перебивать явно запрошенную ночную зарядку (для ВСЕХ триггеров, включая
+      ha_start и 14:05)
+    value_template: >-
+      {% set req = states('input_boolean.ev_night_requested') %} {% set ws =
+      state_attr('input_datetime.ev_night_window_start', 'timestamp') | float(0) %} {{
+      not (req == 'on' and ws > 0 and now().timestamp() < (ws + 10800)) }}
+  - condition: template
+    value_template: '{{ trigger.id != ''price_update'' or (8 <= now().hour < 22) }}'
+    alias: price_update только с 08 до 22 (не перебивать ночное расписание)
+  - condition: template
+    alias: Часовая страховка работает ТОЛЬКО по прокисшему плану — иначе она перебивала
+      бы свежий план каждый час, в том числе через 7 минут после начала зарядки (тогда
+      цепочка проверок +6/+10/+12 мин читала бы уже другое окно)
+    value_template: >-
+      {% set cs = state_attr('input_datetime.ev_charge_start', 'timestamp') | float(0)
+      %} {{ trigger.id != 'periodic' or cs <= 0 or cs < (now().timestamp() - 1800) or cs
+      > (now().timestamp() + 86400) }}
+  actions:
+  - if:
+    - condition: trigger
+      id: ha_start
+    then:
+    - delay: 00:01:00
+  - action: shell_command.ev_auto2h
+  mode: single
+- id: '1778800001002'
+  alias: 🚗 EV зарядка — автозарядка 2ч
+  description: 'По расписанию: включает EV на 2ч. Выключает бойлер на время зарядки. После зарядки:
+    включает бойлер если цена ≤ 0.10 EUR/kWh.'
+  triggers:
+  - trigger: time
+    at: input_datetime.ev_charge_start
+  conditions:
+  - condition: template
+    value_template: '{{ not is_state(''input_boolean.ev_manual_mode'', ''on'') }}'
+  - condition: template
+    value_template: '{{ states(''switch.ev_charger_switch'') not in [''unavailable'', ''unknown'']
+      }}'
+  actions:
+  - alias: Разовая отмена — пропустить ИМЕННО это окно и погасить отмену. Стоит первым
+      шагом намеренно — так отмена гасится ровно один раз, без гонки с отдельной
+      автоматизацией, и ни одна команда устройству не выдаётся
+    if:
+    - condition: template
+      value_template: '{{ is_state(''input_boolean.ev_charge_cancelled'', ''on'') }}'
+    then:
+    - alias: Запомнить, КАКОЕ окно было пропущено — сторож 1790100001001 по этой метке
+        молчит про это окно
+      action: input_datetime.set_datetime
+      target:
+        entity_id: input_datetime.ev_cancel_consumed
+      data:
+        timestamp: '{{ state_attr(''input_datetime.ev_charge_start'', ''timestamp'') | float(now().timestamp())
+          }}'
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.ev_charge_cancelled
+    - action: telegram_bot.send_message
+      data:
+        chat_id: 100000000
+        parse_mode: html
+        message: '⛔ EV: эта зарядка пропущена — ты нажал «Отменить зарядку».
+
+
+          Окно {{ states(''input_datetime.ev_charge_start'') | e }} (2 ч) пропущено, зарядка
+          не включалась.
+
+
+          Разовая отмена снята: следующая зарядка пройдёт по автоматическому расписанию
+          как обычно. Нужна зарядка раньше — «Зарядить ночью» / «Зарядить днём».
+
+
+          Плановое время <code>input_datetime.ev_charge_start</code>: {{ states(''input_datetime.ev_charge_start'')
+          | e }}'
+    - stop: Зарядка пропущена по разовой отмене владельца
+  - variables:
+      price_now: '{{ states(''sensor.nord_pool_lv_current_price'') | float(0) }}'
+      ev_energy_before: '{{ states(''sensor.ev_charger_energy'') | float(-1) }}'
+  - action: switch.turn_on
+    target:
+      entity_id: switch.ev_charger_switch
+  - action: switch.turn_off
+    target:
+      entity_id: switch.smart_plug_2_socket_1
+    alias: Бойлер OFF на время зарядки EV
+  - alias: Проверка 2 — зарядка реально началась (облако Tuya, лаг до 5 мин)
+    wait_template: '{{ is_state(''sensor.ev_charger_status'', ''charger_charging'') }}'
+    timeout: 00:06:00
+    continue_on_timeout: true
+  - variables:
+      ev_charging_ok: '{{ is_state(''sensor.ev_charger_status'', ''charger_charging'') }}'
+  - choose:
+    - alias: Зарядка подтверждена — обычное уведомление
+      conditions:
+      - condition: template
+        value_template: '{{ ev_charging_ok }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          message: '🚗⚡ EV зарядка началась!
+
+            ⚡ Цена: {{ ''%.4f'' | format(price_now) }} EUR/kWh
+
+            ⏱ Стоп в {{ (now() + timedelta(hours=2)).strftime(''%H:%M'') }}
+
+            📅 Зарядка до {{ (now() + timedelta(hours=2)).strftime(''%d.%m %H:%M'') }}'
+          inline_keyboard:
+          - - - ⛔ EV СТОП
+              - /ev_stop
+          parse_mode: html
+    - alias: Зарядка не началась — настоящая причина из sensor.ev_charger_status
+      conditions:
+      - condition: template
+        value_template: '{{ not ev_charging_ok }}'
+      - condition: template
+        value_template: '{{ (now().timestamp() - (state_attr(''input_datetime.tuya_cmd_fail_ev'',
+          ''timestamp'') | float(0))) > 21600 }}'
+      sequence:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.tuya_cmd_fail_ev
+        data:
+          timestamp: '{{ now().timestamp() }}'
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: '{%- set s = states(''sensor.ev_charger_status'') -%}{%- set causes = {''charger_free'':
+            ''машина не подключена'', ''charger_insert'': ''машина подключена, но зарядка не началась'',
+            ''charger_pause'': ''зарядка на паузе'', ''charger_end'': ''зарядка уже завершена''}
+            -%}{%- set cause = causes.get(s, ''нет связи с зарядкой (Tuya)'' if s in [''unavailable'',
+            ''unknown'', ''none'', ''None'', '''', ''cloud_error''] else ''статус '' ~ (s | e)) -%}⚠️
+            EV: зарядка не началась — {{ cause }}
+
+
+            Статус <code>sensor.ev_charger_status</code>: {{ s | e }} (ожидался <code>charger_charging</code>),
+            проверка 6 мин.
+
+
+            Реле <code>switch.ev_charger_switch</code> на этой зарядке читается <code>off</code>
+            даже во время зарядки, поэтому по нему успех не определяется.
+
+
+            Повтор этого сообщения — не чаще раза в 6 ч.'
+  - delay: 02:00:00
+  - variables:
+      price_after: '{{ states(''sensor.nord_pool_lv_current_price'') | float(0) }}'
+  - alias: Стоп по окончании окна — реле не показатель, выключаем безусловно (идемпотентно)
+    action: switch.turn_off
+    target:
+      entity_id: switch.ev_charger_switch
+  - alias: Проверка — зарядка реально прекратилась (облако Tuya, лаг до 5 мин)
+    wait_template: '{{ not is_state(''sensor.ev_charger_status'', ''charger_charging'') }}'
+    timeout: 00:06:00
+    continue_on_timeout: true
+  - alias: Восстановить бойлер если цена дешёвая
+    choose:
+    - conditions:
+      - condition: numeric_state
+        entity_id: sensor.nord_pool_lv_current_price
+        below: 0.1
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.smart_plug_2_socket_1
+        alias: Бойлер ON — цена дешёвая
+  - variables:
+      ev_charged: '{{ ev_charging_ok or ((ev_energy_before | float(-1)) >= 0 and (states(''sensor.ev_charger_energy'')
+        | float(-1)) > (ev_energy_before | float(-1))) or ((state_attr(''sensor.ev_charger_energy'',
+        ''session_kwh'') | float(0)) > 0) }}'
+  - choose:
+    - alias: Зарядка была и остановлена — обычное уведомление
+      conditions:
+      - condition: template
+        value_template: '{{ ev_charged and not is_state(''sensor.ev_charger_status'', ''charger_charging'')
+          }}'
+      sequence:
+      - action: notify.send_message
+        target:
+          entity_id: notify.telegram_owner
+        data:
+          message: '🚗 EV зарядка завершена (2ч) ✅
+
+            💰 Цена: {{ ''%.4f'' | format(price_after) }} EUR/kWh
+
+            📅 Следующий сеанс: {{ (as_datetime(states(''input_datetime.ev_charge_start'')) | as_local).strftime(''%d.%m
+            %H:%M'') }}'
+    - alias: СТОП не подействовал
+      conditions:
+      - condition: template
+        value_template: '{{ is_state(''sensor.ev_charger_status'', ''charger_charging'') }}'
+      - condition: template
+        value_template: '{{ (now().timestamp() - (state_attr(''input_datetime.tuya_cmd_fail_ev'',
+          ''timestamp'') | float(0))) > 21600 }}'
+      sequence:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.tuya_cmd_fail_ev
+        data:
+          timestamp: '{{ now().timestamp() }}'
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: '⚠️ EV: зарядка не остановлена
+
+
+            После команды СТОП статус <code>sensor.ev_charger_status</code> = {{ states(''sensor.ev_charger_status'')
+            | e }} (ожидался любой, кроме <code>charger_charging</code>; проверка 6 мин).
+
+
+            Зарядка продолжается. Реле <code>switch.ev_charger_switch</code> здесь не показатель
+            — оно читается <code>off</code> и во время зарядки.
+
+
+            Повтор этого сообщения — не чаще раза в 6 ч.'
+    - alias: Окно закончилось, зарядки так и не было
+      conditions:
+      - condition: template
+        value_template: '{{ not ev_charged }}'
+      - condition: template
+        value_template: '{{ (now().timestamp() - (state_attr(''input_datetime.tuya_cmd_fail_ev'',
+          ''timestamp'') | float(0))) > 21600 }}'
+      sequence:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.tuya_cmd_fail_ev
+        data:
+          timestamp: '{{ now().timestamp() }}'
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: '{%- set s = states(''sensor.ev_charger_status'') -%}{%- set causes = {''charger_free'':
+            ''машина не подключена'', ''charger_insert'': ''машина подключена, но зарядка не началась'',
+            ''charger_pause'': ''зарядка на паузе'', ''charger_end'': ''зарядка уже завершена''}
+            -%}{%- set cause = causes.get(s, ''нет связи с зарядкой (Tuya)'' if s in [''unavailable'',
+            ''unknown'', ''none'', ''None'', '''', ''cloud_error''] else ''статус '' ~ (s | e)) -%}⚠️
+            EV: 2-часовое окно закончилось, зарядка так и не началась — {{ cause }}
+
+
+            Статус <code>sensor.ev_charger_status</code>: {{ s | e }}
+
+
+            Счётчик <code>sensor.ev_charger_energy</code>: {{ states(''sensor.ev_charger_energy'')
+            | e }} кВт·ч (в начале окна было {{ ev_energy_before | e }})
+
+
+            Уведомление о завершении не отправлено — завершать было нечего.
+
+
+            Повтор этого сообщения — не чаще раза в 6 ч.'
+  mode: single
+- id: '1790100001001'
+  alias: 🚗 Сторож EV — плановая зарядка (только уведомление)
+  description: Независимая проверка EV-зарядки. Через 10 мин после планового старта
+    проверяет, идёт ли зарядка; отдельно ловит зарядку дольше планового окна. НИКОГДА
+    не подаёт команд устройствам. Нужна потому, что ошибка Tuya (ApiRequestException)
+    обрывает основную автоматизацию на шаге команды, до всех проверок и уведомлений.
+  triggers:
+  - trigger: time
+    at: input_datetime.ev_charge_start
+    id: planned_start
+  - alias: Стабильная ссылка на ЗАПРОШЕННОЕ ночное окно. Отдельный helper, который
+      планировщик не трогает, поэтому этот триггер нельзя молча перевести на другое
+      время, изменив input_datetime.ev_charge_start.
+    trigger: time
+    at: input_datetime.ev_night_window_start
+    id: night_planned_start
+  - trigger: state
+    entity_id: sensor.ev_charger_status
+    to: charger_charging
+    for: 02:30:00
+    id: overrun
+  conditions:
+  - condition: template
+    value_template: '{{ not is_state(''input_boolean.ev_manual_mode'', ''on'') }}'
+  actions:
+  - alias: Дать основной автоматизации 10 мин на старт зарядки
+    if:
+    - condition: trigger
+      id:
+      - planned_start
+      - night_planned_start
+    then:
+    - delay: 00:10:00
+  - choose:
+    - alias: Плановый старт был, а зарядки нет
+      conditions:
+      - condition: trigger
+        id: planned_start
+      - condition: template
+        alias: Ночной заявкой занимается отдельная ветка ниже (иначе два сообщения
+          об одном и том же). Helper отсутствует -> условие истинно -> ветка работает
+          как раньше.
+        value_template: '{{ not is_state(''input_boolean.ev_night_requested'', ''on'')
+          }}'
+      - condition: template
+        value_template: '{{ not is_state(''sensor.ev_charger_status'', ''charger_charging'')
+          }}'
+      - condition: template
+        alias: Это окно не отменял сам владелец (метка ev_cancel_consumed). Помощник
+          отсутствует -> 0 -> условие истинно -> ветка работает как раньше
+        value_template: >-
+          {% set cs = state_attr('input_datetime.ev_charge_start', 'timestamp') | float(0)
+          %} {% set cc = state_attr('input_datetime.ev_cancel_consumed', 'timestamp') |
+          float(0) %} {{ cs <= 0 or ((cc - cs) | abs) > 60 }}
+      - condition: template
+        alias: СВЕЖИЙ charger_free — это случай «машина не подключена», им занимается
+          1791000001001 (перенос зарядки + одно сообщение). Иначе владелец получил бы
+          два сообщения об одном событии
+        value_template: >-
+          {% set s = states('sensor.ev_charger_status') %} {% set src =
+          state_attr('sensor.ev_charger_status', 'src') %} {% set age =
+          state_attr('sensor.ev_charger_status', 'stale_age') | float(-1) %} {{ not (s ==
+          'charger_free' and src in ['local', 'cloud'] and age >= 0 and age < 900) }}
+      - condition: template
+        value_template: '{{ (now().timestamp() - (state_attr(''input_datetime.tuya_cmd_fail_ev'',
+          ''timestamp'') | float(0))) > 21600 }}'
+      sequence:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.tuya_cmd_fail_ev
+        data:
+          timestamp: '{{ now().timestamp() }}'
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: |-
+            {%- set s = states('sensor.ev_charger_status') -%}
+            {%- set src = state_attr('sensor.ev_charger_status', 'src') -%}
+            {%- set age = state_attr('sensor.ev_charger_status', 'stale_age') | float(-1) -%}
+            {%- set fresh = (src in ['local', 'cloud']) and age >= 0 and age < 900 -%}
+            {%- set dead = s in ['unavailable', 'unknown', 'none', 'None', ''] -%}
+            {%- set causes = {'charger_free': 'машина не подключена', 'charger_insert': 'машина подключена, но зарядка не началась', 'charger_pause': 'зарядка на паузе', 'charger_end': 'зарядка уже завершена', 'charger_charging': 'зарядка идёт (статус свежий)'} -%}
+            {%- if dead -%}{%- set cause = 'нет связи с зарядкой (статус недоступен)' -%}
+            {%- elif s == 'cloud_error' -%}{%- set cause = 'нет свежих данных от зарядки (кэш/квота Tuya) — причину назвать нельзя' -%}
+            {%- elif not fresh -%}{%- set cause = 'нет свежих данных от зарядки (кэш/квота Tuya) — причину назвать нельзя, последний известный статус устарел' -%}
+            {%- else -%}{%- set cause = causes.get(s, 'статус ' ~ (s | e)) -%}
+            {%- endif -%}
+            {%- if fresh -%}{%- set stale_note = '' -%}
+            {%- elif age >= 0 -%}{%- set stale_note = ' — данные НЕ свежие (источник ' ~ ((src if src is string else 'неизвестен') | e) ~ ', возраст ' ~ ((age / 60) | round(0) | int | string) ~ ' мин)' -%}
+            {%- else -%}{%- set stale_note = ' — данные НЕ свежие (возраст неизвестен)' -%}
+            {%- endif -%}
+            ⚠️ EV: плановая зарядка не началась
+
+            Через 10 мин после планового старта зарядка не идёт.
+
+            Причина: {{ cause }}
+
+            Статус <code>sensor.ev_charger_status</code>: {{ s | e }} (ожидался <code>charger_charging</code>){{ stale_note }}
+            Плановое время <code>input_datetime.ev_charge_start</code>: {{ states('input_datetime.ev_charge_start') | e }}
+            Счётчик <code>sensor.ev_charger_energy</code>: {{ states('sensor.ev_charger_energy') | e }} кВт·ч
+
+            Реле <code>switch.ev_charger_switch</code> на этой зарядке читается <code>off</code> даже во время зарядки — по нему успех не определяется.
+
+            Это независимая проверка: она срабатывает даже если сама автоматизация оборвалась ошибкой Tuya.
+            Повтор этого сообщения — не чаще раза в 6 ч.
+    - alias: Ночная заявка — плановый старт был, а зарядки нет
+      conditions:
+      - condition: trigger
+        id: night_planned_start
+      - condition: template
+        alias: Заявка ещё активна (она же — токен «вердикт не отправлен»)
+        value_template: '{{ is_state(''input_boolean.ev_night_requested'', ''on'') }}'
+      - condition: template
+        alias: Зарядка не идёт
+        value_template: '{{ not is_state(''sensor.ev_charger_status'', ''charger_charging'')
+          }}'
+      - condition: template
+        alias: Это окно не отменял сам владелец (нажал «Отменить зарядку» после заявки)
+        value_template: >-
+          {% set cs = state_attr('input_datetime.ev_charge_start', 'timestamp') | float(0)
+          %} {% set cc = state_attr('input_datetime.ev_cancel_consumed', 'timestamp') |
+          float(0) %} {{ cs <= 0 or ((cc - cs) | abs) > 60 }}
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: |-
+            {%- set s = states('sensor.ev_charger_status') -%}
+            {%- set src = state_attr('sensor.ev_charger_status', 'src') -%}
+            {%- set age = state_attr('sensor.ev_charger_status', 'stale_age') | float(-1) -%}
+            {%- set fresh = (src in ['local', 'cloud']) and age >= 0 and age < 900 -%}
+            {%- set dead = s in ['unavailable', 'unknown', 'none', 'None', ''] -%}
+            {%- set causes = {'charger_free': 'машина не подключена', 'charger_insert': 'машина подключена, но зарядка не началась', 'charger_pause': 'зарядка на паузе', 'charger_end': 'зарядка уже завершена', 'charger_charging': 'зарядка идёт (статус свежий)'} -%}
+            {%- if dead -%}{%- set cause = 'нет связи с зарядкой (статус недоступен)' -%}
+            {%- elif s == 'cloud_error' -%}{%- set cause = 'нет свежих данных от зарядки (кэш/квота Tuya) — причину назвать нельзя' -%}
+            {%- elif not fresh -%}{%- set cause = 'нет свежих данных от зарядки (кэш/квота Tuya) — причину назвать нельзя, последний известный статус устарел' -%}
+            {%- else -%}{%- set cause = causes.get(s, 'статус ' ~ (s | e)) -%}
+            {%- endif -%}
+            {%- if fresh -%}{%- set stale_note = '' -%}
+            {%- elif age >= 0 -%}{%- set stale_note = ' — данные НЕ свежие (источник ' ~ ((src if src is string else 'неизвестен') | e) ~ ', возраст ' ~ ((age / 60) | round(0) | int | string) ~ ' мин)' -%}
+            {%- else -%}{%- set stale_note = ' — данные НЕ свежие (возраст неизвестен)' -%}
+            {%- endif -%}
+            {%- set wt = states('input_datetime.ev_night_window_start') -%}
+            {%- set wts = state_attr('input_datetime.ev_night_window_start', 'timestamp') | float(0) -%}
+            {%- set wh = (wts | timestamp_custom('%H', true) | int(-1)) if wts > 0 else -1 -%}
+            {%- set kind = 'ночная' if (wh >= 23 or (wh >= 0 and wh < 7)) else 'дневная' -%}
+            ⚠️ EV: {{ kind | e }} зарядка по заявке НЕ состоялась
+
+            Заявка была на {{ wt | e }} (окно 2 ч, запрошено кнопкой «Зарядить ночью» / «Зарядить днём»).
+            Через 10 мин после планового старта зарядка не идёт.
+
+            Причина: {{ cause }}
+
+            Статус <code>sensor.ev_charger_status</code>: {{ s | e }} (ожидался <code>charger_charging</code>){{ stale_note }}
+            Плановое время <code>input_datetime.ev_charge_start</code>: {{ states('input_datetime.ev_charge_start') | e }}
+            Заявка <code>input_datetime.ev_night_window_start</code>: {{ wt | e }}
+            Счётчик <code>sensor.ev_charger_energy</code>: {{ states('sensor.ev_charger_energy') | e }} кВт·ч
+
+            Реле <code>switch.ev_charger_switch</code> на этой зарядке читается <code>off</code> даже во время зарядки — по нему успех не определяется.
+
+            Это сообщение отправляется РОВНО ОДИН РАЗ на заявку.
+      - alias: Вердикт доставлен — гасим заявку, чтобы сообщение было РОВНО одно
+        action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_night_requested
+    - alias: Ночная заявка — зарядка идёт, вердикт не нужен
+      conditions:
+      - condition: trigger
+        id: night_planned_start
+      - condition: template
+        value_template: '{{ is_state(''sensor.ev_charger_status'', ''charger_charging'')
+          }}'
+      sequence:
+      - alias: Отметить, что зарядка в запрошенном окне наблюдалась
+        action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.ev_night_charge_seen
+        data:
+          timestamp: '{{ now().timestamp() }}'
+    - alias: Зарядка идёт дольше планового окна
+      conditions:
+      - condition: trigger
+        id: overrun
+      - condition: template
+        value_template: '{{ (now().timestamp() - (state_attr(''input_datetime.ev_overrun_notify'',
+          ''timestamp'') | float(0))) > 21600 }}'
+      sequence:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.ev_overrun_notify
+        data:
+          timestamp: '{{ now().timestamp() }}'
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: '⚠️ EV: зарядка идёт дольше планового окна
+
+            <code>sensor.ev_charger_status</code> = charger_charging уже 2 ч 30 мин,
+            а плановое окно — 2 ч.
+
+            Реле <code>switch.ev_charger_switch</code>: {{ states(''switch.ev_charger_switch'')
+            }}
+
+            Счётчик <code>sensor.ev_charger_energy</code>: {{ states(''sensor.ev_charger_energy'')
+            }} кВт·ч
+
+            Команда СТОП могла не пройти (Tuya) — проверь и при необходимости останови
+            вручную.
+
+            Повтор этого сообщения — не чаще раза в 6 ч.'
+  mode: queued
+  max: 5
+- id: '1790500001001'
+  alias: '🚗 EV: ночная заявка — учёт, перехват и поздний вердикт'
+  description: 'Жизненный цикл ЗАЯВКИ на ночную зарядку (input_boolean.ev_night_requested).
+
+    ЗАЧЕМ: 18.08 в 18:23 владелец запросил ночную зарядку на 19.08 03:45; в 19:49
+    планировщик (ev_best2h.py через shell_command.ev_find_best2h) перезаписал input_datetime.ev_charge_start
+    на 14:15, поэтому в 03:45 автозарядка 1778800001002 не сработала. Сторож 1790100001001
+    ждал ТОТ ЖЕ helper, поэтому тоже промолчал — владелец не получил вообще ничего.
+
+    ЧТО ДЕЛАЕТ: (1) отмечает, что зарядка в окне реально наблюдалась; (2) ловит перезапись
+    планового времени поверх активной заявки и сообщает об этом; (3) поздний вердикт,
+    если окно прошло без зарядки (работает даже после рестарта HA); (4) детерминированно
+    гасит заявку — по завершении зарядки и по ограниченному сроку истечения.
+
+    СРОК ИСТЕЧЕНИЯ: заявка гасится не позже начала окна + 3 ч (= конец окна + 1 ч).
+    Плюс условие планировщика 1778800001001 перестаёт учитывать заявку в тот же момент
+    НЕЗАВИСИМО от состояния флага, поэтому зависший флаг не может заблокировать планировщик
+    навсегда.
+
+    НИКОГДА не подаёт команд устройствам: только input_boolean/input_datetime и Telegram.'
+  triggers:
+  - alias: Зарядка реально пошла
+    trigger: state
+    entity_id: sensor.ev_charger_status
+    to: charger_charging
+    id: charging
+  - alias: Зарядка завершена / машина отключена — как в 1748000001006
+    trigger: state
+    entity_id: sensor.ev_charger_status
+    to:
+    - charger_end
+    - charger_free
+    id: completed
+  - alias: Кто-то перезаписал плановое время поверх активной заявки
+    trigger: state
+    entity_id: input_datetime.ev_charge_start
+    id: overwritten
+  - alias: Поздний вердикт и срок истечения заявки
+    trigger: time_pattern
+    minutes: /10
+    id: sweep
+  conditions: []
+  actions:
+  - variables:
+      ws: '{{ state_attr(''input_datetime.ev_night_window_start'', ''timestamp'') | float(0)
+        }}'
+      seen: '{{ state_attr(''input_datetime.ev_night_charge_seen'', ''timestamp'') | float(0)
+        }}'
+      cs: '{{ state_attr(''input_datetime.ev_charge_start'', ''timestamp'') | float(0) }}'
+      req: '{{ is_state(''input_boolean.ev_night_requested'', ''on'') }}'
+  - choose:
+    - alias: Зарядка пошла — отметить наблюдение (сообщений нет)
+      conditions:
+      - condition: trigger
+        id: charging
+      - condition: template
+        value_template: '{{ req }}'
+      sequence:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.ev_night_charge_seen
+        data:
+          timestamp: '{{ now().timestamp() }}'
+    - alias: Зарядка завершена внутри/после окна — детерминированно гасим заявку
+      conditions:
+      - condition: trigger
+        id: completed
+      - condition: template
+        value_template: '{{ req }}'
+      - condition: template
+        alias: Только если окно УЖЕ началось. Иначе charger_free до окна (машина ещё
+          не подключена в момент заявки) погасил бы заявку сразу и баг вернулся бы.
+        value_template: '{{ (ws | float(0)) > 0 and now().timestamp() >= (ws | float(0))
+          }}'
+      sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_night_requested
+    - alias: Плановое время перезаписано поверх активной заявки — РОВНО одно сообщение
+      conditions:
+      - condition: trigger
+        id: overwritten
+      - condition: template
+        value_template: '{{ req }}'
+      - condition: template
+        alias: Расхождение с запрошенным окном больше минуты (attribute-only изменения
+          и запись того же значения не считаются)
+        value_template: '{{ (ws | float(0)) > 0 and ((cs | float(0)) - (ws | float(0)))
+          | abs > 60 }}'
+      sequence:
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: |-
+            {%- set s = states('sensor.ev_charger_status') -%}
+            {%- set src = state_attr('sensor.ev_charger_status', 'src') -%}
+            {%- set age = state_attr('sensor.ev_charger_status', 'stale_age') | float(-1) -%}
+            {%- set fresh = (src in ['local', 'cloud']) and age >= 0 and age < 900 -%}
+            {%- set dead = s in ['unavailable', 'unknown', 'none', 'None', ''] -%}
+            {%- set causes = {'charger_free': 'машина не подключена', 'charger_insert': 'машина подключена, но зарядка не началась', 'charger_pause': 'зарядка на паузе', 'charger_end': 'зарядка уже завершена', 'charger_charging': 'зарядка идёт (статус свежий)'} -%}
+            {%- if dead -%}{%- set cause = 'нет связи с зарядкой (статус недоступен)' -%}
+            {%- elif s == 'cloud_error' -%}{%- set cause = 'нет свежих данных от зарядки (кэш/квота Tuya) — причину назвать нельзя' -%}
+            {%- elif not fresh -%}{%- set cause = 'нет свежих данных от зарядки (кэш/квота Tuya) — причину назвать нельзя, последний известный статус устарел' -%}
+            {%- else -%}{%- set cause = causes.get(s, 'статус ' ~ (s | e)) -%}
+            {%- endif -%}
+            {%- if fresh -%}{%- set stale_note = '' -%}
+            {%- elif age >= 0 -%}{%- set stale_note = ' — данные НЕ свежие (источник ' ~ ((src if src is string else 'неизвестен') | e) ~ ', возраст ' ~ ((age / 60) | round(0) | int | string) ~ ' мин)' -%}
+            {%- else -%}{%- set stale_note = ' — данные НЕ свежие (возраст неизвестен)' -%}
+            {%- endif -%}
+            {%- set wt = states('input_datetime.ev_night_window_start') -%}
+            {%- set nv = states('input_datetime.ev_charge_start') -%}
+            {%- set ctx = trigger.to_state.context if trigger is defined and trigger.to_state is defined and trigger.to_state is not none else none -%}
+            {%- set pid = ctx.parent_id if ctx is not none else none -%}
+            {%- set uid = ctx.user_id if ctx is not none else none -%}
+            {%- if pid -%}{%- set who = 'автоматизация или скрипт HA' -%}
+            {%- elif uid -%}{%- set who = 'внешняя запись под токеном (скрипт ev_day2h.py / ev_best2h.py через API, либо ручная правка helper)' -%}
+            {%- else -%}{%- set who = 'источник записи не определён' -%}
+            {%- endif -%}
+            ⚠️ EV: ночная заявка перебита — зарядки в запрошенном окне НЕ будет
+
+            Заявка была на {{ wt | e }} (окно 2 ч).
+            Плановое время <code>input_datetime.ev_charge_start</code> теперь = {{ nv | e }}.
+
+            Кто перебил: {{ who }}
+
+            Заявка снята. Если ночная зарядка всё ещё нужна — нажми «Ночь 2ч» ещё раз.
+
+            Это сообщение отправляется РОВНО ОДИН РАЗ на заявку.
+      - alias: Вердикт доставлен — гасим заявку
+        action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_night_requested
+    - alias: Окно прошло — поздний вердикт и срок истечения заявки
+      conditions:
+      - condition: trigger
+        id: sweep
+      - condition: template
+        value_template: '{{ req }}'
+      - condition: template
+        alias: Начало окна + 3 ч (= конец окна + 1 ч)
+        value_template: '{{ (ws | float(0)) > 0 and now().timestamp() > ((ws | float(0))
+          + 10800) }}'
+      sequence:
+      - alias: Сообщать только если зарядка в этом окне ни разу не наблюдалась
+        if:
+        - condition: template
+          value_template: '{{ (seen | float(0)) < (ws | float(0)) }}'
+        then:
+        - action: telegram_bot.send_message
+          data:
+            chat_id: 100000000
+            parse_mode: html
+            message: |-
+              {%- set s = states('sensor.ev_charger_status') -%}
+              {%- set src = state_attr('sensor.ev_charger_status', 'src') -%}
+              {%- set age = state_attr('sensor.ev_charger_status', 'stale_age') | float(-1) -%}
+              {%- set fresh = (src in ['local', 'cloud']) and age >= 0 and age < 900 -%}
+              {%- set dead = s in ['unavailable', 'unknown', 'none', 'None', ''] -%}
+              {%- set causes = {'charger_free': 'машина не подключена', 'charger_insert': 'машина подключена, но зарядка не началась', 'charger_pause': 'зарядка на паузе', 'charger_end': 'зарядка уже завершена', 'charger_charging': 'зарядка идёт (статус свежий)'} -%}
+              {%- if dead -%}{%- set cause = 'нет связи с зарядкой (статус недоступен)' -%}
+              {%- elif s == 'cloud_error' -%}{%- set cause = 'нет свежих данных от зарядки (кэш/квота Tuya) — причину назвать нельзя' -%}
+              {%- elif not fresh -%}{%- set cause = 'нет свежих данных от зарядки (кэш/квота Tuya) — причину назвать нельзя, последний известный статус устарел' -%}
+              {%- else -%}{%- set cause = causes.get(s, 'статус ' ~ (s | e)) -%}
+              {%- endif -%}
+              {%- if fresh -%}{%- set stale_note = '' -%}
+              {%- elif age >= 0 -%}{%- set stale_note = ' — данные НЕ свежие (источник ' ~ ((src if src is string else 'неизвестен') | e) ~ ', возраст ' ~ ((age / 60) | round(0) | int | string) ~ ' мин)' -%}
+              {%- else -%}{%- set stale_note = ' — данные НЕ свежие (возраст неизвестен)' -%}
+              {%- endif -%}
+              {%- set wt = states('input_datetime.ev_night_window_start') -%}
+              ⚠️ EV: ночное окно прошло, зарядки так и не было
+
+              Заявка была на {{ wt | e }} (окно 2 ч) — окно закончилось, зарядка ни разу не переходила
+              в <code>charger_charging</code>.
+
+              Причина: {{ cause }}
+
+              Статус <code>sensor.ev_charger_status</code>: {{ s | e }}{{ stale_note }}
+              Счётчик <code>sensor.ev_charger_energy</code>: {{ states('sensor.ev_charger_energy') | e }} кВт·ч
+
+              Это поздняя проверка (окно + 1 ч): она срабатывает даже если HA был выключен
+              в момент планового старта. Отправляется РОВНО ОДИН РАЗ на заявку.
+      - alias: Срок истечения — заявка гасится в любом случае, чтобы флаг не завис
+        action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_night_requested
+    - alias: Заявка неактивна, но флаг завис без записанного окна — снять
+      conditions:
+      - condition: trigger
+        id: sweep
+      - condition: template
+        value_template: '{{ req and (ws | float(0)) <= 0 }}'
+      sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_night_requested
+    - alias: Срок истечения РАЗОВОЙ ОТМЕНЫ — 24 ч. Стоит последней ветвью намеренно
+        (choose берёт первое совпадение), чтобы никогда не перебить вердикт по заявке
+      conditions:
+      - condition: trigger
+        id: sweep
+      - condition: template
+        value_template: '{{ is_state(''input_boolean.ev_charge_cancelled'', ''on'') }}'
+      - condition: template
+        alias: Метка постановки + 24 ч. Помощник отсутствует -> 0 -> условие истинно ->
+          отмена снимается сразу, а не висит вечно
+        value_template: '{{ now().timestamp() > ((state_attr(''input_datetime.ev_cancel_armed_at'',
+          ''timestamp'') | float(0)) + 86400) }}'
+      sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_charge_cancelled
+      - action: telegram_bot.send_message
+        data:
+          chat_id: 100000000
+          parse_mode: html
+          message: 'ℹ️ EV: разовая отмена зарядки истекла (24 ч) и снята автоматически.
+
+
+            Ни одна плановая зарядка за это время так и не начиналась, поэтому отменять
+            было нечего. Автоматическое расписание работает как обычно.
+
+
+            Флаг <code>input_boolean.ev_charge_cancelled</code> выключен.'
+  mode: queued
+  max: 10

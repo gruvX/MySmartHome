@@ -1,0 +1,62 @@
+# Tooling config for the MySmartHome project.
+# This file configures pytest and ruff only. It intentionally does NOT declare
+# the project as an installable package — the repo is a collection of scripts
+# and a Home Assistant custom component, not a distributable library.
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+# Test tiers (see tests/README.md):
+#   unit        - pure/hermetic; no network, no devices (the default bulk).
+#   integration - exercises multiple modules together, still hermetic (stubbed
+#                 HTTP via the `fake_http` fixture); safe in CI.
+#   live        - hits a real device/API (HA, Elering, Tuya); DESELECTED by
+#                 default via tests/conftest.py. Opt in with `-m live`.
+# `--strict-markers` means every marker used must be declared here.
+markers = [
+    "unit: pure, hermetic test (no network, no devices)",
+    "integration: multi-module test; hermetic (stubbed HTTP), safe in CI",
+    "live: test hits a real device/network (HA, Elering, Tuya); deselected by default",
+]
+addopts = "-ra --strict-markers"
+
+[tool.ruff]
+# Conservative: config only. Do NOT auto-reformat the existing tree in this
+# cycle. Target the interpreter actually used on the box.
+target-version = "py312"
+line-length = 100
+# Only lint code this project owns; leave vendored/runtime dirs alone.
+extend-exclude = [
+    "backups",
+    "screenshots",
+    "docs",
+    "__pycache__",
+    ".git",
+    "miniapp/design_src",
+]
+
+[tool.ruff.lint]
+# A deliberately small, high-signal ruleset — real bugs and obvious hygiene,
+# nothing that would demand a mass rewrite of existing scripts.
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes (undefined names, unused imports, etc.)
+    "W",   # pycodestyle warnings
+    "I",   # import sorting
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear (likely bugs)
+]
+ignore = [
+    "E501",  # line-too-long: many existing scripts have long strings/URLs
+    "E402",  # module import not at top: scripts do sys.path juggling first
+    "B008",  # function call in default arg: common + intentional here
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests may use assert-heavy patterns and local imports freely.
+"tests/*" = ["B011"]
+
+[tool.ruff.format]
+# Present so `ruff format` has a home, but not invoked by CI this cycle.
+quote-style = "double"
+indent-style = "space"

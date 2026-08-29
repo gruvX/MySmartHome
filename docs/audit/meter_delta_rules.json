@@ -1,0 +1,107 @@
+{
+  "_meta": {
+    "generated_from": "docs/audit/shadow_evidence/shadow_snapshots.frozen.jsonl",
+    "window": "2026-07-15T18:46:59+03:00 .. 2026-07-16T18:30:00+03:00",
+    "interval_hours": 0.25,
+    "rule": "max_interval_kwh = plausible_power_kw * interval_hours (0.25h). Interval delta > max_interval_kwh => flag reconnect/catch-up jump; delta < 0 => flag reset. Flagged intervals are EXCLUDED from accepted totals but NEVER deleted from the ledger; review before any production drop.",
+    "nameplate_note": "No device nameplate power is exposed in Home Assistant (verified read-only: only sensor.75_qled_power exists, unrelated). All thresholds are heuristic: device-class typicals with headroom above each device's own observed max delta.",
+    "stale_lag_min": 45.0,
+    "stale_note": "stale_snapshots counts readings whose source 'updated' timestamp lags the snapshot by > stale_lag_min. For total_increasing counters an idle/off device legitimately shows an old 'updated' (HA writes state only on change), so a high stale count on a zero-delta device is expected, NOT necessarily a fault. The real concern is distinct_updated_timestamps == 1 (source never refreshed across the whole 24h window)."
+  },
+  "ev": {
+    "plausible_power_kw": 22.0,
+    "max_interval_kwh": 5.5,
+    "threshold_source": "heuristic",
+    "confidence": "SUSPECT",
+    "total_included": "EXCLUDED",
+    "exclude_rules": [
+      "delta_kwh < 0  => reset",
+      "delta_kwh > 5.5  => reconnect/catch-up jump",
+      "either endpoint unavailable => incomplete, not priced"
+    ]
+  },
+  "boiler_ten": {
+    "plausible_power_kw": 3.5,
+    "max_interval_kwh": 0.875,
+    "threshold_source": "heuristic",
+    "confidence": "OK",
+    "total_included": "INCLUDED",
+    "exclude_rules": [
+      "delta_kwh < 0  => reset",
+      "delta_kwh > 0.875  => reconnect/catch-up jump",
+      "either endpoint unavailable => incomplete, not priced"
+    ]
+  },
+  "towel": {
+    "plausible_power_kw": 0.7,
+    "max_interval_kwh": 0.175,
+    "threshold_source": "heuristic",
+    "confidence": "LOW",
+    "total_included": "INCLUDED",
+    "exclude_rules": [
+      "delta_kwh < 0  => reset",
+      "delta_kwh > 0.175  => reconnect/catch-up jump",
+      "either endpoint unavailable => incomplete, not priced"
+    ]
+  },
+  "aquarium": {
+    "plausible_power_kw": 0.15,
+    "max_interval_kwh": 0.0375,
+    "threshold_source": "heuristic",
+    "confidence": "OK",
+    "total_included": "INCLUDED",
+    "exclude_rules": [
+      "delta_kwh < 0  => reset",
+      "delta_kwh > 0.0375  => reconnect/catch-up jump",
+      "either endpoint unavailable => incomplete, not priced"
+    ]
+  },
+  "recirc": {
+    "plausible_power_kw": 0.1,
+    "max_interval_kwh": 0.025,
+    "threshold_source": "heuristic",
+    "confidence": "OK",
+    "total_included": "INCLUDED",
+    "exclude_rules": [
+      "delta_kwh < 0  => reset",
+      "delta_kwh > 0.025  => reconnect/catch-up jump",
+      "either endpoint unavailable => incomplete, not priced"
+    ]
+  },
+  "hydrophore": {
+    "plausible_power_kw": 1.5,
+    "max_interval_kwh": 0.375,
+    "threshold_source": "heuristic",
+    "confidence": "MEDIUM",
+    "total_included": "INCLUDED",
+    "exclude_rules": [
+      "delta_kwh < 0  => reset",
+      "delta_kwh > 0.375  => reconnect/catch-up jump",
+      "either endpoint unavailable => incomplete, not priced"
+    ]
+  },
+  "bed_backlight": {
+    "plausible_power_kw": 0.1,
+    "max_interval_kwh": 0.025,
+    "threshold_source": "heuristic",
+    "confidence": "LOW",
+    "total_included": "INCLUDED",
+    "exclude_rules": [
+      "delta_kwh < 0  => reset",
+      "delta_kwh > 0.025  => reconnect/catch-up jump",
+      "either endpoint unavailable => incomplete, not priced"
+    ]
+  },
+  "tv": {
+    "plausible_power_kw": 0.4,
+    "max_interval_kwh": 0.1,
+    "threshold_source": "heuristic",
+    "confidence": "LOW",
+    "total_included": "INCLUDED",
+    "exclude_rules": [
+      "delta_kwh < 0  => reset",
+      "delta_kwh > 0.1  => reconnect/catch-up jump",
+      "either endpoint unavailable => incomplete, not priced"
+    ]
+  }
+}

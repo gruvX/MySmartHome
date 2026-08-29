@@ -1,0 +1,28 @@
+# Secret-free snapshot of the `panel_custom:` block of the deployed
+# /config/configuration.yaml, taken 2026-08-17 after the v2 `?v=` was re-stamped to the
+# live build. tests/test_panel_registration.py parses this when no local (gitignored)
+# configuration.yaml / scratch_configuration.yaml snapshot is present at the repo root —
+# same fallback convention as tests/fixtures/leak_protection_template.yaml.
+#
+# WHY THIS FILE EXISTS: on 2026-08-17 the owner reported «не вижу изменений» three times.
+# Two independent faults were in play, and both are now locked by the test:
+#   1. an earlier agent restored configuration.yaml from a backup predating the
+#      tablet-panel-v2 entry, silently DROPPING the registration;
+#   2. the entry's `module_url` kept a stale `?v=`, so Chromium served the module from
+#      cache (HA sends `max-age=2678400` on /local/) even across location.reload().
+# Keep this block in sync with the deployed file whenever panel_custom changes.
+panel_custom:
+  - name: tablet-panel
+    url_path: tablet-panel
+    sidebar_title: "Умный дом"
+    sidebar_icon: mdi:tablet-dashboard
+    module_url: /local/tablet-panel.js?v=classic-20260727-2
+    require_admin: false
+    embed_iframe: false
+  - name: tablet-panel-v2
+    url_path: tablet-panel-v2
+    sidebar_title: "Пульт v2"
+    sidebar_icon: mdi:monitor-dashboard
+    module_url: /local/tablet-panel-v2.js?v=20260825-v2-ux3
+    require_admin: false
+    embed_iframe: false
